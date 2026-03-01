@@ -31,40 +31,28 @@ warn() { echo -e "${Y}!${R} $1"; }
 
 _ensure_cc() {
     CC=$(compgen -c clang- 2>/dev/null|grep -xE 'clang-[0-9]+'|sort -t- -k2 -rn|head -1) || CC=""
-    [[ -z "$CC" ]] && for CC in clang gcc; do command -v $CC &>/dev/null && break; done
+    [[ -z "$CC" ]] && command -v clang &>/dev/null && CC=clang
     [[ -n "$CC" ]] && return 0
-    # Auto-install clang (prefer LLVM apt repo for latest on debian)
-    info "No C compiler found — installing clang..."
-    if [[ -f /data/data/com.termux/files/usr/bin/bash ]]; then
-        pkg install -y clang
-    elif [[ -f /etc/debian_version ]]; then
-        T=/tmp/llvm.sh && curl -fsSL https://apt.llvm.org/llvm.sh -o $T && sudo bash $T $(grep -o 'PATTERNS\[[0-9]*' $T|grep -o '[0-9]*'|sort -rn|head -1) 2>/dev/null || sudo apt-get install -y clang
-    elif [[ -f /etc/arch-release ]]; then
-        sudo pacman -S --noconfirm clang
-    elif [[ -f /etc/fedora-release ]]; then
-        sudo dnf install -y clang
-    elif [[ "$OSTYPE" == darwin* ]]; then
-        xcode-select --install 2>/dev/null; echo "Run 'xcode-select --install' and retry"; exit 1
-    else
-        echo "ERROR: No C compiler (clang/gcc). Install one and retry."; exit 1
-    fi
+    info "Installing clang..."
+    if [[ -f /data/data/com.termux/files/usr/bin/bash ]]; then pkg install -y clang || true
+    elif [[ -f /etc/debian_version ]]; then { T=/tmp/llvm.sh && curl -fsSL https://apt.llvm.org/llvm.sh -o $T && sudo bash $T $(grep -o 'PATTERNS\[[0-9]*' $T|grep -o '[0-9]*'|sort -rn|head -1) 2>/dev/null || sudo apt-get install -y clang; } 2>/dev/null || true
+    elif [[ -f /etc/arch-release ]]; then sudo pacman -S --noconfirm clang 2>/dev/null || true
+    elif [[ -f /etc/fedora-release ]]; then sudo dnf install -y clang 2>/dev/null || true
+    elif [[ "$OSTYPE" == darwin* ]]; then xcode-select --install 2>/dev/null; echo "Run 'xcode-select --install' and retry"; exit 1; fi
     command -v clang &>/dev/null && { CC=clang; return 0; }
-    echo "ERROR: clang install failed."; exit 1
+    command -v gcc &>/dev/null && { warn "using gcc"; CC=gcc; return 0; }
+    echo "ERROR: no compiler"; exit 1
 }
 
 _warn_flags() {
-    WARN="-std=c17 -Werror -Weverything"
-    WARN+=" -Wno-padded -Wno-disabled-macro-expansion -Wno-reserved-id-macro"
-    WARN+=" -Wno-documentation -Wno-declaration-after-statement"
-    WARN+=" -Wno-unsafe-buffer-usage -Wno-used-but-marked-unused"
-    WARN+=" -Wno-pre-c11-compat" # glibc expands _Generic at call site; not actionable, already c17
-    WARN+=" --system-header-prefix=/usr/include -isystem /usr/local/include"
-    $CC -Werror -Wno-implicit-void-ptr-cast -x c -c /dev/null -o /dev/null 2>/dev/null && WARN+=" -Wno-implicit-void-ptr-cast" || :
-    $CC -Werror -Wno-nullable-to-nonnull-conversion -x c -c /dev/null -o /dev/null 2>/dev/null && WARN+=" -Wno-nullable-to-nonnull-conversion" || :
-    $CC -Werror -Wno-poison-system-directories -x c -c /dev/null -o /dev/null 2>/dev/null && WARN+=" -Wno-poison-system-directories" || :
-    HARDEN="-fstack-protector-strong -ftrivial-auto-var-init=zero -fno-common -D_FORTIFY_SOURCE=3 -fvisibility=hidden"
-    # these flags + stack-clash/cf-protection unsupported on darwin; || : for bash 3.2 set -e
-    [[ "$(uname)" != "Darwin" ]] && HARDEN+=" -fsanitize=safe-stack -fsanitize=cfi -fstack-clash-protection -fcf-protection=full" || :
+    if [[ "$CC" == *clang* ]]; then
+        WARN="-std=c17 -Werror -Weverything -Wno-padded -Wno-disabled-macro-expansion -Wno-reserved-id-macro -Wno-documentation -Wno-declaration-after-statement -Wno-unsafe-buffer-usage -Wno-used-but-marked-unused -Wno-pre-c11-compat --system-header-prefix=/usr/include -isystem /usr/local/include"
+        $CC -Werror -Wno-implicit-void-ptr-cast -x c -c /dev/null -o /dev/null 2>/dev/null && WARN+=" -Wno-implicit-void-ptr-cast" || :
+        $CC -Werror -Wno-nullable-to-nonnull-conversion -x c -c /dev/null -o /dev/null 2>/dev/null && WARN+=" -Wno-nullable-to-nonnull-conversion" || :
+        $CC -Werror -Wno-poison-system-directories -x c -c /dev/null -o /dev/null 2>/dev/null && WARN+=" -Wno-poison-system-directories" || :
+        HARDEN="-fstack-protector-strong -ftrivial-auto-var-init=zero -fno-common -D_FORTIFY_SOURCE=3 -fvisibility=hidden"
+        [[ "$(uname)" != "Darwin" ]] && HARDEN+=" -fsanitize=safe-stack -fsanitize=cfi -fstack-clash-protection -fcf-protection=full" || :
+    else WARN="-std=c17 -w"; HARDEN=""; fi
 }
 
 _shell_funcs() {
@@ -187,12 +175,11 @@ install)
     [[ -f "$E/e.c" ]] && sh "$E/e.c" install || :
     _shell_funcs
     install_cli() {
-        local pkg="$1" cmd="$2"
-        if ! command -v "$cmd" &>/dev/null; then
-            info "Installing $cmd..."
-            if command -v npm &>/dev/null; then npm install -g "$pkg" && ok "$cmd" || warn "$cmd failed"
-            else warn "$cmd skipped (npm not found)"; fi
-        else ok "$cmd (exists)"; fi
+        local pkg="$1" cmd="$2"; command -v "$cmd" &>/dev/null && { ok "$cmd (exists)"; return; }
+        info "Installing $cmd..."
+        if ! command -v npm &>/dev/null; then warn "$cmd skipped (npm not found)"
+        elif [[ -n "$SUDO" ]] || [[ $EUID -eq 0 ]]; then $SUDO npm install -g "$pkg" && ok "$cmd" || warn "$cmd failed"
+        else mkdir -p "$HOME/.local/lib" && npm install -g --prefix="$HOME/.local" "$pkg" && ok "$cmd" || warn "$cmd failed"; fi
     }
     if ! command -v claude &>/dev/null; then
         info "Installing claude..."
