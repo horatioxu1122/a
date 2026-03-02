@@ -46,10 +46,9 @@ _ensure_cc() {
 
 _warn_flags() {
     if [[ "$CC" == *clang* ]]; then
-        WARN="-std=c17 -Werror -Weverything -Wno-padded -Wno-disabled-macro-expansion -Wno-reserved-id-macro -Wno-documentation -Wno-declaration-after-statement -Wno-unsafe-buffer-usage -Wno-used-but-marked-unused -Wno-pre-c11-compat --system-header-prefix=/usr/include -isystem /usr/local/include"
-        $CC -Werror -Wno-implicit-void-ptr-cast -x c -c /dev/null -o /dev/null 2>/dev/null && WARN+=" -Wno-implicit-void-ptr-cast" || :
-        $CC -Werror -Wno-nullable-to-nonnull-conversion -x c -c /dev/null -o /dev/null 2>/dev/null && WARN+=" -Wno-nullable-to-nonnull-conversion" || :
-        $CC -Werror -Wno-poison-system-directories -x c -c /dev/null -o /dev/null 2>/dev/null && WARN+=" -Wno-poison-system-directories" || :
+        WARN="-std=c17 -Werror -Weverything -Wno-padded -Wno-disabled-macro-expansion -Wno-reserved-id-macro -Wno-documentation -Wno-declaration-after-statement -Wno-unsafe-buffer-usage -Wno-used-but-marked-unused --system-header-prefix=/usr/include -isystem /usr/local/include"
+        for F in -Wno-pre-c11-compat -Wno-implicit-void-ptr-cast -Wno-nullable-to-nonnull-conversion -Wno-poison-system-directories; do
+            $CC -Werror $F -x c -c /dev/null -o /dev/null 2>/dev/null && WARN+=" $F" || :; done
         HARDEN="-fstack-protector-strong -ftrivial-auto-var-init=zero -fno-common -D_FORTIFY_SOURCE=3 -fvisibility=hidden"
         [[ "$(uname)" != "Darwin" ]] && HARDEN+=" -fsanitize=safe-stack -fsanitize=cfi -fstack-clash-protection -fcf-protection=full" || :
     else WARN="-std=c17 -w"; HARDEN=""; fi
@@ -235,20 +234,9 @@ install)
             git init -q "$SROOT" 2>/dev/null; ok "adata/git initialized (gh auth login to enable sync)"
         fi
     fi
-    echo ""
-    echo -e "${G}══════════════════════════════════════════════════════════════${R}"
-    echo -e "${G}  Installation complete!${R}"
-    echo -e "${G}══════════════════════════════════════════════════════════════${R}"
-    echo ""
-    echo -e "${Y}⚠  IMPORTANT: To use the 'a' command, you must either:${R}"
-    echo ""
-    echo -e "   ${C}1.${R} Open a ${G}new terminal window${R}  (recommended)"
-    echo ""
-    echo -e "   ${C}2.${R} Or source your shell rc:"
-    echo -e "      ${C}source ~/.bashrc${R}  or  ${C}source ~/.zshrc${R}"
-    echo ""
-    echo -e "Then type ${G}a${R} to get started!"
-    echo ""
+    RC="$HOME/.bashrc"; [[ -n "$ZSH_VERSION" ]] && RC="$HOME/.zshrc"
+    source "$RC" 2>/dev/null && ok "shell ready (sourced $RC)" || warn "run: source $RC"
+    echo -e "\n${G}✓${R} Install complete — type ${G}a${R} to get started.\n"
     ;;
 *)
     echo "Usage: sh a.c [build|install|analyze|shell|clean]"
