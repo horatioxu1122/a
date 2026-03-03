@@ -2,7 +2,7 @@
 __attribute__((noreturn))
 static void fallback_py(const char *mod, int argc, char **argv) {
     if (getenv("A_BENCH")) _exit(0);
-    perf_disarm();
+    perf_disarm(); setenv("PYTHONDONTWRITEBYTECODE","1",1);
     char path[P]; snprintf(path, P, "%s/lib/%s.py", SDIR, mod);
     char **a = malloc(((unsigned)argc + 5) * sizeof(char *));
     {FILE *f=fopen(path,"r");char h[32]={0};
