@@ -13,9 +13,11 @@ static void init_paths(void) {
     if (n > 0) {
         self[n] = 0;
         char *s = strrchr(self, '/');
-        if (s) { *s = 0; snprintf(SDIR, P, "%s", self);
-            /* worktree binary: resolve AROOT to real project root */
+        if (s) { *s = 0;
+            /* binary lives in adata/local/ — strip to project root */
+            {char *al=strstr(self,"/adata/local");if(al)*al=0;}
             {char *wt=strstr(self,"/adata/worktrees/");if(wt)*wt=0;}
+            snprintf(SDIR, P, "%s", self);
             snprintf(AROOT, P, "%s/adata", self);
             snprintf(SROOT, P, "%s/git", AROOT);
         }

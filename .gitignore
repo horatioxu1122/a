@@ -20,6 +20,7 @@ __pycache__/
 
 .aider*
 .a_job
+/my
 
 # User data — adata/ is a separate world from the code repo.
 # adata/git/ is its own independent git repo (not a submodule).
@@ -29,5 +30,3 @@ adata/
 # C build artifacts
 *.o
 *.plist
-/bench_dispatch
-/bench_real
