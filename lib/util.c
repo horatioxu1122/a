@@ -47,6 +47,18 @@ static void rapid(const char *prompt, void (*fn)(const char*)) {
     }
 }
 
+/* ── raw terminal helpers (omnibox-style: enter once, stay in it) ── */
+static struct termios raw_orig;
+static void raw_enter(void){struct termios r;tcgetattr(0,&raw_orig);r=raw_orig;
+    r.c_lflag&=~(tcflag_t)(ICANON|ECHO);r.c_cc[VMIN]=1;r.c_cc[VTIME]=0;tcsetattr(0,TCSAFLUSH,&r);}
+static void raw_exit(void){tcsetattr(0,TCSAFLUSH,&raw_orig);}
+static int raw_key(void){unsigned char c;return read(STDIN_FILENO,&c,1)==1?(int)c:-1;}
+static int raw_line(const char*prompt,char*buf,int sz){
+    raw_exit();printf("%s",prompt);fflush(stdout);
+    int ok=fgets(buf,sz,stdin)!=NULL;if(ok)buf[strcspn(buf,"\n")]=0;
+    raw_enter();return ok&&buf[0];}
+
+
 static const char*clip_cmd(void){return getenv("TMUX")?"tmux load-buffer -":NULL;}
 static int to_clip(const char*d){const char*c=clip_cmd();
     FILE*f=c?popen(c,"w"):NULL;if(!f)return 1;fputs(d,f);return pclose(f);}

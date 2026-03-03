@@ -29,7 +29,7 @@ static const char *HELP_FULL =
     "  a ssh <#>           Connect to host\n"
     "  a run <#> \"task\"    Run task on remote\n\n"
     "OTHER\n"
-    "  a j \"task\"           Job in new worktree+window (cwd or a j <#>)\n"
+    "  a j \"prompt\"         Job in new worktree+window (cwd or a j <#>)\n"
     "  a job               Active jobs + review worktrees\n"
     "  a ls                List tmux sessions\n"
     "  a attach            Reconnect to session\n"

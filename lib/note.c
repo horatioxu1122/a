@@ -213,11 +213,6 @@ static void task_repri(int x,int pv){
     char dst[P];snprintf(dst,P,"%.*s/%s",(int)(bn-1-T[x].d),T[x].d,nw);
     rename(T[x].d,dst);printf("\xe2\x9c\x93 P%s %.40s\n",np,T[x].t);
 }
-static int task_getkey(void){
-    struct termios old,raw;tcgetattr(0,&old);raw=old;
-    raw.c_lflag&=~(tcflag_t)(ICANON|ECHO);raw.c_cc[VMIN]=1;raw.c_cc[VTIME]=0;
-    tcsetattr(0,TCSAFLUSH,&raw);int c=getchar();tcsetattr(0,TCSAFLUSH,&old);return c;
-}
 static int cmd_task(int argc,char**argv){
     perf_disarm();
     char dir[P];snprintf(dir,P,"%s/tasks",SROOT);mkdirp(dir);const char*sub=argc>2?argv[2]:NULL;
@@ -259,38 +254,29 @@ static int cmd_task(int argc,char**argv){
     if(grn||isdigit(*sub)||!strcmp(sub,"rev")||!strcmp(sub,"review")||!strcmp(sub,"r")||!strcmp(sub,"t")){
         int n=grn?grn:load_tasks(dir);if(!n){puts("No tasks");return 0;}
         {int i=isdigit(*sub)?atoi(sub)-1:argc>3?atoi(argv[3])-1:0;if(i<0||i>=n)i=0;int show=1;
+        raw_enter();
         while(i<n){if(show)task_show(i,n);show=1;
-            printf("\n  [e]archive [a]dd [c]prompt [r]un [g]o [d]eadline [p]ri [/]search  [j]next [k]back [q]uit  ");fflush(stdout);
-            int k=task_getkey();putchar('\n');
+            printf("\n  [e]del [a]dd [c]prompt [r]un [g]o [d]line [p]ri [/]find [j/k/q]  ");fflush(stdout);
+            int k=raw_key();putchar('\n');
             if(k=='e'){do_archive(T[i].d);printf("\xe2\x9c\x93 Archived: %.40s\n",T[i].t);
                 sync_bg();n=load_tasks(dir);if(i>=n)i=n-1;if(i<0)break;}
             else if(k=='a'){
                 {struct stat st;if(!stat(T[i].d,&st)&&!S_ISDIR(st.st_mode))task_todir(T[i].d);}
                 char sd[P];snprintf(sd,P,"%s/task",T[i].d);
-                printf("  Text: ");fflush(stdout);
-                char buf[B];if(fgets(buf,B,stdin)){buf[strcspn(buf,"\n")]=0;if(buf[0]){
+                char buf[B];if(raw_line("  Text: ",buf,B)){
                     mkdir(sd,0755);
                     struct timespec tp;clock_gettime(CLOCK_REALTIME,&tp);
                     char ts[32],fn[P];strftime(ts,32,"%Y%m%dT%H%M%S",localtime(&tp.tv_sec));
                     snprintf(fn,P,"%s/%s.%09ld_%s.txt",sd,ts,tp.tv_nsec,DEV);
                     char fb[B];snprintf(fb,B,"Text: %s\nDevice: %s\nCreated: %s\n",buf,DEV,ts);writef(fn,fb);
-                    printf("\xe2\x9c\x93 Added\n");sync_bg();}}
-                /* re-show task so new addition is visible */
+                    printf("\xe2\x9c\x93 Added\n");sync_bg();}
                 task_show(i,n);show=0;}
             else if(k=='c'){docreate:
                 {struct stat st;if(!stat(T[i].d,&st)&&!S_ISDIR(st.st_mode))task_todir(T[i].d);}
-                printf("  Name: ");fflush(stdout);
-                char nm[64];if(!fgets(nm,64,stdin)||!nm[0]||nm[0]=='\n'){show=0;continue;}
-                nm[strcspn(nm,"\n")]=0;
-                printf("  Prompt text: ");fflush(stdout);
-                char pt[B];if(!fgets(pt,B,stdin)||!pt[0]||pt[0]=='\n'){show=0;continue;}
-                pt[strcspn(pt,"\n")]=0;
-                printf("  Folder [cwd]: ");fflush(stdout);
-                char fd[P];if(!fgets(fd,P,stdin))fd[0]=0;fd[strcspn(fd,"\n")]=0;
-                if(!fd[0])(void)!getcwd(fd,P);
-                printf("  Model [opus]: ");fflush(stdout);
-                char md[64];if(!fgets(md,64,stdin))md[0]=0;md[strcspn(md,"\n")]=0;
-                if(!md[0])snprintf(md,64,"opus");
+                char nm[64];if(!raw_line("  Name: ",nm,64)){show=0;continue;}
+                char pt[B];if(!raw_line("  Prompt text: ",pt,B)){show=0;continue;}
+                char fd[P];if(!raw_line("  Folder [cwd]: ",fd,P))(void)!getcwd(fd,P);
+                char md[64];if(!raw_line("  Model [opus]: ",md,64))snprintf(md,64,"opus");
                 char pd[P];snprintf(pd,P,"%s/prompt_%s",T[i].d,nm);mkdir(pd,0755);
                 char pf[P];
                 snprintf(pf,P,"%s/prompt.txt",pd);writef(pf,pt);
@@ -299,9 +285,7 @@ static int cmd_task(int argc,char**argv){
                 printf("\xe2\x9c\x93 Added prompt: %s\n",nm);
                 task_show(i,n);show=0;}
             else if(k=='r'){
-                printf("  Prompt # or [n]ew: ");fflush(stdout);
-                char pb[8];if(!fgets(pb,8,stdin)||!pb[0]||pb[0]=='\n'){show=0;continue;}
-                pb[strcspn(pb,"\n")]=0;
+                char pb[8];if(!raw_line("  Prompt # or [n]ew: ",pb,8)){show=0;continue;}
                 if(*pb=='n'||*pb=='c')goto docreate;
                 int ci=atoi(pb);if(ci<1){show=0;continue;}
                 /* collect task text */
@@ -347,33 +331,32 @@ static int cmd_task(int argc,char**argv){
                     if(pd)closedir(pd);
                     if(!found){printf("  x Invalid prompt #\n");show=0;continue;}}
                 /* hand off to a job */
+                raw_exit();
                 {char pf[P];snprintf(pf,P,"%s/a_task_%d.txt",TMP,(int)getpid());writef(pf,prompt);
                 char cmd[B];snprintf(cmd,B,"a job '%s' --prompt-file '%s' --no-worktree --model %s --bg",pfolder,pf,pmodel);
-                (void)!system(cmd);}show=0;}
+                (void)!system(cmd);}raw_enter();show=0;}
             else if(k=='g'){
                 /* go: attach most recent live, or resume most recent dead */
                 Sess ss[32];int ns=load_sessions(T[i].d,ss,32);
                 if(!ns){printf("  Not run yet. Press [r] to run with claude.\n");show=0;}
-                else{/* pick most recent live, else most recent review (last in sorted list) */
-                    int pick=-1;
+                else{int pick=-1;
                     for(int j=ns-1;j>=0;j--)if(ss[j].st==1){pick=j;break;}
                     if(pick<0)pick=ns-1;
+                    raw_exit();
                     if(ss[pick].st==1){char cmd[P];snprintf(cmd,P,"tmux attach -t '%s'",ss[pick].tmx);
                         (void)!system(cmd);}
                     else{char cmd[P];snprintf(cmd,P,"claude -r %s",ss[pick].sid);
                         printf("  Resuming claude session...\n");(void)!system(cmd);}
-                    show=0;}}
-            else if(k=='p'){printf("  Priority (1-99999): ");fflush(stdout);
-                char buf[16];if(fgets(buf,16,stdin)){task_repri(i,atoi(buf));sync_bg();n=load_tasks(dir);}}
+                    raw_enter();show=0;}}
+            else if(k=='p'){char buf[16];if(raw_line("  Priority (1-99999): ",buf,16)){task_repri(i,atoi(buf));sync_bg();n=load_tasks(dir);}}
             else if(k=='d'){
                 {struct stat st;if(!stat(T[i].d,&st)&&!S_ISDIR(st.st_mode))task_todir(T[i].d);}
-                printf("  Deadline (MM-DD [HH:MM]): ");fflush(stdout);
-                char db[32];if(fgets(db,32,stdin)&&db[0]&&db[0]!='\n'){db[strcspn(db,"\n")]=0;
+                char db[32];if(raw_line("  Deadline (MM-DD [HH:MM]): ",db,32)){
                     char dn[32];dl_norm(db,dn,32);
                     char df[P];snprintf(df,P,"%s/deadline.txt",T[i].d);writef(df,dn);printf("\xe2\x9c\x93 %s\n",dn);sync_bg();}
                 task_show(i,n);show=0;}
-            else if(k=='/'||k=='s'){printf("  Search: ");fflush(stdout);
-                char q[128];if(!fgets(q,128,stdin)||q[0]=='\n'){show=0;continue;}q[strcspn(q,"\n")]=0;
+            else if(k=='/'||k=='s'){
+                char q[128];if(!raw_line("  Search: ",q,128)){show=0;continue;}
                 int mx[256],nm=0;for(int j=0;j<n&&nm<256;j++){
                     if(strcasestr(T[j].t,q)){mx[nm++]=j;continue;}
                     struct stat ss;if(stat(T[j].d,&ss))continue;
@@ -385,11 +368,10 @@ static int cmd_task(int argc,char**argv){
                         if(fc){if(strcasestr(fc,q)){mx[nm++]=j;fd=1;}free(fc);}}closedir(dd);
                 }if(!nm){printf("  No match\n");show=0;continue;}
                 for(int j=0;j<nm;j++)printf("  %d. [P%s] %.60s\n",j+1,T[mx[j]].p,T[mx[j]].t);
-                printf("  Go to (1-%d): ",nm);fflush(stdout);
-                char gb[8];if(fgets(gb,8,stdin)&&gb[0]!='\n'){int gi=atoi(gb)-1;if(gi>=0&&gi<nm)i=mx[gi];else show=0;}else show=0;}
+                char gb[8];if(raw_line("  Go to: ",gb,8)){int gi=atoi(gb)-1;if(gi>=0&&gi<nm)i=mx[gi];else show=0;}else show=0;}
             else if(k=='k'){if(i>0)i--;else{printf("  (first task)\n");show=0;}}
             else if(k=='q'||k==3||k==27)break;else if(k=='j')i++;else{show=0;}}
-        if(i>=n)puts("Done");return 0;}}
+        raw_exit();if(i>=n)puts("Done");return 0;}}
     if(!strcmp(sub,"pri")){if(argc<5){puts("a task pri # N");return 1;}
         int n=load_tasks(dir),x=atoi(argv[3])-1;if(x<0||x>=n){puts("x Invalid");return 1;}
         task_repri(x,atoi(argv[4]));sync_bg();return 0;}
