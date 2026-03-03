@@ -49,6 +49,19 @@ Shows:
   - SSH fail fallback: "x can't reach <device>, start new session? [y/n]"
   - New session fallback: opens claude in the worktree (has full code context)
 - **j (next)**: skip, review later
+- **Saved review prompts**: one-key sends a canned prompt, resumes agent, returns to review when done
+  - Built-in defaults: `n` = "make it negative tokens", `s` = "shorten, same or fewer tokens"
+  - Custom prompts: user saves their own (e.g. "extract to existing util", "use pcmd instead")
+  - Stored in `adata/git/review_prompts/` — syncs across devices
+  - Library grows organically from patterns you actually repeat
+
+### Token gate
+- Net new features: diff must be under 200 tokens
+- Replacements/refactors: diff must be net negative tokens
+- Deletions: no limit
+- On merge, check `a diff` token count — over limit blocks merge
+- Agent gets one auto-pass to simplify, then human reviews
+- Not an autonomous halving loop — single "too big, shrink it" pass to avoid runaway deletion
 
 ### Cross-device
 - `.a_done` is in the worktree, syncs via git — review from any device
