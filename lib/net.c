@@ -166,8 +166,7 @@ static int cmd_update(int argc, char **argv) {
     }
     /* Pull, rebuild, exec new */
     {char g[P];snprintf(g,P,"%s/.git",SDIR);if(access(g,F_OK)!=0){puts("x Not in git repo");init_db();load_cfg();list_all(1,1);gen_icache();return 0;}}
-    char c[B];snprintf(c, B, "git -C '%s' checkout -- a-i 2>/dev/null", SDIR); (void)!system(c);
-    snprintf(c, B, "git -C '%s' fetch 2>/dev/null", SDIR); (void)!system(c);
+    char c[B];snprintf(c, B, "git -C '%s' fetch 2>/dev/null", SDIR); (void)!system(c);
     snprintf(c, B, "git -C '%s' status -uno 2>/dev/null", SDIR);
     char out[B]; pcmd(c, out, B);
     if (strstr(out, "diverged")) {
@@ -181,7 +180,6 @@ static int cmd_update(int argc, char **argv) {
     }
     snprintf(c, B, "sh '%s/a.c'", SDIR);
     if (system(c) == 0) puts("\xe2\x9c\x93 Built"); else puts("x Build failed");
-    { char ai[P]; snprintf(ai,P,"%s/a-i",SDIR); if(!access(ai,X_OK)){snprintf(c,B,"'%s' --stop",ai);(void)!system(c);} }
     snprintf(c, B, "ln -sf '%s/a' '%s/.local/bin/a'", SDIR, getenv("HOME"));
     (void)!system(c);
     { char vp[P]; snprintf(vp, P, "%s/venv/bin/pip", AROOT);

@@ -104,10 +104,8 @@ build)
     R="${D%%/adata/worktrees/*}"
     $CC $WARN $HARDEN -DSRC="\"$D\"" -O3 -flto -fsyntax-only "$D/a.c" & P1=$!
     $CC -DSRC="\"$D\"" -isystem "$HOME/micromamba/include" -O3 -march=native -flto -w -o "$R/a" "$D/a.c" $LDFLAGS & P2=$!
-    $CC -O2 -march=native -w -o "$R/a-i" "$D/lib/aid.c" & P3=$!
-    wait $P1 && wait $P2 && wait $P3
-    BIN="$HOME/.local/bin"; mkdir -p "$BIN"; ln -sf "$R/a" "$BIN/a"; [ -f "$R/a-i" ] && ln -sf "$R/a-i" "$BIN/a-i"
-    "$R/a-i" --stop 2>/dev/null || :
+    wait $P1 && wait $P2
+    BIN="$HOME/.local/bin"; mkdir -p "$BIN"; ln -sf "$R/a" "$BIN/a"
     ;;
 analyze)
     _ensure_cc
@@ -168,7 +166,6 @@ install)
     _ensure_cc
     sh "$D/a.c" && ok "a compiled ($CC, $(wc -c < "$D/a") bytes)" || warn "Build failed"
     ln -sf "$D/a" "$BIN/a"
-    [[ -f "$D/a-i" ]] && ln -sf "$D/a-i" "$BIN/a-i" && chmod +x "$BIN/a-i" && ok "a-i installed" || :
     E="$HOME/projects/editor"
     [[ -f "$E/e.c" ]] || git clone https://github.com/seanpattencode/editor "$E" 2>/dev/null || :
     [[ -f "$E/e.c" ]] && sh "$E/e.c" install || :
