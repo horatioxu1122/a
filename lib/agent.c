@@ -24,7 +24,7 @@ static int cmd_agent(int argc, char **argv) {
     if (argc < 3) { puts("Usage: a agent [run <name>|g|c|l] <task>"); return 1; }
     /* a agent run <name> — PEP 723 → uv, else → python3 */
     if (!strcmp(argv[2],"run") && argc > 3) {
-        char py[P]; snprintf(py,P,"%s/personal/%s.py",SDIR,argv[3]);
+        char py[P]; snprintf(py,P,"%s/my/%s.py",SDIR,argv[3]);
         if (!fexists(py)) { fprintf(stderr,"x %s\n",py); return 1; }
         perf_disarm();
         char **na=malloc(((unsigned)argc+2)*sizeof(char*));
