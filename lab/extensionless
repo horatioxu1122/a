@@ -1,48 +1,75 @@
 #if 0
-# ── extensionless — a file with no extension that self-compiles as C ──
+# ── extensionless — self-compiling, self-bundling, multi-fallback ──
 #
-# WHAT THIS DEMONSTRATES:
-# A single file with no extension can be valid sh AND valid C simultaneously.
-# sh extensionless    → runs shell block, compiles itself, runs binary
-# cc -x c extensionless -o /tmp/extensionless && /tmp/extensionless  → manual
+# ONE FILE, FOUR LAYERS:
+# 1. Shell dispatcher — tries each strategy in order
+# 2. Embedded binary — appended after __BINARY__, instant exec
+# 3. C source — compiles itself if no cached binary
+# 4. Python fallback — works if no compiler at all
 #
-# WHY NO EXTENSION WORKS:
-# - sh doesn't care about extensions, reads content
-# - cc needs -x c to know it's C (or some compilers guess from #include)
-# - The #if 0 / #endif polyglot trick works identically
-#
-# WHAT YOU GAIN:
-# - Language-independent identity: rewrite in any lang, name never changes
-# - The file IS the command name — "extensionless" not "extensionless.c"
-# - curl https://example.com/extensionless | sh  works (no .c confusion)
-#
-# WHAT YOU LOSE:
-# - LLMs can't identify language without reading content
-# - Editors default to plaintext (no syntax highlighting)
-# - GitHub/tools won't auto-detect language
-# - cc requires explicit -x c flag
-#
-# VERDICT: a.c keeps .c because LLM legibility > 2 chars saved
+# sh extensionless           → run (binary > compile > python)
+# sh extensionless bundle    → compile + append binary into self
+# sh extensionless clean     → strip binary, source only
 
 [ -z "$BASH_VERSION" ] && exec bash "$0" "$@"
 set -e
-D="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 BIN="/tmp/extensionless_bin"
+MK="__BINARY__"
 
-CC=cc
-# extensionless files need -x c to tell compiler it's C
-$CC -x c -O2 -o "$BIN" "$0" 2>/dev/null && {
-    echo "✓ compiled extensionless file as C"
-    "$BIN"
-    rm -f "$BIN"
-    exit 0
+# ── try embedded binary (byte-offset extraction) ──
+run_binary() {
+    local off=$(grep -abom1 "^$MK" "$SELF" | cut -d: -f1)
+    [ -z "$off" ] && return 1
+    tail -c +$((off + ${#MK} + 2)) "$SELF" > "$BIN"
+    chmod +x "$BIN" && "$BIN" --version 2>/dev/null
 }
-echo "✗ compile failed"
-exit 1
+
+# ── try compile ──
+run_compile() {
+    command -v cc >/dev/null 2>&1 || return 1
+    cc -x c -O2 -o "$BIN" "$SELF" 2>/dev/null
+}
+
+# ── python fallback ──
+run_python() {
+    for p in python3 python; do
+        command -v $p >/dev/null 2>&1 && { $p -c 'print("hello from python fallback")'; return 0; }
+    done; return 1
+}
+
+# ── bundle: compile + append binary to self ──
+if [ "${1:-}" = "bundle" ]; then
+    run_compile || { echo "✗ compile failed"; exit 1; }
+    line=$(grep -an "^$MK" "$SELF" 2>/dev/null | head -1 | cut -d: -f1)
+    [ -n "$line" ] && head -n $((line-1)) "$SELF" > "$SELF.tmp" || cp "$SELF" "$SELF.tmp"
+    printf '\n%s\n' "$MK" >> "$SELF.tmp"
+    cat "$BIN" >> "$SELF.tmp"
+    mv "$SELF.tmp" "$SELF" && chmod +x "$SELF"
+    echo "✓ bundled $(wc -c < "$BIN") bytes"
+    rm -f "$BIN"; exit 0
+fi
+
+# ── clean: strip binary ──
+if [ "${1:-}" = "clean" ]; then
+    line=$(grep -an "^$MK" "$SELF" 2>/dev/null | head -1 | cut -d: -f1)
+    [ -n "$line" ] && { head -n $((line-1)) "$SELF" > "$SELF.tmp"
+        mv "$SELF.tmp" "$SELF" && chmod +x "$SELF"
+        echo "✓ stripped"; } || echo "no binary"
+    exit 0
+fi
+
+# ── dispatch ──
+if run_binary 2>/dev/null; then echo "[binary]"; "$BIN" "$@"
+elif run_compile;           then echo "[compiled]"; "$BIN" "$@"
+elif run_python;            then echo "[python]"
+else echo "✗ nothing works"; exit 1; fi
+rm -f "$BIN"; exit 0
 #endif
 
 #include <stdio.h>
-int main(void) {
-    puts("hello from a file with no extension, compiled as C");
+int main(int argc, char **argv) {
+    if (argc > 1 && !__builtin_strcmp(argv[1], "--version")) return 0;
+    puts("hello from extensionless — compiled C, no extension needed");
     return 0;
 }
