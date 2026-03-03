@@ -56,6 +56,13 @@ Shows:
 - Resume shows device origin, attempts SSH to remote if needed
 - Session IDs are device-local — fallback is new session in worktree with full context
 
+### Why this is safe
+- Daily user and dev — bugs surface immediately through usage, not test suites
+- Tight feedback loop: bad merge → hit the bug same day → `a revert` → move on
+- Cost of a bad merge is minutes, not days
+- Tests are a substitute for human attention in orgs where nobody touches code for weeks
+- Solo daily user already has the human attention — tests would just be overhead
+
 ### What this replaces
 - Drop `a done` PR creation entirely
 - Drop the "When done, run: a done" prompt append
