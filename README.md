@@ -3,14 +3,13 @@ AI agent manager. Human-AI interaction accelerator.
 
 ## Install
 
-**Mac/Linux:**
-```bash
-git clone https://github.com/seanpattencode/a.git && cd a && bash a.c install
+```
+curl -fsSL raw.githubusercontent.com/seanpattencode/a/main/a.c | sh
 ```
 
 **Windows:** Install WSL first (`wsl --install -d Ubuntu` in PowerShell as admin, restart), then run above in Ubuntu.
 
-**Termux:** `pkg install git -y && git clone https://github.com/seanpattencode/a.git ~/a && cd ~/a && bash a.c install`
+**Termux:** `pkg install git curl -y` first, then run above.
 
 ## Multi-device
 
