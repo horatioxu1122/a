@@ -212,9 +212,11 @@ static int cmd_jobs(int argc, char **argv) {
         printf("\n  [m]erge [r]esume [d]el [j/k/q]  ");fflush(stdout);
         int k=raw_key();putchar('\n');char gd[B]="",c[B];
         if(k=='m'||k=='d'){snprintf(c,B,"git -C '%s' rev-parse --show-toplevel 2>/dev/null",R[ri].p);pcmd(c,gd,B);gd[strcspn(gd,"\n")]=0;}
-        if(k=='m'&&gd[0]){raw_exit();char o[B]="";
-            snprintf(c,B,"cd '%s'&&git merge --no-edit 'j-%s' 2>&1",gd,R[ri].n);
+        if(k=='m'&&gd[0]){raw_exit();
+            snprintf(c,B,"cd '%s'&&git add -A&&git diff --cached --quiet||git commit -m 'job: auto-commit'",R[ri].p);pcmd(c,NULL,0);
+            char o[B]="";snprintf(c,B,"cd '%s'&&git merge --no-edit 'j-%s' 2>&1",gd,R[ri].n);
             if(pcmd(c,o,B)){snprintf(c,B,"cd '%s'&&claude -p 'resolve merge conflicts, git add, git commit'",gd);(void)!system(c);}
+            snprintf(c,B,"cd '%s'&&git rm -f .a_done 2>/dev/null&&git commit -m 'job: cleanup' 2>/dev/null",gd);pcmd(c,NULL,0);
             snprintf(c,B,"rm -rf '%s'&&git -C '%s' worktree prune&&git -C '%s' branch -d 'j-%s' 2>/dev/null",R[ri].p,gd,gd,R[ri].n);
             (void)!system(c);puts("  \xe2\x9c\x93");raw_enter();}
         else if(k=='d'){snprintf(c,B,"rm -rf '%s'",R[ri].p);pcmd(c,NULL,0);

@@ -457,7 +457,7 @@ static int cmd_j(int c,char**v){
         if(!system(gc)){printf("+ %s\n",wp);snprintf(wd,P,"%s",wp);}
     }
     printf("+ job: %s\n  %.*s\n",bname(wd),80,pr);
-    if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done, write .a_done in the repo root with:\n- Summary of what changed\n- Shell commands to test/verify the changes");
+    if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: git add -A && git commit -m 'job: <summary>', then write .a_done with summary + test commands");
     tm_ensure_conf();
     char jcmd[B];snprintf(jcmd,B,"while :;do claude --dangerously-skip-permissions;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",LOGDIR);
     if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",bname(wd));
