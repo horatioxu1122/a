@@ -462,7 +462,7 @@ static int cmd_j(int c,char**v){
     if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",bname(wd));
         tm_ensure_conf();tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);tm_go(sn);}
     char cm[B],pid[64];
-    snprintf(cm,B,"tmux new-window -P -F '#{pane_id}' -c '%s' '%s'",wd,jcmd);
+    snprintf(cm,B,"tmux new-window -d -n '%s' -P -F '#{pane_id}' -c '%s' '%s'",bname(wd),wd,jcmd);
     pcmd(cm,pid,64);pid[strcspn(pid,"\n")]=0;if(pid[0])send_prefix_bg(pid,"claude",wd,pr);
     return 0;}
 static int cmd_adb(int c,char**v){
