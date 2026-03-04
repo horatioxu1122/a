@@ -28,16 +28,10 @@ static int load_notes(const char *dir, const char *f) {
 static int cmd_note(int argc, char **argv) {
     if (getenv("A_BENCH")) return 0;
     char dir[P]; snprintf(dir,P,"%s/notes",SROOT); mkdirp(dir);
-    if(argc>2&&!strcmp(argv[2],"l")){do load_notes(dir,NULL);while(gn_archived);/* archive dupes */
-        DIR *d=opendir(dir);if(!d){puts("(none)");return 0;}struct dirent *e;int n=0;
-        while((e=readdir(d))){if(e->d_name[0]=='.'||!strstr(e->d_name,".txt"))continue;
-            char fp[P];snprintf(fp,P,"%s/%s",dir,e->d_name);kvs_t kv=kvfile(fp);
-            const char *t=kvget(&kv,"Text"),*s=kvget(&kv,"Status"),*dv=kvget(&kv,"Device"),*cr=kvget(&kv,"Created");
-            if(!t||(s&&strcmp(s,"pending")))continue;
-            printf("%3d. %s",++n,t);
-            if(dv||cr){printf("  \033[90m");if(dv)printf(" %s",dv);if(cr)printf(" %s",cr);printf("\033[0m");}
-            putchar('\n');}
-        closedir(d);if(!n)puts("(none)");return 0;}
+    if(argc>2&&!strcmp(argv[2],"l")){int n;do n=load_notes(dir,NULL);while(gn_archived);
+        if(!n){puts("(none)");return 0;}
+        for(int a=0;a<n-1;a++)for(int b=a+1;b<n;b++){const char*ta=strrchr(gnp[a],'_'),*tb=strrchr(gnp[b],'_');if(ta&&tb&&strcmp(ta,tb)>0){char t[P];memcpy(t,gnp[a],P);memcpy(gnp[a],gnp[b],P);memcpy(gnp[b],t,P);char s[512];memcpy(s,gnt[a],512);memcpy(gnt[a],gnt[b],512);memcpy(gnt[b],s,512);}}
+        for(int i=0;i<n;i++)printf("%3d. %s\n",i+1,gnt[i]);return 0;}
     if(argc<=2){int n=load_notes(dir,NULL);while(gn_archived)n=load_notes(dir,NULL);
         printf("%d pending\n  a n <text>  add\n  a n l       list\n  a n r       review\n  a n ?<q>    search\n",n);return 0;}
     if(argc>2&&(argv[2][0]=='?'||!strcmp(argv[2],"r")||!strcmp(argv[2],"review"))){

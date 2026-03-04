@@ -17,7 +17,7 @@ import sys, asyncio, os, pty, subprocess as S, struct, fcntl, termios, json, tim
 # never add client-side data fetching to show(). if a view needs data, prerender it.
 # bookmarkable flat paths via pushState: /term /note work on reload + cross-device
 _D = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-_A, _G = f'{_D}/a', f'{_D}/adata/git'
+_A, _G = f'{_D}/adata/local/a', f'{_D}/adata/git'
 def _kv(p):
     r = {}
     for l in open(p):
@@ -92,7 +92,7 @@ try{
   T.onData(function(d){ws(d);});
   new ResizeObserver(function(){F.fit();ws(JSON.stringify({cols:T.cols,rows:T.rows}));}).observe(document.getElementById('t'));
 }catch(e){document.body.innerHTML='<pre style="color:red;padding:20px">'+e+'</pre>';}
-nf.onsubmit=function(e){e.preventDefault();var c=nc.value.trim();if(c){fetch('/note',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'c='+encodeURIComponent(c)});nl.insertAdjacentHTML('afterbegin','<div style="padding:6px 0;color:#aaa;border-bottom:1px solid #222">'+c+'</div>');nc.value='';nc.placeholder='saved!';}};
+nf.onsubmit=function(e){e.preventDefault();var c=nc.value.trim();if(c){nc.value='';fetch('/note',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'c='+encodeURIComponent(c)}).then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(p){nl.insertAdjacentHTML('afterbegin','<div style="padding:6px 0;color:#aaa;border-bottom:1px solid #222">'+c+'</div>');nc.placeholder=p;}).catch(function(){nc.placeholder='FAIL';nc.style.borderColor='red';setTimeout(function(){nc.style.borderColor='#333'},2000);});}};
 var _tg=0;document.addEventListener('touchstart',function(e){var g=e.target.closest('[data-go]');if(g){e.preventDefault();_tg=1;go(g.dataset.go);}},{passive:false});
 document.addEventListener('click',function(e){if(_tg){_tg=0;return;}var g=e.target.closest('[data-go]');if(g)go(g.dataset.go);});
 show(views[location.pathname]?location.pathname:'/');
@@ -194,7 +194,7 @@ async def term_capture(r):
     return web.Response(text=p.stdout if p.returncode == 0 else f'no session: {s}')
 
 async def note_api(r):
-    if r.method == 'POST': d = await r.post(); c = d.get('c', '').strip(); c and S.Popen([_A, 'note', c]); return web.Response(text='ok')
+    if r.method == 'POST': d = await r.post(); c = d.get('c', '').strip(); ok = c and not S.run([_A, 'note', c], capture_output=True, timeout=5).returncode; return web.Response(text=f'{_G}/notes' if ok else '', status=200 if ok else 500)
     return web.Response(text='')
 async def note_archive(r): d=await r.json();f=os.path.basename(d.get('f',''));nd=f'{_G}/notes';ad=f'{nd}/.archive';os.makedirs(ad,exist_ok=True);p=f'{nd}/{f}';os.path.isfile(p) and os.rename(p,f'{ad}/{f}');return web.Response(text='ok')
 async def sync_api(r): S.run(f'cd {_G}&&git pull -q --rebase&&git add -A&&git commit -qm sync;git push -q',shell=True,timeout=15,capture_output=True);return web.Response(text='ok')
