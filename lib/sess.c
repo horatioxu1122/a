@@ -29,6 +29,11 @@ static int cmd_sess(int argc, char **argv) {
         is_prompt = 1;
     }
     char sn[256]; snprintf(sn, 256, "%s-%s", s->name, bname(wd));
+    /* claim ghost if matches */
+    {char gf[P];snprintf(gf,P,"%s/ghost",DDIR);char*gh=readf(gf,NULL);
+    if(gh){gh[strcspn(gh,"\n")]=0;if(!strcmp(gh,sn)&&tm_has(sn)){unlink(gf);free(gh);
+        if(is_prompt&&prompt[0]){tm_send(sn,prompt);usleep(100000);tm_key(sn,"Enter");}
+        tm_go(sn);return 0;}free(gh);}}
     /* Inside tmux = split pane mode (user wants agent HERE, not session switch) */
     if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
         perf_disarm();

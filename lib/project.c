@@ -11,6 +11,22 @@ static int cmd_project_num(int argc, char **argv, int idx) { (void)argc; (void)a
         if (!dexists(p->path)) { printf("x %s\n", p->path); return 1; }
         snprintf(c,B,"%s/cd_target",DDIR); writef(c,p->path); printf("%s\n",p->path);
         if(!fork()){snprintf(c,B,"git -C '%s' ls-remote --exit-code origin HEAD>/dev/null 2>&1&&touch '%s/logs/push.ok'",p->path,DDIR);(void)!system(c);_exit(0);}
+        /* ghost: pre-spawn default agent */
+        if(!fork()){setsid();load_sess();
+            const char*dk=cfget("default_agent");if(!dk[0])dk="c";
+            sess_t*gs=find_sess(dk);if(!gs)_exit(0);
+            char sn[256];snprintf(sn,256,"%s-%s",gs->name,p->name);
+            if(tm_has(sn))_exit(0);
+            char gf[P];snprintf(gf,P,"%s/ghost",DDIR);
+            char*og=readf(gf,NULL);if(og){og[strcspn(og,"\n")]=0;
+                char k[B];snprintf(k,B,"tmux kill-session -t '=%s' 2>/dev/null",og);(void)!system(k);free(og);}
+            tm_ensure_conf();create_sess(sn,p->path,gs->cmd);
+            send_prefix_bg(sn,gs->name,p->path,NULL);writef(gf,sn);
+            if(!fork()){sleep(30);char*g=readf(gf,NULL);
+                if(g){g[strcspn(g,"\n")]=0;if(!strcmp(g,sn)){
+                    char k[B];snprintf(k,B,"tmux kill-session -t '=%s' 2>/dev/null",sn);(void)!system(k);unlink(gf);}free(g);}
+                _exit(0);}
+            _exit(0);}
         return 0;
     }
     int ai = idx - NPJ;
