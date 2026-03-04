@@ -104,8 +104,8 @@ node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v
 build)
     # Two-pass parallel: checker (Weverything, ~55ms) + build (-O0, ~100ms).
     # Checker is compile-time only — binary has zero diagnostic overhead.
-    # Runtime is identical across -O0/-O3/TCC/PGO (~0.7ms per invocation)
-    # because all time is in syscalls (fork/exec/IO), not C compute.
+    # On fast devices runtime is syscall-bound (-O0≈O3). On weak devices
+    # (Termux) C compute matters — bg -O3 replaces -O0 binary when ready.
     # Binary goes in adata/local/, symlinked to ~/.local/bin/a.
     _ensure_cc
     _warn_flags
@@ -115,6 +115,7 @@ build)
     $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" & P2=$!
     wait $P1 && wait $P2
     ln -sf "$ABIN/a" "$BIN/a"
+    ($CC -DSRC="\"$D\"" -O3 -march=native -flto -w -o "$ABIN/a.opt" "$D/a.c"&&mv "$ABIN/a.opt" "$ABIN/a") 2>/dev/null &
     ;;
 analyze)
     _ensure_cc
