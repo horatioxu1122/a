@@ -38,11 +38,7 @@ HTML = '''<!doctype html>
   <a onclick="fetch('/restart')" style="font-size:16px;color:#666;cursor:pointer;padding:10px 20px">restart server</a>
 </div>
 <div id=v_term style="display:none;height:100vh">
-  <div id=t style="height:calc(100vh - 140px)"></div>
-  <div id=bar style="position:fixed;bottom:0;left:0;right:0;height:140px;padding:10px;box-sizing:border-box;background:#1a1a2e;border-top:2px solid #4a4a6a;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px">
-    <input id=i autofocus placeholder="command" style="width:100%;padding:18px;font-size:20px;background:#0d0d1a;color:#fff;border:2px solid #4a4a6a;border-radius:8px;outline:none;box-sizing:border-box">
-    <button onclick="var v=i.value;i.value='';ws(v+'\\n');i.focus()" style="flex:1;padding:18px;font-size:22px;min-width:60px">&#9654;</button>
-  </div>
+  <div id=t style="height:100vh"></div>
 </div>
 <div id=v_jobs style="display:none;height:100vh;flex-direction:column;align-items:center;justify-content:center;gap:20px;color:#fff">
   <select id=jp style="width:95vw;font-size:20px;padding:12px;background:#111;color:#fff;border:1px solid #333;border-radius:8px">__PO__</select>
@@ -81,7 +77,6 @@ window.onpopstate=function(){show(location.pathname);};
 try{
   T=new Terminal();F=new(FitAddon.FitAddon||FitAddon)();
   T.loadAddon(F);T.open(document.getElementById('t'));try{T.loadAddon(new WebglAddon.WebglAddon())}catch(e){}
-  i.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();var v=i.value;i.value='';ws(v+'\\n');i.focus();}});
   function connect(){
     W=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');
     W.onopen=function(){v_dc.style.display='none';F.fit();ws(JSON.stringify({cols:T.cols,rows:T.rows}));};
