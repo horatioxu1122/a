@@ -43,7 +43,7 @@ static int cmd_log(int argc, char **argv) {
             pcmd(c, cnt, 64); int loc = atoi(cnt);
             if (!strcmp(dn, DEV)) { printf("%-16s %6d %6s  local (this device)\n", dn, loc, "-"); }
             else {
-                snprintf(c, B, "'%s/a' ssh '%s' 'ls ~/projects/a/adata/backup/%s/*.jsonl 2>/dev/null | wc -l' 2>/dev/null", SDIR, dn, dn);
+                snprintf(c, B, "'%s/a' ssh '%s' 'ls ~/projects/a/adata/backup/%s/*.jsonl 2>/dev/null | wc -l' 2>/dev/null", DDIR, dn, dn);
                 pcmd(c, cnt, 64); int rn = atoi(cnt);
                 printf("%-16s %6d %6d  %s\n", dn, loc, rn, rn ? "remote \xe2\x9c\x93" : "remote (no JSONL)");
             }
@@ -186,14 +186,13 @@ static int cmd_update(int argc, char **argv) {
           if (system(c) == 0) puts("\xe2\x9c\x93 Python deps"); else puts("x pip failed");
       }
     }
-    snprintf(c, B, "bash '%s/a.c' shell 2>/dev/null", SDIR); (void)!system(c);
-    snprintf(c, B, "bash '%s/a.c' node 2>/dev/null", SDIR); (void)!system(c);
+    snprintf(c, B, "bash '%s/a.c' shell 2>&-;bash '%s/a.c' node 2>&-", SDIR, SDIR); (void)!system(c);
     /* Termux: ensure Claude Code sandbox dir + tmux env on update */
     if (access("/data/data/com.termux",F_OK)==0) {
         char td[P]; snprintf(td,P,"%s/.tmp",HOME); mkdirp(td);
         snprintf(c,B,"tmux set-environment -g CLAUDE_CODE_TMPDIR '%s' 2>/dev/null",td); (void)!system(c);
     }
-    snprintf(c, B, "'%s/a' update cache", SDIR); (void)!system(c);
+    snprintf(c, B, "'%s/a' update cache", DDIR); (void)!system(c);
     ensure_adata();
     sync_repo();
     /* rclone: append-only timestamped */
@@ -208,7 +207,7 @@ static int cmd_update(int argc, char **argv) {
     bg_backup_jsonl();
     if (sub && !strcmp(sub, "all")) {
         puts("\n--- Broadcasting to SSH hosts ---");
-        snprintf(c, B, "'%s/a' ssh all 'a update'", SDIR); (void)!system(c);
+        snprintf(c, B, "'%s/a' ssh all 'a update'", DDIR); (void)!system(c);
     }
     return 0;
 }
