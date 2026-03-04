@@ -57,9 +57,7 @@ _warn_flags() {
         WARN="-std=c17 -Werror -Weverything -Wno-padded -Wno-disabled-macro-expansion -Wno-reserved-id-macro -Wno-documentation -Wno-declaration-after-statement -Wno-unsafe-buffer-usage -Wno-used-but-marked-unused --system-header-prefix=/usr/include -isystem /usr/local/include"
         for F in -Wno-pre-c11-compat -Wno-implicit-void-ptr-cast -Wno-nullable-to-nonnull-conversion -Wno-poison-system-directories; do
             $CC -Werror $F -x c -c /dev/null -o /dev/null 2>/dev/null && WARN+=" $F" || :; done
-        HARDEN="-fstack-protector-strong -ftrivial-auto-var-init=zero -fno-common -D_FORTIFY_SOURCE=3 -fvisibility=hidden"
-        [[ "$(uname)" != "Darwin" ]] && HARDEN+=" -fsanitize=safe-stack -fsanitize=cfi -fstack-clash-protection -fcf-protection=full" || :
-    else WARN="-std=c17 -w"; HARDEN=""; fi
+    else WARN="-std=c17 -w"; fi
 }
 
 _shell_funcs() {
@@ -106,10 +104,12 @@ _install_node() {
 case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
 build)
-    # LLMs: always "sh a.c && command a <args>" to test (see comment below)
+    # Two-pass: strict checker (Weverything) enforces code quality at compile
+    # time; binary compiles with only optimization flags for max speed.
+    # Checker catches bugs, binary has zero diagnostic overhead.
+    # Binary goes in adata/local/, symlinked to ~/.local/bin/a.
     _ensure_cc
     _warn_flags
-    # Binary goes in adata/local/ — all persistent data in one place
     R="${D%%/adata/worktrees/*}"; ABIN="$R/adata/local"; mkdir -p "$ABIN"
     BIN="$HOME/.local/bin"; mkdir -p "$BIN"
     $CC $WARN -DSRC="\"$D\"" -fsyntax-only "$D/a.c" & P1=$!
