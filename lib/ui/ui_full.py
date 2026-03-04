@@ -2,20 +2,8 @@
 # requires-python = ">=3.10"
 # dependencies = ["aiohttp>=3.9"]
 # ///
-import sys, asyncio, os, pty, subprocess as S, struct, fcntl, termios, json, time, sqlite3; from html import escape as E; from aiohttp import web
-
-# terminal is the API: ALL logic routes through local terminal commands (the `a` binary)
-# so AI agents and humans can debug in terminal and know logic works identically in UI.
-# no business logic in UI — UI calls CLI commands, never reimplements them.
-# to add UI features: first build+debug as terminal command, then add UI that calls it.
-# terminal is handled through tmux as our session manager and I/O device.
-# all terminal ops should be tmux sessions — inspectable via tmux capture-pane,
-# controllable via tmux send-keys, debuggable by attaching: tmux attach -t <session>.
-# single-page app: all views in one HTML, show/hide for instant switching
-# <1ms view transitions are mandatory. all data is server-side prerendered into
-# the HTML so view switching is a pure CSS display toggle — no fetch, no render.
-# never add client-side data fetching to show(). if a view needs data, prerender it.
-# bookmarkable flat paths via pushState: /term /note work on reload + cross-device
+import sys, asyncio, os, pty, subprocess as S, struct, fcntl, termios, json, sqlite3; from html import escape as E; from aiohttp import web
+# UI calls CLI (a binary) — no business logic here. prerendered SPA, CSS toggle, tmux sessions.
 _D = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 _A, _G = f'{_D}/adata/local/a', f'{_D}/adata/git'
 def _kv(p):
@@ -29,23 +17,23 @@ HTML = '''<!doctype html>
 <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xterm-addon-webgl@0.16.0/lib/xterm-addon-webgl.min.js"></script>
-<style>*{font-family:system-ui}[data-go]{touch-action:manipulation}.b{padding:16px 24px;font-size:24px;background:#1a1a2e;color:#4af;border:2px solid #4af;border-radius:8px;cursor:pointer}</style>
+<style>*{font-family:system-ui}[data-go]{touch-action:manipulation}.b{padding:16px 24px;font-size:24px;background:#1a1a2e;color:#4af;border:2px solid #4af;border-radius:8px;cursor:pointer}.n{font-size:28px;color:#4af;cursor:pointer;padding:20px 40px;border:2px solid #4af;border-radius:12px}.f{background:#111;color:#fff;border:1px solid #333;border-radius:8px}.ni{padding:6px 0;color:#aaa;border-bottom:1px solid #222;display:flex;align-items:center}.nx{background:none;border:1px solid #555;color:#888;padding:12px 20px;margin-right:10px;border-radius:4px;cursor:pointer;font-size:16px}</style>
 <body style="margin:0;height:100vh;background:#000;overflow:hidden">
 <div id=v_index style="display:none;height:100vh;flex-direction:column;align-items:center;justify-content:center;gap:20px">
-  <a data-go="/jobs" style="font-size:28px;color:#4af;cursor:pointer;padding:20px 40px;border:2px solid #4af;border-radius:12px">jobs</a>
-  <a data-go="/term" style="font-size:28px;color:#4af;cursor:pointer;padding:20px 40px;border:2px solid #4af;border-radius:12px">terminal</a>
-  <a data-go="/note" style="font-size:28px;color:#4af;cursor:pointer;padding:20px 40px;border:2px solid #4af;border-radius:12px">note</a>
+  <a data-go="/jobs" class=n>jobs</a>
+  <a data-go="/term" class=n>terminal</a>
+  <a data-go="/note" class=n>note</a>
   <a onclick="fetch('/restart')" style="font-size:16px;color:#666;cursor:pointer;padding:10px 20px">restart server</a>
 </div>
 <div id=v_term style="display:none;height:100vh">
   <div id=t style="height:100vh"></div>
 </div>
 <div id=v_jobs style="display:none;height:100vh;flex-direction:column;align-items:center;justify-content:center;gap:20px;color:#fff">
-  <select id=jp style="width:95vw;font-size:20px;padding:12px;background:#111;color:#fff;border:1px solid #333;border-radius:8px">__PO__</select>
-  <select id=jd style="width:95vw;font-size:20px;padding:12px;background:#111;color:#fff;border:1px solid #333;border-radius:8px">__DO__</select>
+  <select id=jp class=f style="width:95vw;font-size:20px;padding:12px">__PO__</select>
+  <select id=jd class=f style="width:95vw;font-size:20px;padding:12px">__DO__</select>
   <div style="display:flex;gap:10px;width:95vw;align-items:center">
-    <input id=jc placeholder="prompt" onkeydown="if(event.key==='Enter')runjob()" style="flex:1;font-size:24px;padding:16px;background:#111;color:#fff;border:1px solid #333;border-radius:8px">
-    <select id=jn style="font-size:20px;padding:12px;background:#111;color:#fff;border:1px solid #333;border-radius:8px"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+    <input id=jc placeholder="prompt" onkeydown="if(event.key==='Enter')runjob()" class=f style="flex:1;font-size:24px;padding:16px">
+    <select id=jn class=f style="font-size:20px;padding:12px"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
     <label style="color:#4af;font-size:18px;display:flex;align-items:center;gap:4px"><input type=checkbox id=jpr>PR</label>
     <button class=b onclick="runjob()">run</button>
   </div>
@@ -53,7 +41,7 @@ HTML = '''<!doctype html>
 </div>
 <div id=v_note style="display:none;height:100vh;flex-direction:column;padding-top:20px;align-items:center">
   <form id=nf style="display:flex;gap:10px;width:95vw;align-items:center">
-    <input id=nc autofocus placeholder="note" style="flex:1;font-size:24px;padding:16px;background:#111;color:#fff;border:1px solid #333;border-radius:8px">
+    <input id=nc autofocus placeholder="note" class=f style="flex:1;font-size:24px;padding:16px">
     <button class=b type=submit>save</button>
     <button class=b type=button onclick="this.textContent='...';fetch('/api/sync').then(()=>location.reload())">sync</button>
     <button class=b type=button data-go="/term">term</button>
@@ -87,7 +75,7 @@ try{
   T.onData(function(d){ws(d);});
   new ResizeObserver(function(){F.fit();ws(JSON.stringify({cols:T.cols,rows:T.rows}));}).observe(document.getElementById('t'));
 }catch(e){document.body.innerHTML='<pre style="color:red;padding:20px">'+e+'</pre>';}
-nf.onsubmit=function(e){e.preventDefault();var c=nc.value.trim();if(c){nc.value='';fetch('/note',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'c='+encodeURIComponent(c)}).then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(p){nl.insertAdjacentHTML('afterbegin','<div style="padding:6px 0;color:#aaa;border-bottom:1px solid #222">'+c+'</div>');nc.placeholder=p;}).catch(function(){nc.placeholder='FAIL';nc.style.borderColor='red';setTimeout(function(){nc.style.borderColor='#333'},2000);});}};
+nf.onsubmit=function(e){e.preventDefault();var c=nc.value.trim();if(c){nc.value='';fetch('/note',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'c='+encodeURIComponent(c)}).then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(p){nl.insertAdjacentHTML('afterbegin','<div class=ni>'+c+'</div>');nc.placeholder=p;}).catch(function(){nc.placeholder='FAIL';nc.style.borderColor='red';setTimeout(function(){nc.style.borderColor='#333'},2000);});}};
 var _tg=0;document.addEventListener('touchstart',function(e){var g=e.target.closest('[data-go]');if(g){e.preventDefault();_tg=1;go(g.dataset.go);}},{passive:false});
 document.addEventListener('click',function(e){if(_tg){_tg=0;return;}var g=e.target.closest('[data-go]');if(g)go(g.dataset.go);});
 show(views[location.pathname]?location.pathname:'/');
@@ -114,7 +102,7 @@ async def spa(r):
             if not f.endswith('.txt') or f.startswith('.'): continue
             try:
                 for l in open(f'{nd}/{f}'):
-                    if l.startswith('Text: '): no += f'<div style="padding:6px 0;color:#aaa;border-bottom:1px solid #222;display:flex;align-items:center"><button onclick="arcn(\'{f}\',this)" style="background:none;border:1px solid #555;color:#888;padding:12px 20px;margin-right:10px;border-radius:4px;cursor:pointer;font-size:16px">x</button><span>{E(l[6:].strip())}</span></div>'; break
+                    if l.startswith('Text: '): no += f'<div class=ni><button onclick="arcn(\'{f}\',this)" class=nx>x</button><span>{E(l[6:].strip())}</span></div>'; break
             except: pass
     try:
         jo = S.run([_A,'jobs'],capture_output=True,text=True,timeout=10).stdout or 'No jobs'
