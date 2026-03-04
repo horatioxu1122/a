@@ -66,7 +66,7 @@ _shell_funcs() {
     for RC in "$HOME/.bashrc" "$HOME/.zshrc"; do
         touch "$RC"
         grep -q '.local/bin' "$RC" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$RC"
-        sed -i -e '/^_ADD=/d' -e '/^a() {/,/^}/d' -e '/^aio() {/,/^}/d' -e '/^ai() {/,/^}/d' "$RC" 2>/dev/null||:
+        sed -i.bak '/^_ADD=/d;/^a() {/,/^}/d;/^aio() /d;/^ai() /d' "$RC";rm "$RC.bak"
         echo "_ADD=\"${D%%/adata/worktrees/*}/adata/local\"" >> "$RC"
         cat >> "$RC" << 'AFUNC'
 a() {
