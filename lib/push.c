@@ -131,9 +131,11 @@ static int cmd_diff(int argc, char **argv) {
     /* Full diff — colored + stats */
     char cwd[P]; if(!getcwd(cwd,P)) snprintf(cwd,P,".");
     char br[128]; pcmd("git rev-parse --abbrev-ref HEAD 2>/dev/null",br,128); br[strcspn(br,"\n")]=0;
-    char tgt[256]; snprintf(tgt,256,"origin/%s",sel?sel:(strncmp(br,"wt-",3)&&strncmp(br,"j-",2)&&strncmp(br,"job-",4))?br:"main");
+    int wt=!sel&&(!strncmp(br,"wt-",3)||!strncmp(br,"j-",2)||!strncmp(br,"job-",4));
+    char tgt[256]; if(wt){pcmd("git merge-base origin/main HEAD 2>/dev/null",tgt,256);tgt[strcspn(tgt,"\n")]=0;}
+    if(!wt||!tgt[0])snprintf(tgt,256,"origin/%s",sel?sel:wt?"main":br);
     char ts[64]; pcmd("git log -1 --format=%cd --date=format:'%Y-%m-%d %I:%M:%S %p' 2>/dev/null",ts,64); ts[strcspn(ts,"\n")]=0;
-    if(sel) printf("%s -> %s\n",br,tgt); else printf("%s\n%s -> %s\n%s\n",cwd,br,tgt,ts);
+    if(sel)printf("%s -> origin/%s\n",br,sel);else{printf("%s\n%s -> ",cwd,br);if(wt&&tgt[0]!='o')printf("fork %.7s",tgt);else printf("%s",tgt);printf("\n%s\n",ts);}
     struct{char name[256];int al,dl,ab,db;}fs[256]; int nf=0,cf=-1;
     #define FS(fn) do{cf=-1;for(int _i=0;_i<nf;_i++)if(!strcmp(fs[_i].name,fn)){cf=_i;break;} \
         if(cf<0&&nf<256){cf=nf;memset(&fs[nf],0,sizeof(fs[0]));snprintf(fs[nf].name,256,"%s",fn);nf++;}}while(0)
@@ -159,6 +161,7 @@ static int cmd_diff(int argc, char **argv) {
     HR; printf("%d file%s, +%d/-%d lines",nf,nf!=1?"s":"",ti,td);
     if(nut)printf(" (incl. untracked)");if(nd)printf(", %d deleted",nd);
     printf(" | Net: %+d lines, %+d tok\n",ti-td,(ta-tb)/4);
+    if(wt&&tgt[0]!='o'){char rc[B],r[16];snprintf(rc,B,"git rev-list %.7s..origin/main --count 2>/dev/null",tgt);pcmd(rc,r,16);r[strcspn(r,"\n")]=0;if(r[0]&&r[0]!='0')printf("main: +%s commits since fork\n",r);}
     if(!sel) puts("\ndiff # = last #");
     return 0;
     #undef FS
