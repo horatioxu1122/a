@@ -111,11 +111,12 @@ build)
     _warn_flags
     R="${D%%/adata/worktrees/*}"; ABIN="$R/adata/local"; mkdir -p "$ABIN"
     BIN="$HOME/.local/bin"; mkdir -p "$BIN"
+    echo $$ > "$ABIN/.bld"
     $CC $WARN -DSRC="\"$D\"" -fsyntax-only "$D/a.c" & P1=$!
     $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" & P2=$!
     wait $P1 && wait $P2
     ln -sf "$ABIN/a" "$BIN/a"
-    (F="-DSRC=\"$D\" -O3 -march=native -flto -w" A=$ABIN P=$A/pgo;rm -rf $P;$CC $F -fprofile-generate=$P -o $A/a.pg $D/a.c&&$A/a.pg i</dev/null;llvm-profdata merge $P -o $P/p&&$CC $F -fprofile-use=$P/p -o $A/a.opt $D/a.c||$CC $F -o $A/a.opt $D/a.c;mv $A/a.opt $A/a 2>&-;rm -rf $P $A/a.pg)>&- 2>&- &
+    (F="-DSRC=\"$D\" -O3 -march=native -flto -w" A=$ABIN P=$A/pgo;rm -rf $P;$CC $F -fprofile-generate=$P -o $A/a.pg $D/a.c&&$A/a.pg i</dev/null;llvm-profdata merge $P -o $P/p&&$CC $F -fprofile-use=$P/p -o $A/a.opt $D/a.c||$CC $F -o $A/a.opt $D/a.c;[ "$(cat $A/.bld 2>&-)" = "$$" ]&&mv $A/a.opt $A/a 2>&-;rm -rf $P $A/a.pg $A/a.opt)>&- 2>&- &
     ;;
 analyze)
     _ensure_cc
