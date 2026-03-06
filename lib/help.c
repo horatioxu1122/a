@@ -56,19 +56,19 @@ static void list_all(int cache, int quiet) {
     char pfile[P]; snprintf(pfile, P, "%s/projects.txt", DDIR);
     /* Write projects.txt for shell function */
     FILE *pf = fopen(pfile, "w");
-    if (pf) { for (int i = 0; i < NPJ; i++) fprintf(pf, "%s\n", PJ[i].path); fclose(pf); }
+    {int i; if (pf) { for (i = 0; i < NPJ; i++) fprintf(pf, "%s\n", PJ[i].path); fclose(pf); }}
     if (quiet && !cache) return;
     char out[B*4] = ""; int o = 0;
     if (NPJ) {
         o += sprintf(out + o, "PROJECTS:\n");
-        for (int i = 0; i < NPJ; i++) {
+        int i; for (i = 0; i < NPJ; i++) {
             char mk = dexists(PJ[i].path) ? '+' : (PJ[i].repo[0] ? '~' : 'x');
             o += sprintf(out + o, "  %d. %c %s\n", i, mk, PJ[i].path);
         }
     }
     if (NAP) {
         o += sprintf(out + o, "COMMANDS:\n");
-        for (int i = 0; i < NAP; i++) {
+        int i; for (i = 0; i < NAP; i++) {
             char dc[64]; snprintf(dc, 64, "%s", AP[i].cmd);
             o += sprintf(out + o, "  %d. %s -> %s\n", NPJ + i, AP[i].name, dc);
         }
@@ -86,8 +86,8 @@ static void gen_icache(void) {
     load_proj(); load_apps();
     char ic[P]; snprintf(ic, P, "%s/i_cache.txt", DDIR);
     FILE *f = fopen(ic, "w"); if (!f) return;
-    for (int i=0;i<NPJ;i++) fprintf(f, "%d: %s\tproject\n", i, PJ[i].name);
-    for (int i=0;i<NAP;i++) fprintf(f, "%d: %s\tcmd\n", NPJ+i, AP[i].name);
+    int i; for (i=0;i<NPJ;i++) fprintf(f, "%d: %s\tproject\n", i, PJ[i].name);
+    for (i=0;i<NAP;i++) fprintf(f, "%d: %s\tcmd\n", NPJ+i, AP[i].name);
     fputs("add\tregister project\nadb\tandroid debug\nagent\tai agent run\nagent run\trun agent task\n"
     "all\tall ai sessions\napk\tbuild android app\nask\task ai question\nattach\tjoin tmux pane\n"
     "cal\tcalendar\ncal add\tadd event\ncal ai\tai calendar\n"
@@ -121,7 +121,7 @@ static void gen_icache(void) {
     "work\tgit worktrees\nx\texperimental\n",f);
     char sd[P]; snprintf(sd, P, "%s/ssh", SROOT);
     char sp[32][P]; int sn = listdir(sd, sp, 32);
-    for (int i=0;i<sn;i++) {
+    for (i=0;i<sn;i++) {
         kvs_t kv = kvfile(sp[i]);
         const char *nm = kvget(&kv,"Name"); if (!nm) continue;  fprintf(f, "ssh %s\thost\n", nm);
     }
