@@ -6,16 +6,14 @@ static hub_t HJ[MJ]; static int NJ;
 static const char *dfl(const char *a, const char *b) { return a ? a : b; }
 
 static void hub_load(void) {
-    char hd[P]; snprintf(hd,P,"%s/agents",SROOT); mkdirp(hd);
-    char paths[256][P]; int np=listdir(hd,paths,256); NJ=0;
-    for(int i=np-1;i>=0&&NJ<MJ;i--){
-        kvs_t kv=kvfile(paths[i]); const char *nm=kvget(&kv,"Name"); if(!nm) continue;
-        int dup=0;for(int j=0;j<NJ;j++)if(!strcmp(HJ[j].n,nm)){dup=1;break;} if(dup)continue;
-        hub_t *j=&HJ[NJ++]; const char *en=kvget(&kv,"Enabled");
-        snprintf(j->n,64,"%s",nm); snprintf(j->s,16,"%s",dfl(kvget(&kv,"Schedule"),""));
-        snprintf(j->p,512,"%s",dfl(kvget(&kv,"Prompt"),"")); snprintf(j->d,64,"%s",dfl(kvget(&kv,"Device"),DEV));
-        j->en=!en||en[0]=='t'||en[0]=='T'; snprintf(j->lr,24,"%s",dfl(kvget(&kv,"Last-Run"),""));
-    }
+    char hd[P],fp[P];snprintf(hd,P,"%s/agents",SROOT);mkdirp(hd);NJ=0;
+    snprintf(fp,P,"ls -t %s/*.txt 2>/dev/null",hd);FILE*f=popen(fp,"r");if(!f)return;
+    while(fgets(fp,P,f)&&NJ<MJ){fp[strcspn(fp,"\n")]=0;
+        kvs_t kv=kvfile(fp);const char*nm=kvget(&kv,"Name");if(!nm)continue;
+        int di=0;for(;di<NJ&&strcmp(HJ[di].n,nm);di++){} if(di<NJ)continue;
+        hub_t*j=&HJ[NJ++];const char*en=kvget(&kv,"Enabled");
+        snprintf(j->n,64,"%s",nm);snprintf(j->s,16,"%s",dfl(kvget(&kv,"Schedule"),""));snprintf(j->p,512,"%s",dfl(kvget(&kv,"Prompt"),""));snprintf(j->d,64,"%s",dfl(kvget(&kv,"Device"),DEV));
+        j->en=!en||en[0]=='t'||en[0]=='T';snprintf(j->lr,24,"%s",dfl(kvget(&kv,"Last-Run"),""));}pclose(f);
 }
 
 static void hub_save(hub_t *j) {
@@ -64,10 +62,9 @@ static int cmd_hub(int argc, char **argv) {
     char hd[P]; snprintf(hd,P,"%s/agents",SROOT);
 
     if(!sub) {
-        char url[512],c[B]; snprintf(c,B,"git -C '%s' remote get-url origin 2>/dev/null",SROOT);
-        pcmd(c,url,512); url[strcspn(url,"\n")]=0;
+        char url[512],c[B];snprintf(c,B,"git -C '%s' remote get-url origin 2>/dev/null",SROOT);
+        pcmd(c,url,512);url[strcspn(url,"\n")]=0;
         printf("Hub: %d jobs\n  %s\n  %s\n\n",NJ,hd,url);
-        /* timer status */
         char tl[B*4];
 #ifdef __ANDROID__
         pcmd("crontab -l 2>/dev/null",tl,sizeof(tl));
@@ -111,9 +108,8 @@ static int cmd_hub(int argc, char **argv) {
         if(!strcmp(sub,"run")) {
             char cmd[B]; if(!strncmp(j->p,"a ",2)) snprintf(cmd,B,"%s %s",G_argv[0],j->p+2);
             else snprintf(cmd,B,"%s",j->p);
-            printf("Running %s...\n",j->n); fflush(stdout);
-            /* capture output for log */
-            char lf[P]; snprintf(lf,P,"%s/hub.log",DDIR);
+            printf("Running %s...\n",j->n);fflush(stdout);
+            char lf[P];snprintf(lf,P,"%s/hub.log",DDIR);
             FILE *fp=popen(cmd,"r"); char out[B*4]=""; int ol=0;
             if(fp) { char b[B]; while(fgets(b,B,fp)&&ol<(int)sizeof(out)-B) { fputs(b,stdout); ol+=sprintf(out+ol,"%s",b); } pclose(fp); }
             time_t now=time(NULL); struct tm *t=localtime(&now); char ts[32];
