@@ -52,13 +52,11 @@ static int cmd_e(int argc, char **argv) {
         (void)!system("curl -sL https://raw.githubusercontent.com/seanpattencode/editor/main/e.c|clang -xc -Wno-everything -o ~/.local/bin/e -");
         return 0;
     }
-    if (getenv("TMUX")) execlp("e", "e", ".", (char*)NULL);
-    else {
-        init_db(); load_cfg();
-        char wd[P]; if(!getcwd(wd,P)) snprintf(wd,P,"%s",HOME);
-        create_sess("edit", wd, "e .");
-        execlp("tmux", "tmux", "attach", "-t", "edit", (char*)NULL);
-    }
+    if (getenv("TMUX")) execlp("e", "e", (char*)NULL);
+    init_db(); load_cfg();
+    char wd[P]; if(!getcwd(wd,P)) snprintf(wd,P,"%s",HOME);
+    create_sess("edit", wd, "e");
+    execlp("tmux", "tmux", "attach", "-t", "edit", (char*)NULL);
     return 0;
 }
 

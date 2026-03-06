@@ -553,7 +553,7 @@ __attribute__((noreturn)) static void perf_alarm(int sig) {
 static void perf_arm(const char *cmd) {
     if (getenv("A_BENCH")) return; /* bench children: parent handles timeout */
     if (isdigit(*cmd)) return;
-    static const char *skip[] = {"push","pull","sync","u","update","login","ssh","gdrive","mono","email","install","send","j","job","pr","hub","create","repo",NULL};
+    static const char *skip[] = {"push","pull","sync","u","update","login","ssh","gdrive","mono","email","install","send","j","job","pr","hub","create","repo","e",NULL};
     for (const char **p = skip; *p; p++) if (!strcmp(cmd, *p)) return;
     unsigned secs = 1;
     /* per-device override: adata/git/perf/{DEV}.txt — command:us (microseconds) */
