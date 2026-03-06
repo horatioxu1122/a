@@ -122,7 +122,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
     raw_t.c_cc[VMIN] = 1; raw_t.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSANOW, &raw_t);
     write(STDOUT_FILENO,"\033[?1000h\033[?1006h",16);
-    char buf[256] = ""; int blen = 0, sel = 0; char prefix[256] = ""; int base_row=0;
+    char buf[256] = ""; int blen = 0, sel = 0; char prefix[256] = "";
     printf("Filter (↑↓/Tab=cycle, Enter=run, Esc=quit)\n");
     while (1) {
         /* Search */
@@ -136,15 +136,15 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
         if (sel >= nm) sel = nm ? nm-1 : 0;
         /* Scroll window around sel */
         int top=sel>=maxshow?sel-maxshow+1:0, show=nm-top<maxshow?nm-top:maxshow;
-        /* Render */
-        printf("\r\033[K%s> %s\n", prefix, buf);
-        for (int i=0;i<show;i++){int j=top+i,W=ws.ws_col;char*t=strchr(matches[j],'\t');int ml=t?(int)(t-matches[j]):(int)strlen(matches[j]);
-            if(ml>W-5)ml=W-5;printf("\033[K%s a %.*s",j==sel?" >":"  ",ml,matches[j]);
-            {if(t&&ml+5+(int)strlen(t+1)<W)printf("\033[%dG\033[90m%s\033[0m",W-(int)strlen(t+1),t+1);}putchar('\n');}
-        printf("\033[%dA\033[%dC\033[?25h", show+1, plen+blen+3);
-        fflush(stdout);
-        write(STDOUT_FILENO,"\033[6n",4);
-        {char rb[32]={0};int ri=0;while(ri<31){char rc;if(read(STDIN_FILENO,&rc,1)!=1)break;rb[ri++]=rc;if(rc=='R')break;}sscanf(rb,"\033[%d;",&base_row);}
+        /* Render — single write to avoid flicker */
+        {char fb[B*4];int fl=0;
+        fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[H\033[?25l%s> %s\033[K\n",prefix,buf);
+        for(int i=0;i<show;i++){int j=top+i,W=ws.ws_col;char*t=strchr(matches[j],'\t');int ml=t?(int)(t-matches[j]):(int)strlen(matches[j]);
+            if(ml>W-5)ml=W-5;fl+=snprintf(fb+fl,(size_t)(B*4-fl),"%s a %.*s",j==sel?" >":"  ",ml,matches[j]);
+            if(t&&ml+5+(int)strlen(t+1)<W)fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[%dG\033[90m%s\033[0m",W-(int)strlen(t+1),t+1);
+            fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[K\n");}
+        fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[J\033[1;%dH\033[?25h",plen+blen+3);
+        (void)!write(STDOUT_FILENO,fb,(size_t)fl);}
         /* Read key */
         char ch; if (read(STDIN_FILENO, &ch, 1) != 1) break;
         int do_pick=0;
@@ -158,7 +158,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
                     while(read(STDIN_FILENO,&mc,1)==1&&mc!=';')mb=mb*10+mc-'0';
                     while(read(STDIN_FILENO,&mc,1)==1&&mc!=';')mx=mx*10+mc-'0';
                     while(read(STDIN_FILENO,&mc,1)==1&&mc!='M'&&mc!='m')my=my*10+mc-'0';
-                    (void)mx;if(mc=='M'&&mb==0){int ci=my-base_row-1+top;if(ci>=0&&ci<nm){sel=ci;do_pick=1;}}
+                    (void)mx;if(mc=='M'&&mb==0){int ci=my-2+top;if(ci>=0&&ci<nm){sel=ci;do_pick=1;}}
                     else if(mc=='M'&&(mb==64||mb==65)){if(mb==64&&sel>0)sel--;if(mb==65&&sel<nm-1)sel++;}}
             } else if(prefix[0]){prefix[0]=0;buf[0]=0;blen=0;sel=0;} else break;
         } else if (ch == '\t') { if(sel<nm-1)sel++; }
@@ -185,7 +185,6 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             free(raw); execvp("a", args);
             return 0;
         }
-        printf("\033[J");
     }
     write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
     tcsetattr(STDIN_FILENO, TCSANOW, &old);
