@@ -140,9 +140,9 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
         {char fb[B*4];int fl=0;
         fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[H\033[?25l%s> %s\033[K\n",prefix,buf);
         for(int i=0;i<show;i++){int j=top+i,W=ws.ws_col;char*t=strchr(matches[j],'\t');int ml=t?(int)(t-matches[j]):(int)strlen(matches[j]);
-            if(ml>W-5)ml=W-5;fl+=snprintf(fb+fl,(size_t)(B*4-fl),"%s a %.*s",j==sel?" >":"  ",ml,matches[j]);
+            if(ml>W-5)ml=W-5;fl+=snprintf(fb+fl,(size_t)(B*4-fl),"%s a %.*s\033[K",j==sel?" >":"  ",ml,matches[j]);
             if(t&&ml+5+(int)strlen(t+1)<W)fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[%dG\033[90m%s\033[0m",W-(int)strlen(t+1),t+1);
-            fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[K\n");}
+            fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\n");}
         fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[J\033[1;%dH\033[?25h",plen+blen+3);
         (void)!write(STDOUT_FILENO,fb,(size_t)fl);}
         /* Read key */
