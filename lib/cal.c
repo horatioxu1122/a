@@ -16,7 +16,7 @@ static int cmd_cal(int c,char**v){
         perf_disarm();execlp("a","a","c",pm,(char*)NULL);return 0;}
     if(*s){char f[P];snprintf(f,P,"%s/%s%s",d,s,strchr(s,'.')?""  :".txt");
         int fd=open(f,O_CREAT|O_WRONLY|O_APPEND,0644);if(fd>=0)close(fd);execlp("e","e",f,(char*)NULL);return 0;}
-    {char cm[B];snprintf(cm,B,"o=$(grep -h '^2...-..-..' '%s'/*.txt 2>/dev/null|sort);[ -n \"$o\" ]&&echo \"$o\"||echo 'no events';echo;echo '%s/';ls '%s'/*.txt 2>/dev/null|xargs -n1 basename|sed 's/^/  /'",d,d,d);system(cm);}
+    {char cm[B];snprintf(cm,B,"o=$(grep -h '^2...-..-..' '%s'/*.txt 2>/dev/null|sort);[ -n \"$o\" ]&&echo \"$o\"||echo 'no events';echo;echo '%s/';ls '%s'/*.txt 2>/dev/null|xargs -rn1 basename|sed 's/^/  /'",d,d,d);system(cm);}
     puts("\nusage:\n  a cal add \"2026-03-06 09:00 standup\"\n  a cal ai <prompt> ai-assisted add\n  a cal <name>      edit file");
     return 0;
 }
