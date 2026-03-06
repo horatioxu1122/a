@@ -113,13 +113,15 @@ build)
     
     TCC_BIN=$(command -v tcc 2>/dev/null || echo "")
     if [[ -n "$TCC_BIN" ]] && "$TCC_BIN" -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null; then
-        # TCC succeeded (instant binary)
-        $CC $WARN -DSRC="\"$D\"" -fsyntax-only "$D/a.c" &
+        # TCC succeeded (instant binary). Run strict checker in parallel.
+        $CC $WARN -DSRC="\"$D\"" -fsyntax-only "$D/a.c" & P1=$!
+        wait $P1 || { rm -f "$ABIN/a"; exit 1; }
     else
         # Fallback to Clang
         $CC $WARN -DSRC="\"$D\"" -fsyntax-only "$D/a.c" & P1=$!
         $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" & P2=$!
-        wait $P1 && wait $P2
+        wait $P1 || { rm -f "$ABIN/a"; exit 1; }
+        wait $P2 || exit 1
     fi
     
     ln -sf "$ABIN/a" "$BIN/a"
