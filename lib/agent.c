@@ -3,9 +3,9 @@ static int cmd_review(int argc, char **argv) { fallback_py("review", argc, argv)
 
 /* ── docs ── */
 static int cmd_docs(int argc, char **argv) {
-    char dir[P]; snprintf(dir, P, "%s/docs", SROOT); mkdirp(dir);
+    char dir[P]; snprintf(dir, P, "%s/adocs", SROOT); mkdirp(dir);
     if (argc > 2) {
-        char f[P]; snprintf(f, P, "%s/%s%s", dir, argv[2], strchr(argv[2],'.') ? "" : ".txt");
+        char f[P]; snprintf(f, P, "%s/%s%s", dir, argv[2], strchr(argv[2],'.') ? "" : ".md");
         int fd = open(f, O_CREAT|O_WRONLY|O_APPEND, 0644); if(fd>=0) close(fd);
         execlp("e", "e", f, (char*)NULL);
         return 0;

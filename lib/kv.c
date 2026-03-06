@@ -36,7 +36,7 @@ static int listdir(const char *dir, char paths[][P], int max) {
     struct dirent *e; int n = 0;
     while ((e = readdir(d)) && n < max) {
         if (e->d_name[0] == '.') continue;
-        char *dot = strrchr(e->d_name, '.'); if (!dot || strcmp(dot, ".txt")) continue;
+        char *dot = strrchr(e->d_name, '.'); if (!dot || (strcmp(dot, ".txt") && strcmp(dot, ".md"))) continue;
         snprintf(paths[n++], P, "%s/%s", dir, e->d_name);
     }
     closedir(d); return n;
