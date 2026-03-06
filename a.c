@@ -102,9 +102,9 @@ _install_node() {
 case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
 build)
-    # Fast path: TCC (~10ms) with fallback to Clang -O0 (~90ms).
-    # Background: Clang -O3 (~600ms) with PGO/LTO overwrites binary when done.
-    # Checker (Weverything) runs in parallel if Clang is used.
+    # TCC (~10ms) for instant iteration, Clang -O3 background (~1s) for user speed.
+    # Weverything poison-pills binary on error. .bld pid guards against stale builds.
+    # PGO removed: a is syscall-bound, PGO added 1.5s for no measurable gain.
     _ensure_cc
     _warn_flags
     R="${D%%/adata/worktrees/*}"; ABIN="$R/adata/local"; mkdir -p "$ABIN"
@@ -115,9 +115,9 @@ build)
     ln -sf "$ABIN/a" "$BIN/a"
     (
         if ! O=$($CC $WARN -DSRC="\"$D\"" -fsyntax-only "$D/a.c" 2>&1); then
-            printf "#!/bin/sh\nprintf '\033[31m[!] FATAL: strict checks failed.\n\n%%s\n' \"\$O\"\nexit 1" > "$ABIN/a" && chmod +x "$ABIN/a"
+            [ "$(cat "$ABIN/.bld" 2>&-)" = "$$" ] && printf "#!/bin/sh\nprintf '\033[31m[!] FATAL: strict checks failed.\n\n%%s\n' \"\$O\"\nexit 1" > "$ABIN/a" && chmod +x "$ABIN/a"
         else
-            F="-DSRC=\"$D\" -O3 -march=native -flto -w" A=$ABIN P=$A/pgo;rm -rf $P;$CC $F -fprofile-generate=$P -o $A/a.pg $D/a.c&&$A/a.pg i</dev/null;llvm-profdata merge $P -o $P/p&&$CC $F -fprofile-use=$P/p -o $A/a.opt $D/a.c||$CC $F -o $A/a.opt $D/a.c;[ "$(cat $A/.bld 2>&-)" = "$$" ]&&mv $A/a.opt $A/a 2>&-;rm -rf $P $A/a.pg $A/a.opt
+            $CC -DSRC="\"$D\"" -O3 -march=native -flto -w -o "$ABIN/a.opt" "$D/a.c" && [ "$(cat "$ABIN/.bld" 2>&-)" = "$$" ] && mv "$ABIN/a.opt" "$ABIN/a" 2>&-; rm -f "$ABIN/a.opt"
         fi
     ) >&- 2>&- &
     ;;
