@@ -413,6 +413,7 @@ static void perf_disarm(void);
 #include "lib/sess.c"     /* session dispatch (c/g/co/etc) */
 
 /* ═══ PY-ONLY WRAPPERS — C entry points for commands still in Python ═══ */
+static int cmd_cal(int c,char**v){(void)c;(void)v;puts("cal: to be added");return 0;}
 static int cmd_cat(int c,char**v){if(c>2&&chdir(v[2]))return 1;perf_disarm();
     const char*cc=clip_cmd();if(!cc){puts("x Needs tmux");return 1;}
     char cm[B];snprintf(cm,B,"git ls-files -z|xargs -0 grep -lIZ ''|xargs -0 tail -n+1|%s&&echo >&2 '✓ copied'",cc);
@@ -516,7 +517,7 @@ static const cmd_t CMDS[] = {
     {"--help",cmd_help_full},{"-h",cmd_help_full},
     {"a",cmd_all},{"adb",cmd_adb},{"add",cmd_add},{"agent",cmd_agent},{"ai",cmd_all},
     {"all",cmd_all},{"apk",cmd_apk},{"ask",cmd_ask},{"attach",cmd_attach},
-    {"cat",cmd_cat},{"cleanup",cmd_cleanup},{"config",cmd_config},
+    {"cal",cmd_cal},{"cat",cmd_cat},{"cleanup",cmd_cleanup},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},{"dash",cmd_dash},{"deps",cmd_deps},
     {"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
     {"e",cmd_e},{"email",cmd_email},{"gdrive",cmd_gdrive},
