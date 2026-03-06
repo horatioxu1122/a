@@ -187,9 +187,10 @@ install)
         local pkg="$1" cmd="$2" p=$(command -v "$cmd" 2>/dev/null)
         [[ -n "$p" && "${p:0:5}" != "/mnt/" ]] && { ok "$cmd (exists)"; return; }
         [[ -n "$p" ]] && warn "$cmd ($p) is Windows"; info "Installing $cmd..."
+        local ns=""; [[ "$OS" == termux ]] && ns="--ignore-scripts"
         if ! command -v npm &>/dev/null; then warn "$cmd skipped (npm not found)"
-        elif [[ -n "$SUDO" ]] || [[ $EUID -eq 0 ]]; then $SUDO npm install -g "$pkg" && ok "$cmd" || warn "$cmd failed"
-        else mkdir -p "$HOME/.local/lib" && npm install -g --prefix="$HOME/.local" "$pkg" && ok "$cmd" || warn "$cmd failed"; fi
+        elif [[ -n "$SUDO" ]] || [[ $EUID -eq 0 ]]; then $SUDO npm install -g $ns "$pkg" && ok "$cmd" || warn "$cmd failed"
+        else mkdir -p "$HOME/.local/lib" && npm install -g $ns --prefix="$HOME/.local" "$pkg" && ok "$cmd" || warn "$cmd failed"; fi
     }
     if ! command -v claude &>/dev/null; then
         info "Installing claude..."
