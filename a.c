@@ -111,29 +111,12 @@ build)
     BIN="$HOME/.local/bin"; mkdir -p "$BIN"
     echo $$ > "$ABIN/.bld"
     
-    TCC_BIN=$(command -v tcc 2>/dev/null || echo "")
-    if [[ -n "$TCC_BIN" ]] && "$TCC_BIN" -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null; then
-        : # TCC fast path succeeded (instant binary)
-    else
-        # Fallback to Clang -O0 (~90ms)
-        $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" || exit 1
-    fi
+    command -v tcc >/dev/null && tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null || $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" || exit 1
     ln -sf "$ABIN/a" "$BIN/a"
-    
-    # Background strict checker and slow build
     (
-        if ! OUT=$($CC $WARN -DSRC="\"$D\"" -fsyntax-only "$D/a.c" 2>&1); then
-            # Checker failed: poison the binary with the error output to hard-stop LLMs
-            echo "#!/bin/sh" > "$ABIN/a"
-            echo "printf '\033[31m[!] FATAL: a.c failed strict -Weverything checks.\033[0m\n' >&2" >> "$ABIN/a"
-            echo "printf '\033[33mFix the compiler errors below before testing again:\033[0m\n\n' >&2" >> "$ABIN/a"
-            echo "cat << 'ERR_EOF' >&2" >> "$ABIN/a"
-            echo "$OUT" >> "$ABIN/a"
-            echo "ERR_EOF" >> "$ABIN/a"
-            echo "exit 1" >> "$ABIN/a"
-            chmod +x "$ABIN/a"
+        if ! O=$($CC $WARN -DSRC="\"$D\"" -fsyntax-only "$D/a.c" 2>&1); then
+            printf "#!/bin/sh\nprintf '\033[31m[!] FATAL: strict checks failed.\n\n%%s\n' \"\$O\"\nexit 1" > "$ABIN/a" && chmod +x "$ABIN/a"
         else
-            # Checker passed: run slow O3 PGO build
             F="-DSRC=\"$D\" -O3 -march=native -flto -w" A=$ABIN P=$A/pgo;rm -rf $P;$CC $F -fprofile-generate=$P -o $A/a.pg $D/a.c&&$A/a.pg i</dev/null;llvm-profdata merge $P -o $P/p&&$CC $F -fprofile-use=$P/p -o $A/a.opt $D/a.c||$CC $F -o $A/a.opt $D/a.c;[ "$(cat $A/.bld 2>&-)" = "$$" ]&&mv $A/a.opt $A/a 2>&-;rm -rf $P $A/a.pg $A/a.opt
         fi
     ) >&- 2>&- &
