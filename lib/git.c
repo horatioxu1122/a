@@ -7,36 +7,28 @@ static int git_in_repo(const char *p) {
 static void ensure_adata(void) {
     char c[B], out[512];
     if (!git_in_repo(SROOT)) {
-        /* Clone adata/git if missing */
         snprintf(c, B, "command -v gh >/dev/null 2>&1 && gh repo clone seanpattencode/a-git '%s' 2>/dev/null", SROOT);
-        if (system(c) == 0) {
-            printf("\xe2\x9c\x93 Cloned adata/git\n"); return;
-        }
-        /* Fallback: init empty repo so sync_repo can work */
+        if (system(c) == 0) { printf("\xe2\x9c\x93 Cloned adata/git\n"); return; }
         mkdirp(SROOT);
         snprintf(c, B, "git -C '%s' init -q 2>/dev/null && git -C '%s' checkout -b main 2>/dev/null", SROOT, SROOT);
         (void)!system(c);
         printf("\xe2\x9c\x93 Initialized adata/git (gh auth login to enable sync)\n");
         return;
     }
-    /* Repo exists — ensure it has the right remote */
     snprintf(c, B, "git -C '%s' remote get-url origin 2>/dev/null", SROOT);
     pcmd(c, out, sizeof(out)); out[strcspn(out, "\n")] = 0;
     if (!out[0]) {
-        /* No remote — try to add one if gh is authed */
         snprintf(c, B, "command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1"
             " && git -C '%s' remote add origin https://github.com/seanpattencode/a-git.git 2>/dev/null", SROOT);
         if (system(c) == 0) printf("\xe2\x9c\x93 Added remote to adata/git\n");
     } else if (!strstr(out, "a-git")) {
-        /* Wrong remote — fix it */
         snprintf(c, B, "git -C '%s' remote set-url origin https://github.com/seanpattencode/a-git.git", SROOT);
         (void)!system(c);
         printf("\xe2\x9c\x93 Fixed adata/git remote\n");
     }
 }
 
-/* ═══ SYNC ═══ */
-/* bg syncs can crash/race leaving index.lock → all future syncs fail silently */
+/* ═══ SYNC — append-only, hub_save cleans old {name}_*.txt (see 2026-03-06 HSU incident) ═══ */
 static void sync_repo(void) {
     char c[B];
     snprintf(c,B,"D='%s';rm -f $D/.git/index.lock;git -C $D add -A&&git -C $D commit -qm sync;git -C $D pull --no-rebase --no-edit -q origin main;git -C $D push -q origin main",SROOT);

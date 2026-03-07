@@ -111,6 +111,7 @@ build)
     BIN="$HOME/.local/bin"; mkdir -p "$BIN"
     echo $$ > "$ABIN/.bld"
     
+    echo '[{"directory":"'"$D"'","file":"a.c","command":"cc a.c"}]'>"$D/compile_commands.json"
     command -v tcc >/dev/null && tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null || $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" || exit 1
     ln -sf "$ABIN/a" "$BIN/a"
     (
