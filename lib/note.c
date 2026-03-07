@@ -116,7 +116,7 @@ static void ts_human(const char*ts,char*out,size_t sz){
     t.tm_mon=(ts[4]-'0')*10+(ts[5]-'0')-1;t.tm_mday=(ts[6]-'0')*10+(ts[7]-'0');
     t.tm_hour=(ts[9]-'0')*10+(ts[10]-'0');t.tm_min=(ts[11]-'0')*10+(ts[12]-'0');
     int h=t.tm_hour;const char*ap=h>=12?"pm":"am";h=h%12;if(!h)h=12;
-    strftime(out,sz,"%b %-d",mktime(&t)?&t:&t);
+    mktime(&t);strftime(out,sz,"%b %-d",&t);
     char tmp[32];snprintf(tmp,32," %d:%02d%s",h,t.tm_min,ap);
     strncat(out,tmp,sz-strlen(out)-1);
 }

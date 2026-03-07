@@ -138,8 +138,7 @@ static int cmd_perf(int argc, char **argv) {
             unsigned old = res[i].old_lim; int tight = 0;
             res[i].new_lim = old;
             if (killed) { /* keep old */ }
-            else if (!old) { res[i].new_lim = proposed; tight = 1; }
-            else if (proposed < old) { res[i].new_lim = proposed; tight = 1; }
+            else if (!old || proposed < old) { res[i].new_lim = proposed; tight = 1; }
             if (!killed) passed++;
             if (tight) tightened++;
             const char *label = res[i].cmd[0] ? res[i].cmd : "(bare)";
