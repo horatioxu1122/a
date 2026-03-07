@@ -18,6 +18,7 @@ static void hub_load(void) {
 
 static void hub_save(hub_t *j) {
     char hd[P],fn[P],buf[B]; snprintf(hd,P,"%s/agents",SROOT); mkdirp(hd);
+    {char c[B];snprintf(c,B,"rm -f '%s'/%s_*.txt",hd,j->n);(void)!system(c);}
     struct timespec t;clock_gettime(CLOCK_REALTIME,&t);struct tm*tm=localtime(&t.tv_sec);
     char ts[32];strftime(ts,32,"%Y%m%dT%H%M%S",tm);snprintf(fn,P,"%s/%s_%s.%09ld.txt",hd,j->n,ts,t.tv_nsec);
     int l=snprintf(buf,B,"Name: %s\nSchedule: %s\nPrompt: %s\nDevice: %s\nEnabled: %s\n",
