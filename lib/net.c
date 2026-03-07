@@ -205,6 +205,7 @@ static int cmd_update(int argc, char **argv) {
         if(lp){snprintf(c,B,"mkdir -p ~/.config/rclone&&cp '%s' ~/.config/rclone/rclone.conf",lp);
           if(!system(c))puts("\xe2\x9c\x93 rclone config from sync");}}}
     bg_backup_jsonl();
+    hub_load();if(!hub_find("sync")){hub_t j={.en=1,.n="sync",.s="6:00",.p="a sync"};strcpy(j.d,DEV);hub_save(&j);hub_timer(&j,1);}
     if (sub && !strcmp(sub, "all")) {
         puts("\n--- Broadcasting to SSH hosts ---");
         snprintf(c, B, "'%s/a' ssh all 'a update'", DDIR); (void)!system(c);
