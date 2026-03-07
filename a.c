@@ -1,5 +1,5 @@
 #if 0
-# ── a.c — self-compiling C program ──
+# ── a.c — Will one day save the world. Possibly today. ──
 #
 # sh a.c              build (two-pass parallel: checker + builder)
 # sh a.c install      full install (deps, compile, shell, CLIs)
