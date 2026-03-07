@@ -148,20 +148,19 @@ static int cmd_diff(int argc, char **argv) {
         pclose(_f);}}while(0)
     {char c[B];snprintf(c,B,"git diff '%s..HEAD' -- ':!.a_done' 2>/dev/null",tgt);DS(c);}
     {char c[B];snprintf(c,B,"git diff HEAD -- ':!.a_done' 2>/dev/null");DS(c);}
-    char ut[B]; pcmd("git ls-files --others --exclude-standard -- ':!.a_done' 2>/dev/null",ut,B); int nut=0;
+    char ut[B]; pcmd("git ls-files --others --exclude-standard -- ':!.a_done' 2>/dev/null",ut,B);
     if(ut[0]){printf("\nUntracked:\n");char*p=ut;while(*p){char*e=strchr(p,'\n');if(e)*e=0;if(*p){
-        printf("  \033[48;2;26;84;42m+ %s\033[0m\n",p);nut++;size_t sz;char*d=readf(p,&sz);
+        printf("  \033[48;2;26;84;42m+ %s\033[0m\n",p);size_t sz;char*d=readf(p,&sz);
         if(d){int nl=1;for(size_t j=0;j<sz;j++)if(d[j]=='\n')nl++;FS(p);if(cf>=0){fs[cf].al=nl;fs[cf].ab=(int)sz;}free(d);}
     }if(e)p=e+1;else break;}}
     if(!nf){puts("No changes");return 0;}
     #define HR for(int _j=0;_j<60;_j++){putchar(0xe2);putchar(0x94);putchar(0x80);}putchar('\n')
-    int ti=0,td=0,ta=0,tb=0,nd=0; printf("\n"); HR;
+    int ti=0,td=0,ta=0,tb=0; printf("\n"); HR;
     for(int j=0;j<nf;j++){printf("%s: +%d/-%d lines, %+d tok\n",bname(fs[j].name),fs[j].al,fs[j].dl,(fs[j].ab-fs[j].db)/4);
-        ti+=fs[j].al;td+=fs[j].dl;ta+=fs[j].ab;tb+=fs[j].db;if(!fs[j].al&&fs[j].dl)nd++;}
-    HR; printf("%d file%s, +%d/-%d lines",nf,nf!=1?"s":"",ti,td);
-    if(nut)printf(" (incl. untracked)");if(nd)printf(", %d deleted",nd);
-    printf(" | Net: %+d lines, %+d tok\n",ti-td,(ta-tb)/4);
-    if(wt&&tgt[0]!='o'){char rc[B],r[16];snprintf(rc,B,"git rev-list %.7s..origin/main --count 2>/dev/null",tgt);pcmd(rc,r,16);r[strcspn(r,"\n")]=0;if(r[0]&&r[0]!='0')printf("main: +%s commits since fork\n",r);}
+        ti+=fs[j].al;td+=fs[j].dl;ta+=fs[j].ab;tb+=fs[j].db;}
+    HR; printf("%s: %d file%s, %+d lines, %+d tok\n",wt?"fork":"net",nf,nf!=1?"s":"",ti-td,(ta-tb)/4);
+    if(wt&&tgt[0]!='o'){char rc[B],r[16],d[16];snprintf(rc,B,"git rev-list %.7s..origin/main --count",tgt);pcmd(rc,r,16);r[strcspn(r,"\n")]=0;
+    if(r[0]!='0'){snprintf(rc,B,"git diff HEAD..origin/main -- ':!.a_done'|awk '/^[+][^+]/{a+=length}/^[-][^-]/{d+=length}END{printf \"%%+d\",(a-d)/4}'");pcmd(rc,d,16);printf("main: +%s commits, %s tok\n",r,d);}}
     if(!sel) puts("\ndiff # = last #");
     return 0;
     #undef FS
