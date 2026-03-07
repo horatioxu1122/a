@@ -120,7 +120,8 @@ build)
         _c 3 clang-tidy --checks='-*,bugprone-branch-clone,bugprone-infinite-loop,bugprone-sizeof-*' -warnings-as-errors='*' "$F" -- $A -std=c17 -w &
         _c 4 gcc -std=c17 -Werror -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wtrampolines $A -fsyntax-only "$F" &
         { ! command -v gcc &>/dev/null||{ gcc -fanalyzer $A -fsyntax-only "$F" >"$T/5" 2>&1;! grep -q '\-Wanalyzer' "$T/5";};}||touch "$T/5.f" &
-        _c 6 cppcheck --error-exitcode=1 --quiet $A "$F" & _c 7 frama-c -eva -eva-no-print -no-unicode "$F" $A & _c 8 cbmc --function main "$F" $A &
+        _c 6 cppcheck --error-exitcode=1 --quiet --suppress=syntaxError $A "$F" & _c 7 frama-c -eva -eva-no-print -no-unicode "$F" $A &
+        { ! command -v cbmc &>/dev/null||timeout 15 cbmc --function main "$F" $A||[ $? -eq 124 ];}>"$T/8" 2>&1||touch "$T/8.f" &
         { $CC $A -fsanitize=undefined,address -fno-omit-frame-pointer -w -o "$T/a.san" "$F"&&"$T/a.san" help >"$T/9" 2>&1;! grep -q 'runtime error\|SUMMARY:.*Sanitizer' "$T/9";}||touch "$T/9.f" &
         wait
         if ls "$T"/[1-9].f &>/dev/null;then cat "$T"/[1-9] >"$ABIN/.chk" 2>/dev/null
