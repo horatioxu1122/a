@@ -363,8 +363,8 @@ def _clip():
 
 def _write_conf():
     l0 = '#[align=left][#S]#[align=centre]#{W:#[range=window|#{window_index}]#I:#W#{?window_active,*,}#[norange] }'
-    sf = '#[range=user|agent]Ctrl+A:Agent#[norange] #[range=user|win]Ctrl+N:Win#[norange] #[range=user|new]Ctrl+T:Pane#[norange] #[range=user|side]Ctrl+Y:Side#[norange] #[range=user|close]Ctrl+W:Close#[norange] #[range=user|edit]Ctrl+E:Edit#[norange] #[range=user|detach]Ctrl+Q:Quit#[norange]'
-    sm = '#[range=user|agent]Agent#[norange] #[range=user|win]Win#[norange] #[range=user|new]Pane#[norange] #[range=user|side]Side#[norange] #[range=user|close]Close#[norange] #[range=user|edit]Edit#[norange] #[range=user|detach]Quit#[norange]'
+    sf = '#[range=user|agent]Ctrl+A:Agent#[norange] #[range=user|win]Ctrl+N:Win#[norange] #[range=user|new]Ctrl+T:Pane#[norange] #[range=user|side]Ctrl+Y:Side#[norange] #[range=user|close]Ctrl+W:Close#[norange] #[range=user|edit]Ctrl+E:Edit#[norange] #[range=user|detach]Ctrl+Q:Quit#[norange]#[align=right]#[range=user|kill][x]#[norange]'
+    sm = '#[range=user|agent]Agent#[norange] #[range=user|win]Win#[norange] #[range=user|new]Pane#[norange] #[range=user|side]Side#[norange] #[range=user|close]Close#[norange] #[range=user|edit]Edit#[norange] #[range=user|detach]Quit#[norange]#[align=right]#[range=user|kill][x]#[norange]'
     l1 = '#{?#{e|<:#{client_width},70},' + sm + ',' + sf + '}'
     l2 = '#[align=left]#[range=user|esc]Esc#[norange]#[align=centre]#[range=user|kbd]Keyboard#[norange]'
     cc = _clip()
@@ -389,9 +389,9 @@ bind-key -n C-y split-window -fh
 bind-key -n C-a split-window -h 'claude --dangerously-skip-permissions'
 bind-key -n C-w kill-pane
 bind-key -n C-q detach
-bind-key -n C-x confirm-before -p "Kill session? (y/n)" kill-session
+bind-key -n C-x kill-session
 bind-key -n C-e split-window -fh -c '#{{pane_current_path}}' e
-bind-key -T root MouseDown1Status if -F '#{{==:#{{mouse_status_range}},window}}' {{ select-window }} {{ run-shell 'r="#{{mouse_status_range}}"; case "$r" in agent) tmux split-window -h "claude --dangerously-skip-permissions";; win) tmux new-window;; new) tmux split-window;; side) tmux split-window -fh;; close) tmux kill-pane;; edit) tmux split-window -fh -c "#{{pane_current_path}}" e;; detach) tmux detach;; esc) tmux send-keys Escape;; kbd) tmux set -g mouse off; tmux display-message "Mouse off 3s"; (sleep 3; tmux set -g mouse on) &;; esac' }}
+bind-key -T root MouseDown1Status if -F '#{{==:#{{mouse_status_range}},window}}' {{ select-window }} {{ run-shell 'r="#{{mouse_status_range}}"; case "$r" in agent) tmux split-window -h "claude --dangerously-skip-permissions";; win) tmux new-window;; new) tmux split-window;; side) tmux split-window -fh;; close) tmux kill-pane;; edit) tmux split-window -fh -c "#{{pane_current_path}}" e;; kill) tmux kill-session;; detach) tmux detach;; esc) tmux send-keys Escape;; kbd) tmux set -g mouse off; tmux display-message "Mouse off 3s"; (sleep 3; tmux set -g mouse on) &;; esac' }}
 '''
     conf += f'set -s copy-command "{cc}"\n' if cc else ''; cq=f' "{cc}"'if cc else''
     conf += f'bind -T copy-mode MouseDragEnd1Pane send -X copy-pipe-and-cancel{cq}\nbind -T copy-mode-vi MouseDragEnd1Pane send -X copy-pipe-and-cancel{cq}\n'
