@@ -20,16 +20,14 @@
 #   clang-21 -DSRC="\"$D\"" -isystem "$HOME/micromamba/include" \
 #     -O3 -march=native -flto -w -o "$D/a" "$D/a.c"
 
-[ -z "$BASH_VERSION" ] && exec bash "$0" "$@"
-set -e
-# Bootstrap: when piped (curl | sh), clone repo and run install
-if [ -z "${BASH_SOURCE[0]}" ] || [ "${BASH_SOURCE[0]}" = "bash" ] || [ ! -f "${BASH_SOURCE[0]}" ]; then
-    A="$HOME/projects/a"
+case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
+    # Bootstrap: when piped (curl | sh), clone repo and run install
+    set -e; A="$HOME/projects/a"
     command -v git >/dev/null || { echo "Install git first"; exit 1; }
     [ -d "$A/.git" ] && { echo "a already installed at $A"; exec sh "$A/a.c" install; }
     git clone https://github.com/seanpattencode/a.git "$A" && exec sh "$A/a.c" install
-    exit 1
-fi
+    exit 1;; esac
+set -e
 D="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 G='\033[32m' Y='\033[33m' C='\033[36m' R='\033[0m'
