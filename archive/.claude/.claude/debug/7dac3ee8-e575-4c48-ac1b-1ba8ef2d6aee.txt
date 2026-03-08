@@ -1,0 +1,148 @@
+2026-02-26T07:35:38.111Z [DEBUG] detectFileEncoding failed for expected reason: ENOENT
+2026-02-26T07:35:38.112Z [DEBUG] MDM settings load completed in 1ms
+2026-02-26T07:35:38.123Z [ERROR] Failed to save config with lock: Error: ENOENT: no such file or directory, lstat '/home/sean/projects/a/.claude.json'
+2026-02-26T07:35:38.124Z [DEBUG] Writing to temp file: .claude.json.tmp.2816151.1772091338124
+2026-02-26T07:35:38.124Z [DEBUG] Setting permissions for new file: 600
+2026-02-26T07:35:38.124Z [DEBUG] Temp file written successfully, size: 50 bytes
+2026-02-26T07:35:38.124Z [DEBUG] Renaming .claude.json.tmp.2816151.1772091338124 to .claude.json
+2026-02-26T07:35:38.124Z [DEBUG] File .claude.json written atomically
+2026-02-26T07:35:38.124Z [DEBUG] [init] configureGlobalMTLS starting
+2026-02-26T07:35:38.125Z [DEBUG] [init] configureGlobalMTLS complete
+2026-02-26T07:35:38.125Z [DEBUG] [init] configureGlobalAgents starting
+2026-02-26T07:35:38.125Z [DEBUG] [init] configureGlobalAgents complete
+2026-02-26T07:35:38.128Z [DEBUG] Writing to temp file: .claude.json.tmp.2816151.1772091338128
+2026-02-26T07:35:38.128Z [DEBUG] Preserving file permissions: 100600
+2026-02-26T07:35:38.128Z [DEBUG] Temp file written successfully, size: 86 bytes
+2026-02-26T07:35:38.128Z [DEBUG] Applied original permissions to temp file
+2026-02-26T07:35:38.128Z [DEBUG] Renaming .claude.json.tmp.2816151.1772091338128 to .claude.json
+2026-02-26T07:35:38.128Z [DEBUG] File .claude.json written atomically
+2026-02-26T07:35:38.129Z [DEBUG] Writing to temp file: .claude.json.tmp.2816151.1772091338129
+2026-02-26T07:35:38.129Z [DEBUG] Preserving file permissions: 100600
+2026-02-26T07:35:38.129Z [DEBUG] Temp file written successfully, size: 125 bytes
+2026-02-26T07:35:38.129Z [DEBUG] Applied original permissions to temp file
+2026-02-26T07:35:38.129Z [DEBUG] Renaming .claude.json.tmp.2816151.1772091338129 to .claude.json
+2026-02-26T07:35:38.135Z [DEBUG] File .claude.json written atomically
+2026-02-26T07:35:38.141Z [DEBUG] Applying permission update: Adding 2 allow rule(s) to destination 'localSettings': ["Bash(test:*)","Bash(python3:*)"]
+2026-02-26T07:35:38.142Z [DEBUG] Writing to temp file: .claude.json.tmp.2816151.1772091338142
+2026-02-26T07:35:38.142Z [DEBUG] Preserving file permissions: 100600
+2026-02-26T07:35:38.142Z [DEBUG] Temp file written successfully, size: 205 bytes
+2026-02-26T07:35:38.142Z [DEBUG] Applied original permissions to temp file
+2026-02-26T07:35:38.142Z [DEBUG] Renaming .claude.json.tmp.2816151.1772091338142 to .claude.json
+2026-02-26T07:35:38.142Z [DEBUG] File .claude.json written atomically
+2026-02-26T07:35:38.144Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-02-26T07:35:38.156Z [DEBUG] installed_plugins.json doesn't exist, returning empty V2 object
+2026-02-26T07:35:38.156Z [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+2026-02-26T07:35:38.157Z [DEBUG] [claudeai-mcp] Checking gate (cached)...
+2026-02-26T07:35:38.157Z [DEBUG] [claudeai-mcp] Gate returned: false
+2026-02-26T07:35:38.157Z [DEBUG] [claudeai-mcp] Disabled via gate
+2026-02-26T07:35:38.159Z [DEBUG] [ToolSearch:optimistic] mode=tst-auto, ENABLE_TOOL_SEARCH=undefined, result=true
+2026-02-26T07:35:38.161Z [DEBUG] [STARTUP] Running setup()...
+2026-02-26T07:35:38.166Z [DEBUG] Loading skills from: managed=/etc/claude-code/.claude/skills, user=.claude/skills, project=[]
+2026-02-26T07:35:38.167Z [DEBUG] Error log sink initialized
+2026-02-26T07:35:38.168Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-02-26T07:35:38.168Z [DEBUG] Total plugin skills loaded: 0
+2026-02-26T07:35:38.168Z [DEBUG] Total plugin commands loaded: 0
+2026-02-26T07:35:38.185Z [DEBUG] [STARTUP] setup() completed in 24ms
+2026-02-26T07:35:38.185Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-02-26T07:35:38.188Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-02-26T07:35:38.215Z [DEBUG] Total plugin agents loaded: 0
+2026-02-26T07:35:38.217Z [DEBUG] Writing to temp file: .claude.json.tmp.2816151.1772091338217
+2026-02-26T07:35:38.217Z [DEBUG] Preserving file permissions: 100600
+2026-02-26T07:35:38.217Z [DEBUG] Temp file written successfully, size: 282 bytes
+2026-02-26T07:35:38.217Z [DEBUG] Applied original permissions to temp file
+2026-02-26T07:35:38.217Z [DEBUG] Renaming .claude.json.tmp.2816151.1772091338217 to .claude.json
+2026-02-26T07:35:38.217Z [DEBUG] File .claude.json written atomically
+2026-02-26T07:35:38.218Z [DEBUG] Loaded 0 unique skills (0 unconditional, 0 conditional, managed: 0, user: 0, project: 0, additional: 0, legacy commands: 0)
+2026-02-26T07:35:38.218Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 3 bundled skills
+2026-02-26T07:35:38.220Z [DEBUG] [STARTUP] Commands and agents loaded in 35ms
+2026-02-26T07:35:38.220Z [DEBUG] [LSP MANAGER] initializeLspServerManager() called
+2026-02-26T07:35:38.220Z [DEBUG] [LSP MANAGER] Created manager instance, state=pending
+2026-02-26T07:35:38.220Z [DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+2026-02-26T07:35:38.221Z [DEBUG] Total LSP servers loaded: 0
+2026-02-26T07:35:38.221Z [ERROR] Failed to fetch org fast mode status, defaulting to disabled: Error: No auth available
+2026-02-26T07:35:38.221Z [DEBUG] [STARTUP] MCP configs loaded in 77ms
+2026-02-26T07:35:38.221Z [DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+2026-02-26T07:35:38.221Z [DEBUG] LSP manager initialized with 0 servers
+2026-02-26T07:35:38.221Z [DEBUG] LSP server manager initialized successfully
+2026-02-26T07:35:38.222Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-02-26T07:35:38.241Z [DEBUG] Initialized versioned plugins system with 0 plugins
+2026-02-26T07:35:38.253Z [DEBUG] Watching for changes in setting files /home/sean/projects/a/.claude/settings.json, /home/sean/projects/a/.claude/settings.local.json...
+2026-02-26T07:35:38.307Z [DEBUG] [Perfetto] initializePerfettoTracing called, env value: undefined
+2026-02-26T07:35:38.307Z [DEBUG] [3P telemetry] isTelemetryEnabled=false (CLAUDE_CODE_ENABLE_TELEMETRY=undefined)
+2026-02-26T07:35:38.444Z [DEBUG] Getting matching hook commands for SessionStart with query: startup
+2026-02-26T07:35:38.444Z [DEBUG] Found 0 hook matchers in settings
+2026-02-26T07:35:38.444Z [DEBUG] Matched 0 unique hooks for query "startup" (0 before deduplication)
+2026-02-26T07:35:38.449Z [DEBUG] installPluginsForHeadless: starting
+2026-02-26T07:35:38.450Z [DEBUG] Found 0 installed plugins
+2026-02-26T07:35:38.450Z [DEBUG] installPluginsForHeadless: no missing plugins or marketplaces configured
+2026-02-26T07:35:38.480Z [DEBUG] Fetching plugin security messages from https://raw.githubusercontent.com/anthropics/claude-plugins-official/refs/heads/security/security.json
+2026-02-26T07:35:38.541Z [DEBUG] Git remote URL: https://github.com/seanpattencode/a.git
+2026-02-26T07:35:38.541Z [DEBUG] Parsed repository: github.com/seanpattencode/a from URL: https://github.com/seanpattencode/a.git
+2026-02-26T07:35:38.555Z [DEBUG] Total plugin output styles loaded: 0
+2026-02-26T07:35:38.557Z [DEBUG] Writing to temp file: .claude.json.tmp.2816151.1772091338557
+2026-02-26T07:35:38.557Z [DEBUG] Preserving file permissions: 100600
+2026-02-26T07:35:38.557Z [DEBUG] Temp file written successfully, size: 282 bytes
+2026-02-26T07:35:38.557Z [DEBUG] Applied original permissions to temp file
+2026-02-26T07:35:38.557Z [DEBUG] Renaming .claude.json.tmp.2816151.1772091338557 to .claude.json
+2026-02-26T07:35:38.558Z [DEBUG] File .claude.json written atomically
+2026-02-26T07:35:38.561Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-02-26T07:35:38.561Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-02-26T07:35:38.561Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-02-26T07:35:38.561Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-02-26T07:35:38.563Z [WARN] [3P telemetry] Event dropped (no event logger initialized): user_prompt
+2026-02-26T07:35:38.564Z [DEBUG] Getting matching hook commands for UserPromptSubmit with query: undefined
+2026-02-26T07:35:38.564Z [DEBUG] Found 0 hook matchers in settings
+2026-02-26T07:35:38.564Z [DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+2026-02-26T07:35:38.568Z [DEBUG] autocompact: tokens=3 threshold=167000 effectiveWindow=180000
+2026-02-26T07:35:38.578Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-02-26T07:35:38.578Z [DEBUG] [API:auth] OAuth token check starting
+2026-02-26T07:35:38.578Z [DEBUG] [API:auth] OAuth token check complete
+2026-02-26T07:35:38.599Z [ERROR] Error: Error: Could not resolve authentication method. Expected either apiKey or authToken to be set. Or for one of the "X-Api-Key" or "Authorization" headers to be explicitly omitted
+    at Mh.validateHeaders (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:370:1008)
+    at Mh.buildHeaders (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:370:8565)
+    at async Mh.buildRequest (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:370:7623)
+    at async Mh.makeRequest (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:370:3388)
+    at async file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:2023:15888
+    at async file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:889:2624
+    at async xu9 (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:888:102583)
+    at async X87 (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:889:2557)
+    at async Np6 (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:2023:1296)
+    at async De (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:2023:1992)
+2026-02-26T07:35:38.599Z [DEBUG] countTokensWithFallback: API returned null, trying haiku fallback (11 tools)
+2026-02-26T07:35:38.600Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-02-26T07:35:38.600Z [DEBUG] [API:auth] OAuth token check starting
+2026-02-26T07:35:38.600Z [DEBUG] [API:auth] OAuth token check complete
+2026-02-26T07:35:38.601Z [DEBUG] countTokensWithFallback: haiku fallback failed: Could not resolve authentication method. Expected either apiKey or authToken to be set. Or for one of the "X-Api-Key" or "Authorization" headers to be explicitly omitted
+2026-02-26T07:35:38.601Z [ERROR] Error: Error: Could not resolve authentication method. Expected either apiKey or authToken to be set. Or for one of the "X-Api-Key" or "Authorization" headers to be explicitly omitted
+    at Mh.validateHeaders (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:370:1008)
+    at Mh.buildHeaders (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:370:8565)
+    at async Mh.buildRequest (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:370:7623)
+    at async Mh.makeRequest (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:370:3388)
+    at async eO7 (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:2023:16710)
+    at async Np6 (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:2023:1568)
+    at async De (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:2023:1992)
+    at async file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:2023:14690
+    at async B7Y (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:2023:14118)
+    at async vp6 (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:2023:12887)
+2026-02-26T07:35:38.601Z [DEBUG] countToolDefinitionTokens returned null for 11 tools: TaskOutput, ExitPlanMode, NotebookEdit, WebFetch, TodoWrite, WebSearch, TaskStop, AskUserQuestion, S...
+2026-02-26T07:35:38.603Z [DEBUG] Tool search disabled via experiment (tengu_tst_kx7): below threshold, deferred tools present [source: query]
+2026-02-26T07:35:38.607Z [DEBUG] Writing to temp file: .claude.json.tmp.2816151.1772091338607
+2026-02-26T07:35:38.607Z [DEBUG] Preserving file permissions: 100600
+2026-02-26T07:35:38.607Z [DEBUG] Temp file written successfully, size: 282 bytes
+2026-02-26T07:35:38.607Z [DEBUG] Applied original permissions to temp file
+2026-02-26T07:35:38.607Z [DEBUG] Renaming .claude.json.tmp.2816151.1772091338607 to .claude.json
+2026-02-26T07:35:38.607Z [DEBUG] File .claude.json written atomically
+2026-02-26T07:35:38.610Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.59.17f; cc_entrypoint=sdk-cli; cch=00000;
+2026-02-26T07:35:38.611Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-02-26T07:35:38.611Z [DEBUG] [API:auth] OAuth token check starting
+2026-02-26T07:35:38.612Z [DEBUG] [API:auth] OAuth token check complete
+2026-02-26T07:35:38.614Z [ERROR] API error (attempt 1/11): Could not resolve authentication method. Expected either apiKey or authToken to be set. Or for one of the "X-Api-Key" or "Authorization" headers to be explicitly omitted
+2026-02-26T07:35:38.614Z [ERROR] Error in API request: Could not resolve authentication method. Expected either apiKey or authToken to be set. Or for one of the "X-Api-Key" or "Authorization" headers to be explicitly omitted
+2026-02-26T07:35:38.614Z [ERROR] Error: Error: Could not resolve authentication method. Expected either apiKey or authToken to be set. Or for one of the "X-Api-Key" or "Authorization" headers to be explicitly omitted
+    at Mh.validateHeaders (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:370:1008)
+    at Mh.buildHeaders (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:370:8565)
+    at async Mh.buildRequest (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:370:7623)
+    at async Mh.makeRequest (file:///home/sean/.local/lib/node_modules/@anthropic-ai/claude-code/cli.js:370:3388)
+2026-02-26T07:35:38.617Z [DEBUG] Getting matching hook commands for Stop with query: undefined
+2026-02-26T07:35:38.617Z [DEBUG] Found 0 hook matchers in settings
+2026-02-26T07:35:38.617Z [DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)

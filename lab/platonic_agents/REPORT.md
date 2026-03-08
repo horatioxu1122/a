@@ -1,12 +1,14 @@
-# Platonic Agents: Introspection Failure in Minimal LLM Agents
+# Platonic Agents: The Minimal Ideal Form of an LLM Agent
+
+"Platonic" as in Plato's Forms — the pure ideal of what an agent is, stripped to its essence. A single file, a loop, an LLM call, a command protocol. The platonic triangle has three sides and nothing else. The platonic agent has a loop, a model, and a shell — nothing else.
 
 ## Setup
 
-Minimal agent loop: user prompt → local LLM (ollama/mistral) → CMD: extraction → subprocess exec → feed output back → loop until plain text answer. 16 lines Python, 33 lines self-compiling C. Rolling 20-message memory, 5-iteration cap, repeat guard, backtick stripping.
+Minimal agent loop: user prompt → LLM → CMD: extraction → subprocess exec → feed output back → loop until plain text answer. 16 lines Python, 33 lines self-compiling C. Rolling 20-message memory, 5-iteration cap, repeat guard, backtick stripping.
 
 ## The Problem
 
-When the model fails to use the CMD: protocol correctly, it **confabulates command outputs instead of executing them**. It operates in a "platonic" reality — reflecting on imagined state rather than actual system state.
+When the model fails to use the CMD: protocol correctly, it **confabulates command outputs instead of executing them** — reflecting on imagined state rather than actual system state.
 
 ## Observed Behavior
 
@@ -306,7 +308,7 @@ On `hostname` test (answer phase, all correct):
 
 ### Key Finding: Rating Cannot Detect Hallucination
 
-DeepSeek-R1 confabulated a hostname (`linux-machine-42`) before the command even ran — the classic "platonic" failure mode. Yet cross-rate gave it 83/100 because the *format* looked authoritative. The rating judge saw one response in isolation with no ground truth, so a confident-sounding wrong answer scored well.
+DeepSeek-R1 confabulated a hostname (`linux-machine-42`) before the command even ran — the classic confabulation failure mode. Yet cross-rate gave it 83/100 because the *format* looked authoritative. The rating judge saw one response in isolation with no ground truth, so a confident-sounding wrong answer scored well.
 
 The A/B voting method is more resistant: when comparing ds-r1's verbose confabulated response against a clean `CMD:hostname`, the comparator looks more protocol-compliant and wins. Voting evaluates responses *relative* to each other, which exposes quality differences that absolute scoring misses.
 
