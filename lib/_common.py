@@ -189,10 +189,10 @@ def load_sess(cfg):
 
 def _pmark(p,r): return '+' if os.path.exists(p) else ('~' if r else 'x')
 def _refresh_cache():
-    from .update import refresh_caches; refresh_caches()
+    from update import refresh_caches; refresh_caches()
 
 def add_proj(p):
-    from .sync import sync
+    from sync import sync
     p = os.path.abspath(os.path.expanduser(p))
     if not os.path.isdir(p): return False, f"Not a directory: {p}"
     name = os.path.basename(p)
@@ -203,7 +203,7 @@ def add_proj(p):
     _refresh_cache(); return True, f"Added: {name}"
 
 def rm_proj(i):
-    from .sync import sync
+    from sync import sync
     projs = load_proj()
     if i < 0 or i >= len(projs): return False, f"Invalid index: {i}"
     name = os.path.basename(projs[i][0])
@@ -212,14 +212,14 @@ def rm_proj(i):
 
 def add_app(n, cmd):
     if not n or not cmd: return False, "Name and command required"
-    from .sync import sync, SYNC_ROOT
+    from sync import sync, SYNC_ROOT
     d = SYNC_ROOT / 'workspace' / 'cmds'; d.mkdir(parents=True, exist_ok=True)
     if (d/f'{n}.txt').exists(): return False, f"Exists: {n}"
     (d/f'{n}.txt').write_text(f"Name: {n}\nCommand: {cmd}\n"); sync('workspace')
     _refresh_cache(); return True, f"Added: {n}"
 
 def rm_app(i):
-    from .sync import sync, SYNC_ROOT
+    from sync import sync, SYNC_ROOT
     a = load_apps()
     if i < 0 or i >= len(a): return False, f"Invalid index: {i}"
     n = a[i][0]; (SYNC_ROOT/'workspace'/'cmds'/f'{n}.txt').unlink(missing_ok=True); sync('workspace')

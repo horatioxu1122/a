@@ -41,7 +41,7 @@ _ensure_cc() {
     [[ -n "$CC" ]] && return 0
     info "Installing clang..."
     if [[ -f /data/data/com.termux/files/usr/bin/bash ]]; then pkg install -y clang || true
-    elif [[ -f /etc/debian_version ]]; then sudo rm -f /etc/apt/sources.list.d/*llvm* && sudo apt-get update -qq && sudo apt-get install -y clang 2>/dev/null || true
+    elif [[ -f /etc/debian_version ]]; then sudo find /etc/apt/sources.list.d -name '*llvm*' -delete 2>/dev/null; sudo apt-get update -qq && sudo apt-get install -y clang 2>/dev/null || true
     elif [[ -f /etc/arch-release ]]; then sudo pacman -S --noconfirm clang 2>/dev/null || true
     elif [[ -f /etc/fedora-release ]]; then sudo dnf install -y clang 2>/dev/null || true
     elif [[ "$OSTYPE" == darwin* ]]; then xcode-select --install 2>/dev/null; echo "Run 'xcode-select --install' and retry"; exit 1; fi
@@ -70,7 +70,7 @@ a() {
     [[ -d "$d" ]] && { echo "📂 $d"; cd "$d"; return; }
     [[ "$1" == *.c && -f "$1" ]] && { sh "$@"; return; }
     [[ "$1" == *.py && -f "$1" ]] && { local py=python3 ev=1; [[ -n "$VIRTUAL_ENV" ]] && py="$VIRTUAL_ENV/bin/python" ev=0; [[ -x .venv/bin/python ]] && py=.venv/bin/python ev=0; local s=$(($(date +%s%N)/1000000)); if command -v uv &>/dev/null && [[ -f pyproject.toml || -f uv.lock ]]; then uv run python "$@"; ev=0; else $py "$@"; fi; local r=$?; echo "{\"cmd\":\"$1\",\"ms\":$(($(($(date +%s%N)/1000000))-s)),\"ts\":\"$(date -Iseconds)\"}" >> $dd/timing.jsonl; [[ $r -ne 0 && $ev -ne 0 ]] && printf '  try: a c fix python env for this project\n'; return $r; }
-    [[ "$1" == copy && -z "$TMUX" && -t 0 ]] && { local lc=$(fc -ln -2 -2 2>/dev/null|sed 's/^ *//'); [[ "$lc" && "$lc" != a\ copy* ]] && { eval "$lc" 2>&1|command a copy; return; }; echo "x No prev cmd"; return 1; }
+    [[ "$1" == copy && -z "$TMUX" && -t 0 ]] && { local lc; lc=$(fc -ln -2 -2 2>/dev/null); lc=${lc#"${lc%%[! ]*}"}; [[ "$lc" && "$lc" != a\ copy* ]] && { eval "$lc" 2>&1|command a copy; return; }; echo "x No prev cmd"; return 1; }
     command a "$@"; local r=$?; [[ -f $dd/cd_target ]] && { read -r d < $dd/cd_target; rm $dd/cd_target; cd "$d" 2>/dev/null; }; return $r
 }
 aio() { a "$@"; }
