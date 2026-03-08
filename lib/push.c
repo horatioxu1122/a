@@ -29,13 +29,16 @@ static int cmd_push(int argc, char **argv) {
     char dirty[64] = ""; pcmd("git status --porcelain 2>/dev/null", dirty, 64);
     const char *tag = dirty[0] ? "\xe2\x9c\x93" : "\xe2\x97\x8b";
 
-    /* Check instant mode */
-    char ok[P]; snprintf(ok, P, "%s/logs/push.ok", DDIR);
+    /* Check for prior push failure */
+    char ok[P],ef[P]; snprintf(ok,P,"%s/logs/push.ok",DDIR); snprintf(ef,P,"%s/logs/push.err",DDIR);
     struct stat st;
+    {char *e=readf(ef,NULL); if(e){unlink(ef);unlink(ok);printf("\xe2\x9c\x97 Last push failed:\n%s\n",e);free(e);}}
+    /* Check instant mode */
     if (stat(ok, &st) == 0 && time(NULL) - st.st_mtime < 600) {
         char c[B*2]; snprintf(c, sizeof(c),
-            "cd '%s' && git add -A && git commit -m \"%s\" --allow-empty 2>/dev/null; git push 2>/dev/null; touch '%s'",
-            cwd, msg, ok);
+            "cd '%s' && git add -A && git commit -m \"%s\" --allow-empty 2>/dev/null && "
+            "out=$(git push 2>&1) && touch '%s' || echo \"$out\" > '%s'",
+            cwd, msg, ok, ef);
         if (fork() == 0) { setsid();
             int n=open("/dev/null",O_RDWR); if(n>=0){dup2(n,0);dup2(n,1);dup2(n,2);close(n);}
             execl("/bin/sh","sh","-c",c,(char*)NULL); _exit(1);
