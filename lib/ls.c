@@ -207,20 +207,19 @@ static int cmd_jobs(int argc, char **argv) {
         snprintf(c,B,"%s/.a_done",R[ri].p);char*d=readf(c,NULL);if(d){printf("%s\n",d);free(d);}}
         raw_enter();printf("\n  [m]erge [r]esume [d]el [j/k/q]  ");fflush(stdout);
         int k=raw_key();raw_exit();putchar('\n');char gd[B]="",c[B];
-        if(k=='m'||k=='d'){snprintf(c,B,"git -C '%s' rev-parse --show-toplevel 2>/dev/null",R[ri].p);pcmd(c,gd,B);gd[strcspn(gd,"\n")]=0;}
+        if(k=='m'||k=='d'){snprintf(c,B,"git -C '%s' rev-parse --path-format=absolute --git-common-dir 2>/dev/null",R[ri].p);pcmd(c,gd,B);gd[strcspn(gd,"\n")]=0;{char*s=strrchr(gd,'/');if(s)*s=0;}}
         if(k=='m'&&gd[0]){
-            snprintf(c,B,"cd '%s'&&git add -A&&git diff --cached --quiet||git commit -m 'job: auto-commit'",R[ri].p);pcmd(c,NULL,0);
-            char o[B]="";snprintf(c,B,"cd '%s'&&git merge --no-edit 'j-%s' 2>&1",gd,R[ri].n);
-            if(pcmd(c,o,B)){snprintf(c,B,"cd '%s'&&claude -p 'resolve merge conflicts, git add, git commit'",gd);(void)!system(c);}
-            snprintf(c,B,"cd '%s'&&git rm -f .a_done 2>/dev/null&&git commit -m 'job: cleanup' 2>/dev/null",gd);pcmd(c,NULL,0);
-            snprintf(c,B,"rm -rf '%s'&&git -C '%s' worktree prune&&git -C '%s' branch -d 'j-%s' 2>/dev/null",R[ri].p,gd,gd,R[ri].n);
-            (void)!system(c);puts("  \xe2\x9c\x93");}
+            snprintf(c,B,"cd '%s'&&git add -A&&(git diff --cached --quiet||git commit -m 'job: auto-commit')",R[ri].p);pcmd(c,NULL,0);
+            char cc[B];snprintf(cc,B,"claude \"Merge j-%s into main. Resolve conflicts. Show diff --stat when done.\"",R[ri].n);
+            if(!getenv("TMUX")){tm_new("merge",gd,cc);snprintf(c,B,"tmux split-window -v -p 50 -t merge -c '%s'",gd);(void)!system(c);tm_go("merge");}
+            else{snprintf(c,B,"tmux new-window -n merge -c '%s' '%s'",gd,cc);(void)!system(c);
+                snprintf(c,B,"tmux split-window -v -p 50 -c '%s'",gd);(void)!system(c);}}
         else if(k=='d'){snprintf(c,B,"rm -rf '%s'",R[ri].p);pcmd(c,NULL,0);
             if(gd[0]){snprintf(c,B,"(git -C '%s' worktree prune;git -C '%s' branch -D 'j-%s')>/dev/null 2>&1 &",gd,gd,R[ri].n);pcmd(c,NULL,0);}}
         else if(k=='r'){char jc[B];snprintf(jc,B,"while :;do claude --dangerously-skip-permissions --continue;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",LOGDIR);
             if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",R[ri].n);tm_new(sn,R[ri].p,jc);tm_go(sn);}
             else{snprintf(c,B,"tmux new-window -n '%s' -c '%s' '%s'",R[ri].n,R[ri].p,jc);(void)!system(c);}}
-        if(k=='m'||k=='d'){nr--;memmove(R+ri,R+ri+1,(size_t)(nr-ri)*sizeof(R[0]));if(ri>=nr)ri=nr-1;}
+        if(k=='d'){nr--;memmove(R+ri,R+ri+1,(size_t)(nr-ri)*sizeof(R[0]));if(ri>=nr)ri=nr-1;}
         else if(k=='k'){if(ri>0)ri--;}else if(k=='q'||k==3||k==27)break;else if(k=='j')ri++;
     }return 0;
 }
