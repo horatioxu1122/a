@@ -70,6 +70,7 @@ a() {
     [[ -z "$1" ]] && { [[ -t 1 ]] && set -- i || { cat $dd/help_cache.txt 2>/dev/null || command a; return; }; }
     local d="${1/#\~/$HOME}"; [[ "$1" == "/projects/"* ]] && d="$HOME$1"
     [[ -d "$d" ]] && { echo "📂 $d"; cd "$d"; return; }
+    [[ "$1" == *.c && -f "$1" ]] && { sh "$@"; return; }
     [[ "$1" == *.py && -f "$1" ]] && { local py=python3 ev=1; [[ -n "$VIRTUAL_ENV" ]] && py="$VIRTUAL_ENV/bin/python" ev=0; [[ -x .venv/bin/python ]] && py=.venv/bin/python ev=0; local s=$(($(date +%s%N)/1000000)); if command -v uv &>/dev/null && [[ -f pyproject.toml || -f uv.lock ]]; then uv run python "$@"; ev=0; else $py "$@"; fi; local r=$?; echo "{\"cmd\":\"$1\",\"ms\":$(($(($(date +%s%N)/1000000))-s)),\"ts\":\"$(date -Iseconds)\"}" >> $dd/timing.jsonl; [[ $r -ne 0 && $ev -ne 0 ]] && printf '  try: a c fix python env for this project\n'; return $r; }
     [[ "$1" == copy && -z "$TMUX" && -t 0 ]] && { local lc=$(fc -ln -2 -2 2>/dev/null|sed 's/^ *//'); [[ "$lc" && "$lc" != a\ copy* ]] && { eval "$lc" 2>&1|command a copy; return; }; echo "x No prev cmd"; return 1; }
     command a "$@"; local r=$?; [[ -f $dd/cd_target ]] && { read -r d < $dd/cd_target; rm $dd/cd_target; cd "$d" 2>/dev/null; }; return $r
