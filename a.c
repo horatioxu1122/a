@@ -152,20 +152,17 @@ install)
     elif [[ -f /etc/fedora-release ]]; then OS=fedora
     else OS=unknown; fi
     SUDO="" NEED_SUDO=0
-    ! command -v tmux &>/dev/null || ! command -v npm &>/dev/null && NEED_SUDO=1
-    ! grep -q 'a\.local' /etc/hosts 2>/dev/null && NEED_SUDO=1
+    { command -v tmux &>/dev/null && command -v npm &>/dev/null && grep -q 'a\.local' /etc/hosts 2>/dev/null; } || NEED_SUDO=1
     if [[ $EUID -eq 0 ]]; then SUDO=""
     elif sudo -n true 2>/dev/null; then SUDO="sudo"
     elif [[ $NEED_SUDO -eq 1 ]] && command -v sudo &>/dev/null && [[ -t 0 ]]; then info "sudo needed for system packages + /etc/hosts"; sudo -v && SUDO="sudo"
     fi
     info "Detected: $OS ${SUDO:+(sudo)}${SUDO:-"(no root)"}"
-    # a.local hostname — do this first while sudo cache is fresh
     if ! grep -q 'a\.local' /etc/hosts 2>/dev/null; then
-        if [[ -n "$SUDO" ]] || [[ $EUID -eq 0 ]]; then
-            echo '127.0.0.1 a.local' | $SUDO tee -a /etc/hosts >/dev/null && ok "a.local (added to /etc/hosts)"
+        if [[ -n "$SUDO" || $EUID -eq 0 ]]; then echo '127.0.0.1 a.local'|$SUDO tee -a /etc/hosts>/dev/null&&ok "a.local"
         elif [[ "$OS" == termux ]]; then ok "a.local (termux: use localhost:1111)"
         else warn "a.local: run 'echo 127.0.0.1 a.local | sudo tee -a /etc/hosts'"; fi
-    else ok "a.local (exists)"; fi
+    else ok "a.local"; fi
     install_node() { command -v node &>/dev/null && [[ "$(node -v)" == v2[2-9]* || "$(node -v)" == v[3-9]* ]] && return 0; _install_node; }
     case $OS in
         mac)
@@ -175,7 +172,8 @@ install)
             ok "tmux + node + gh + rclone" ;;
         debian)
             if [[ -n "$SUDO" ]]; then export DEBIAN_FRONTEND=noninteractive
-                $SUDO apt update -qq && $SUDO apt install -yqq clang tmux git curl python3-pip sshpass rclone gh tcc gcc cppcheck cbmc frama-c-base 2>/dev/null || true; ok "pkgs"
+                $SUDO apt update -qq && $SUDO apt install -yqq clang tmux git curl python3-pip sshpass rclone tcc gcc cppcheck cbmc frama-c-base 2>/dev/null || true
+                command -v gh &>/dev/null||{ curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg|$SUDO tee /etc/apt/keyrings/gh.gpg>/dev/null&&echo "deb [signed-by=/etc/apt/keyrings/gh.gpg] https://cli.github.com/packages stable main"|$SUDO tee /etc/apt/sources.list.d/gh.list>/dev/null&&$SUDO apt update -qq&&$SUDO apt install -yqq gh;}||true; ok "pkgs"
             fi; install_node; [[ -z "$SUDO" ]] && { command -v tmux &>/dev/null || warn "tmux needs: sudo apt install tmux"; } ;;
         arch)
             if [[ -n "$SUDO" ]]; then $SUDO pacman -Sy --noconfirm clang tmux nodejs npm git python-pip sshpass rclone github-cli tcc gcc cppcheck cbmc frama-c 2>/dev/null && ok "pkgs"
@@ -194,37 +192,24 @@ install)
     _shell_funcs
     install_cli() {
         local pkg="$1" cmd="$2" p=$(command -v "$cmd" 2>/dev/null)
-        [[ -n "$p" && "${p:0:5}" != "/mnt/" ]] && { ok "$cmd (exists)"; return; }
+        [[ -n "$p" && "${p:0:5}" != "/mnt/" ]] && { ok "$cmd"; return; }
         [[ -n "$p" ]] && warn "$cmd ($p) is Windows"; info "Installing $cmd..."
         local ns=""; [[ "$OS" == termux && -z "$3" ]] && ns="--ignore-scripts"
-        if ! command -v npm &>/dev/null; then warn "$cmd skipped (npm not found)"
-        elif [[ -n "$SUDO" ]] || [[ $EUID -eq 0 ]]; then $SUDO npm install -g $ns "$pkg" && ok "$cmd" || warn "$cmd failed"
-        else mkdir -p "$HOME/.local/lib" && npm install -g $ns --prefix="$HOME/.local" "$pkg" && ok "$cmd" || warn "$cmd failed"; fi
+        if ! command -v npm &>/dev/null; then warn "$cmd skipped (no npm)"
+        elif [[ -n "$SUDO" || $EUID -eq 0 ]]; then $SUDO npm install -g $ns "$pkg"&&ok "$cmd"||warn "$cmd failed"
+        else mkdir -p "$HOME/.local/lib"&&npm install -g $ns --prefix="$HOME/.local" "$pkg"&&ok "$cmd"||warn "$cmd failed"; fi
     }
-    if ! command -v claude &>/dev/null; then
-        info "Installing claude..."
-        curl -fsSL https://claude.ai/install.sh | bash && ok "claude" || warn "claude install failed"
-    else ok "claude (exists)"; fi
+    command -v claude &>/dev/null&&ok "claude"||{ info "Installing claude...";curl -fsSL https://claude.ai/install.sh|bash&&ok "claude"||warn "claude failed";}
     install_cli "@openai/codex" "codex"
     install_cli "@google/gemini-cli" "gemini" scripts
     [[ "$OS" == termux ]] && info "Gemini auth: NO_BROWSER=true gemini"
-    # uv — preferred python env. auto-installs deps from PEP 723 metadata.
-    # fallback_py() tries uv run --script first, then venv, then system python3.
+    # uv — preferred python env. fallback_py() tries uv run --script first, then python3.
+    command -v uv &>/dev/null&&ok "uv"||{ info "Installing uv...";curl -LsSf https://astral.sh/uv/install.sh|sh&&export PATH="$HOME/.local/bin:$PATH"&&ok "uv"||warn "uv failed";}
     if ! command -v uv &>/dev/null; then
-        info "Installing uv..."
-        curl -LsSf https://astral.sh/uv/install.sh | sh && export PATH="$HOME/.local/bin:$PATH" && ok "uv" || warn "uv install failed"
-    else ok "uv ($(uv --version))"; fi
-    # venv fallback — for systems where uv is unavailable
-    _best_py() {
-        for v in python3.14 python3.13 python3.12 python3.11 python3; do command -v $v &>/dev/null && { $v -c 'import venv' 2>/dev/null && echo $v && return; }; done
-    }
-    VENV="$D/adata/venv"; PY=$(_best_py)
-    if ! command -v uv &>/dev/null && [[ -n "$PY" ]]; then
-        if [[ ! -f "$VENV/bin/python" ]]; then
-            info "Creating venv with $PY..."
-            $PY -m venv "$VENV" && ok "venv ($($VENV/bin/python --version))" || warn "venv creation failed"
-        else ok "venv (exists: $($VENV/bin/python --version))"; fi
-        [[ -f "$VENV/bin/pip" ]] && $VENV/bin/pip install -q pexpect prompt_toolkit aiohttp 2>/dev/null && ok "python deps" || warn "pip install failed"
+        _best_py(){ for v in python3.14 python3.13 python3.12 python3.11 python3;do command -v $v &>/dev/null&&$v -c 'import venv' 2>/dev/null&&echo $v&&return;done;}
+        VENV="$D/adata/venv";PY=$(_best_py)
+        [[ -n "$PY" ]]&&{ [[ -f "$VENV/bin/python" ]]&&ok "venv"||{ $PY -m venv "$VENV"&&ok "venv"||warn "venv failed";}
+        [[ -f "$VENV/bin/pip" ]]&&$VENV/bin/pip install -q pexpect prompt_toolkit aiohttp 2>/dev/null&&ok "python deps"||warn "pip failed";}
     fi
     # playwright browser deps (needed for headless scraping agents)
     if ! python3 -c "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); p.chromium.launch(headless=True).close(); p.stop()" 2>/dev/null; then
@@ -236,12 +221,7 @@ install)
             sudo apt-get install -y libxcomposite1 libgtk-3-0t64 libasound2t64 libnss3 2>/dev/null && ok "playwright deps" || warn "playwright deps (needs sudo)"
         fi
     else ok "playwright deps"; fi
-    if ! command -v ollama &>/dev/null; then
-        if [[ -n "$SUDO" ]] || [[ $EUID -eq 0 ]]; then
-            info "Installing ollama..."
-            curl -fsSL https://ollama.com/install.sh | sh && ok "ollama" || warn "ollama install failed"
-        else warn "ollama needs sudo - run: curl -fsSL https://ollama.com/install.sh | sudo sh"; fi
-    else ok "ollama (exists)"; fi
+    command -v ollama &>/dev/null&&ok "ollama"||{ [[ -n "$SUDO" || $EUID -eq 0 ]]&&{ info "Installing ollama...";curl -fsSL https://ollama.com/install.sh|sh&&ok "ollama"||warn "ollama failed";}||warn "ollama needs sudo";}
     "$BIN/a" ui on 2>/dev/null && ok "UI service (localhost:1111)" || :
     [[ ! -s "$HOME/.tmux.conf" ]] && "$BIN/a" config tmux_conf y 2>/dev/null && ok "tmux config (mouse enabled)" || :
     "$BIN/a" >/dev/null 2>&1 && ok "cache generated" || :
