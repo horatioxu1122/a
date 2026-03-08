@@ -216,7 +216,7 @@ static int cmd_jobs(int argc, char **argv) {
                 snprintf(c,B,"tmux split-window -v -p 50 -c '%s'",gd);(void)!system(c);}}
         else if(k=='d'){snprintf(c,B,"rm -rf '%s'",R[ri].p);pcmd(c,NULL,0);
             if(gd[0]){snprintf(c,B,"(git -C '%s' worktree prune;git -C '%s' branch -D 'j-%s')>/dev/null 2>&1 &",gd,gd,R[ri].n);pcmd(c,NULL,0);}}
-        else if(k=='r'){char jc[B];snprintf(jc,B,"tmux splitw -vd -p50;while :;do claude --dangerously-skip-permissions --continue;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",LOGDIR);
+        else if(k=='r'){char jc[B];jcmd_fill(jc,1);
             if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",R[ri].n);tm_new(sn,R[ri].p,jc);tm_go(sn);}
             else{snprintf(c,B,"tmux new-window -n '%s' -c '%s' '%s'",R[ri].n,R[ri].p,jc);(void)!system(c);}}
         if(k=='d'){nr--;memmove(R+ri,R+ri+1,(size_t)(nr-ri)*sizeof(R[0]));if(ri>=nr)ri=nr-1;}

@@ -464,7 +464,7 @@ static int cmd_j(int c,char**v){
     if(c>3&&!strcmp(v[2],"--resume")){snprintf(wd,P,"%s",v[3]);
         if(!dexists(wd)){printf("x %s not found\n",wd);return 1;}
         printf("+ resume: %s\n",wd);
-        tm_ensure_conf();char jcmd[B];snprintf(jcmd,B,"tmux splitw -vd -p50;while :;do claude --dangerously-skip-permissions --continue;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",LOGDIR);
+        tm_ensure_conf();char jcmd[B];jcmd_fill(jcmd,1);
         if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",bname(wd));tm_new(sn,wd,jcmd);tm_go(sn);}
         else{char cm[B],pid[64];snprintf(cm,B,"tmux new-window -P -F '#{pane_id}' -c '%s' '%s'",wd,jcmd);pcmd(cm,pid,64);}
         return 0;}
@@ -485,7 +485,7 @@ static int cmd_j(int c,char**v){
     printf("+ job: %s\n  %.*s\n",bname(wd),80,pr);
     if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: git add -A && git commit -m 'job: <summary>', then write .a_done with summary + test commands");
     tm_ensure_conf();
-    char jcmd[B];snprintf(jcmd,B,"tmux splitw -vd -p50;while :;do claude --dangerously-skip-permissions;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",LOGDIR);
+    char jcmd[B];jcmd_fill(jcmd,0);
     if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",bname(wd));
         tm_ensure_conf();tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);tm_go(sn);}
     char cm[B],pid[64];
