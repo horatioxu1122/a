@@ -120,7 +120,7 @@ build)
         _c 3 clang-tidy --checks='-*,bugprone-branch-clone,bugprone-infinite-loop,bugprone-sizeof-*' -warnings-as-errors='*' "$F" -- $A -std=c17 -w &
         { ! _rgcc||gcc -std=c17 -Werror -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wtrampolines $A -fsyntax-only "$F";}>"$T/4" 2>&1||touch "$T/4.f" &
         { ! _rgcc||{ gcc -fanalyzer $A -fsyntax-only "$F" >"$T/5" 2>&1;! grep -q '\-Wanalyzer' "$T/5";};}||touch "$T/5.f" &
-        _c 6 cppcheck --error-exitcode=1 --quiet --suppress=syntaxError $A "$F" & _c 7 frama-c -eva -eva-no-print -no-unicode "$F" $A &
+        _c 6 cppcheck --error-exitcode=1 --quiet --suppress=syntaxError $A "$F" & _c 7 frama-c -eva -eva-no-print -no-unicode -cpp-extra-args="$A" "$F" &
         { ! command -v cbmc &>/dev/null||timeout 15 cbmc --function main "$F" $A||[ $? -eq 124 ];}>"$T/8" 2>&1||touch "$T/8.f" &
         { $CC $A -fsanitize=undefined,address -fno-omit-frame-pointer -w -o "$T/a.san" "$F"&&"$T/a.san" help >"$T/9" 2>&1;! grep -q 'runtime error\|SUMMARY:.*Sanitizer' "$T/9";}||touch "$T/9.f" &
         wait
@@ -167,7 +167,7 @@ install)
     case $OS in
         mac)
             command -v brew &>/dev/null || { info "Installing Homebrew..."; /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"; }
-            brew tap hudochenkov/sshpass 2>/dev/null; brew install tmux node gh sshpass rclone cppcheck gcc 2>/dev/null||brew upgrade tmux node gh sshpass rclone cppcheck gcc 2>/dev/null
+            brew tap hudochenkov/sshpass 2>/dev/null; brew install tmux node gh sshpass rclone cppcheck gcc &>/dev/null||brew upgrade tmux node gh sshpass rclone cppcheck gcc &>/dev/null
             command -v clang &>/dev/null || { xcode-select --install 2>/dev/null; warn "Run 'xcode-select --install' then retry"; }
             ok "tmux + node + gh + rclone" ;;
         debian)
