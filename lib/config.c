@@ -14,7 +14,7 @@ static int cmd_set(int argc, char **argv) {
 
 static int cmd_settings(int argc,char**argv) {
     char p[P],d[P];snprintf(d,P,"%s/settings",SROOT);mkdirp(d);snprintf(p,P,"%s/%s",d,argc>2?argv[2]:"dev");
-    if(argc>3){argv[3][1]=='n'?writef(p,""):unlink(p);sync_bg();}
+    if(argc>3){if(argv[3][1]=='n')writef(p,"");else unlink(p);sync_bg();}
     puts(fexists(p)?"on":"off");return 0;
 }
 
@@ -31,9 +31,8 @@ static int cmd_uninstall(int argc, char **argv) { (void)argc;(void)argv;
     printf("Uninstall aio? (y/n): "); char buf[16];
     if (!fgets(buf, 16, stdin) || (buf[0] != 'y' && buf[0] != 'Y')) return 0;
     char p[P];
-    snprintf(p, P, "%s/.local/bin/aio", HOME); unlink(p);
-    snprintf(p, P, "%s/.local/bin/aioUI.py", HOME); unlink(p);
-    puts("\xe2\x9c\x93 aio uninstalled"); _exit(0);
+    snprintf(p, P, "%s/.local/bin/a", HOME); unlink(p);
+    puts("\xe2\x9c\x93 uninstalled"); _exit(0);
 }
 
 /* ── deps ── */
