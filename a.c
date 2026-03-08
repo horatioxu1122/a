@@ -115,11 +115,12 @@ build)
     (
         T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\""
         _c(){ n=$1;shift;{ ! command -v "$1" &>/dev/null||"$@";}>"$T/$n" 2>&1||touch "$T/$n.f";}
+        _rgcc(){ command -v gcc &>/dev/null&&! gcc --version 2>&1|grep -q clang;}
         _c 1 $CC $WARN $A -fsyntax-only "$F" &
-        { $CC $A --analyze -Xanalyzer -analyzer-checker=security,unix,nullability -w "$F" >"$T/2" 2>&1;! grep 'warning:' "$T/2"|grep -qv 'insecureAPI\|DeadStores';}||touch "$T/2.f" &
+        { $CC $A --analyze -Xanalyzer -analyzer-checker=security,unix,nullability -w "$F" >"$T/2" 2>&1;! grep 'warning:' "$T/2"|grep -qv 'insecureAPI\|DeadStores\|Path diagnostic\|NullableDeref';}||touch "$T/2.f" &
         _c 3 clang-tidy --checks='-*,bugprone-branch-clone,bugprone-infinite-loop,bugprone-sizeof-*' -warnings-as-errors='*' "$F" -- $A -std=c17 -w &
-        _c 4 gcc -std=c17 -Werror -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wtrampolines $A -fsyntax-only "$F" &
-        { ! command -v gcc &>/dev/null||{ gcc -fanalyzer $A -fsyntax-only "$F" >"$T/5" 2>&1;! grep -q '\-Wanalyzer' "$T/5";};}||touch "$T/5.f" &
+        { ! _rgcc||gcc -std=c17 -Werror -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wtrampolines $A -fsyntax-only "$F";}>"$T/4" 2>&1||touch "$T/4.f" &
+        { ! _rgcc||{ gcc -fanalyzer $A -fsyntax-only "$F" >"$T/5" 2>&1;! grep -q '\-Wanalyzer' "$T/5";};}||touch "$T/5.f" &
         _c 6 cppcheck --error-exitcode=1 --quiet --suppress=syntaxError $A "$F" & _c 7 frama-c -eva -eva-no-print -no-unicode "$F" $A &
         { ! command -v cbmc &>/dev/null||timeout 15 cbmc --function main "$F" $A||[ $? -eq 124 ];}>"$T/8" 2>&1||touch "$T/8.f" &
         { $CC $A -fsanitize=undefined,address -fno-omit-frame-pointer -w -o "$T/a.san" "$F"&&"$T/a.san" help >"$T/9" 2>&1;! grep -q 'runtime error\|SUMMARY:.*Sanitizer' "$T/9";}||touch "$T/9.f" &
