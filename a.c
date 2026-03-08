@@ -41,7 +41,7 @@ _ensure_cc() {
     [[ -n "$CC" ]] && return 0
     info "Installing clang..."
     if [[ -f /data/data/com.termux/files/usr/bin/bash ]]; then pkg install -y clang || true
-    elif [[ -f /etc/debian_version ]]; then { T=/tmp/llvm.sh && curl -fsSL https://apt.llvm.org/llvm.sh -o $T && sudo bash $T 2>/dev/null || sudo apt-get install -y clang; } 2>/dev/null || true
+    elif [[ -f /etc/debian_version ]]; then sudo apt-get update -qq && sudo apt-get install -y clang 2>/dev/null || true
     elif [[ -f /etc/arch-release ]]; then sudo pacman -S --noconfirm clang 2>/dev/null || true
     elif [[ -f /etc/fedora-release ]]; then sudo dnf install -y clang 2>/dev/null || true
     elif [[ "$OSTYPE" == darwin* ]]; then xcode-select --install 2>/dev/null; echo "Run 'xcode-select --install' and retry"; exit 1; fi
