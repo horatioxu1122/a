@@ -105,7 +105,7 @@ build)
     # Any checker failure poisons binary. Missing tools skip gracefully.
     _ensure_cc
     _warn_flags
-    R="${D%%/adata/worktrees/*}"; ABIN="$R/adata/local"; mkdir -p "$ABIN"
+    R="${D%%/adata/worktrees/*}"; ABIN="$R/adata/local"; mkdir -p "$ABIN"; rm -f "$ABIN/.chk"
     BIN="$HOME/.local/bin"; mkdir -p "$BIN"
     echo $$ > "$ABIN/.bld"
 
