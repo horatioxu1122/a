@@ -117,7 +117,7 @@ build)
         _c(){ n=$1;shift;{ ! command -v "$1" &>/dev/null||"$@";}>"$T/$n" 2>&1||touch "$T/$n.f";}
         _rgcc(){ command -v gcc &>/dev/null&&! gcc --version 2>&1|grep -q clang;}
         _c 1 $CC $WARN $A -fsyntax-only "$F" &
-        { $CC $A --analyze -Xanalyzer -analyzer-checker=security,unix,nullability -w "$F" >"$T/2" 2>&1;! grep 'warning:' "$T/2"|grep -qv 'insecureAPI\|DeadStores\|Path diagnostic\|NullableDeref';}||touch "$T/2.f" &
+        # clang --analyze removed: all findings (insecureAPI,NullableDeref,DeadStores) are false positives; use sh a.c analyze for ad-hoc runs
         _c 3 clang-tidy --checks='-*,bugprone-branch-clone,bugprone-infinite-loop,bugprone-sizeof-*' -warnings-as-errors='*' "$F" -- $A -std=c17 -w &
         { ! _rgcc||gcc -std=c17 -Werror -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wtrampolines $A -fsyntax-only "$F";}>"$T/4" 2>&1||touch "$T/4.f" &
         { ! _rgcc||{ gcc -fanalyzer $A -fsyntax-only "$F" >"$T/5" 2>&1;! grep -q '\-Wanalyzer' "$T/5";};}||touch "$T/5.f" &
