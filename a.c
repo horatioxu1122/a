@@ -41,7 +41,7 @@ _ensure_cc() {
     [[ -n "$CC" ]] && return 0
     info "Installing clang..."
     if [[ -f /data/data/com.termux/files/usr/bin/bash ]]; then pkg install -y clang || true
-    elif [[ -f /etc/debian_version ]]; then sudo rm -f /etc/apt/sources.list.d/*llvm* && sudo apt-get update -qq && sudo apt-get install -y clang 2>/dev/null || true
+    elif [[ -f /etc/debian_version ]]; then [[ -f "$D/adata/git/settings/dev" ]] && sudo rm -f /etc/apt/sources.list.d/*llvm*; sudo apt-get update -qq && sudo apt-get install -y clang 2>/dev/null || true
     elif [[ -f /etc/arch-release ]]; then sudo pacman -S --noconfirm clang 2>/dev/null || true
     elif [[ -f /etc/fedora-release ]]; then sudo dnf install -y clang 2>/dev/null || true
     elif [[ "$OSTYPE" == darwin* ]]; then xcode-select --install 2>/dev/null; echo "Run 'xcode-select --install' and retry"; exit 1; fi
@@ -544,7 +544,7 @@ static const cmd_t CMDS[] = {
     {"pull",cmd_pull},{"push",cmd_push},
     {"remove",cmd_remove},{"repo",cmd_create},{"revert",cmd_revert},{"review",cmd_review},
     {"rm",cmd_remove},{"run",cmd_run},{"scan",cmd_scan},{"send",cmd_send},
-    {"set",cmd_set},{"settings",cmd_set},{"setup",cmd_setup},
+    {"set",cmd_set},{"settings",cmd_settings},{"setup",cmd_setup},
     {"ssh",cmd_ssh},{"ssh add",cmd_ssh},{"ssh all",cmd_ssh},{"ssh rm",cmd_ssh},
     {"ssh self",cmd_ssh},{"ssh setup",cmd_ssh},{"ssh start",cmd_ssh},{"ssh stop",cmd_ssh},
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},

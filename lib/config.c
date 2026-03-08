@@ -12,6 +12,12 @@ static int cmd_set(int argc, char **argv) {
     return 0;
 }
 
+static int cmd_settings(int argc,char**argv) {
+    char p[P],d[P];snprintf(d,P,"%s/settings",SROOT);mkdirp(d);snprintf(p,P,"%s/%s",d,argc>2?argv[2]:"dev");
+    if(argc>3){argv[3][1]=='n'?writef(p,""):unlink(p);sync_bg();}
+    puts(fexists(p)?"on":"off");return 0;
+}
+
 /* ── install ── */
 static int cmd_install(int argc, char **argv) { (void)argc;(void)argv;
     if (getenv("A_BENCH")) return 0;
