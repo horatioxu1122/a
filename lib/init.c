@@ -23,6 +23,7 @@ static void init_paths(void) {
         }
     }
     if (!SROOT[0]) { snprintf(AROOT, P, "%s/projects/a/adata", h); snprintf(SROOT, P, "%s/git", AROOT); }
+    {char l[P];snprintf(l,P,"%s/my",SDIR);symlink("adata/git/my",l);}
     /* All local state lives in adata/ — if it's not in adata, nobody knows
      * where it is. Maximum visibility for humans and LLMs. */
     snprintf(DDIR, P, "%s/local", AROOT);
