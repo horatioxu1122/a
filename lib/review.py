@@ -8,5 +8,5 @@ def run():
     if c=='q' or not c or not c.split()[0].isdigit(): return
     p=items[int(c.split()[0])];repo,num=p['repository']['nameWithOwner'],str(p['number'])
     sp.run(f'D=/tmp/pr-{num};rm -rf $D&&gh repo clone {repo} $D>/dev/null 2>&1&&cd $D&&gh pr checkout {num}>/dev/null 2>&1',shell=True)
-    sp.run(['tmux','new-window','-c',f'/tmp/pr-{num}','claude',f"Review PR #{num} by {p['author']['login']} on {repo}: {p['title']}. Diff against main, review code, help merge to main. Only push on my approval."])
+    sp.run(['tmux','new-window','-c',f'/tmp/pr-{num}','claude','--dangerously-skip-permissions',f"Review PR #{num} by {p['author']['login']} on {repo}: {p['title']}. Diff against main, review code, help merge to main. Only push on my approval."])
 run()
