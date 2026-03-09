@@ -5,31 +5,37 @@ static int git_in_repo(const char *p) {
 
 /* ═══ ADATA SETUP ═══ */
 static void ensure_adata(void) {
-    char c[B], out[512];
-    if (!git_in_repo(SROOT)) {
-        snprintf(c, B, "command -v gh >/dev/null 2>&1 && gh repo clone seanpattencode/a-git '%s' 2>/dev/null", SROOT);
-        if (system(c) == 0) { printf("\xe2\x9c\x93 Cloned adata/git\n"); return; }
+    char c[B],out[256];
+    if(!git_in_repo(SROOT)){
+        snprintf(c,B,"gh repo clone seanpattencode/a-git '%s' 2>/dev/null",SROOT);
+        if(!system(c)){puts("\xe2\x9c\x93 Cloned adata/git");goto link;}
         mkdirp(SROOT);
-        snprintf(c, B, "git -C '%s' init -q 2>/dev/null && git -C '%s' checkout -b main 2>/dev/null", SROOT, SROOT);
-        (void)!system(c);
-        printf("\xe2\x9c\x93 Initialized adata/git (gh auth login to enable sync)\n");
-        return;
+        snprintf(c,B,"git -C '%s' init -q&&git -C '%s' checkout -b main 2>/dev/null",SROOT,SROOT);
+        (void)!system(c);puts("\xe2\x9c\x93 Init adata/git (gh auth login for sync)");goto link;
     }
-    snprintf(c, B, "git -C '%s' remote get-url origin 2>/dev/null", SROOT);
-    pcmd(c, out, sizeof(out)); out[strcspn(out, "\n")] = 0;
-    if (!out[0]) {
-        snprintf(c, B, "command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1"
-            " && git -C '%s' remote add origin https://github.com/seanpattencode/a-git.git 2>/dev/null", SROOT);
-        if (system(c) == 0) printf("\xe2\x9c\x93 Added remote to adata/git\n");
-    } else if (!strstr(out, "a-git")) {
-        snprintf(c, B, "git -C '%s' remote set-url origin https://github.com/seanpattencode/a-git.git", SROOT);
-        (void)!system(c);
-        printf("\xe2\x9c\x93 Fixed adata/git remote\n");
-    }
+    snprintf(c,B,"git -C '%s' remote get-url origin 2>/dev/null",SROOT);
+    pcmd(c,out,256);out[strcspn(out,"\n")]=0;
+    if(!out[0]){snprintf(c,B,"gh auth status>/dev/null 2>&1&&git -C '%s' remote add origin https://github.com/seanpattencode/a-git.git 2>/dev/null",SROOT);
+        if(!system(c))puts("\xe2\x9c\x93 Added adata/git remote");
+    }else if(!strstr(out,"a-git")){snprintf(c,B,"git -C '%s' remote set-url origin https://github.com/seanpattencode/a-git.git",SROOT);
+        (void)!system(c);puts("\xe2\x9c\x93 Fixed adata/git remote");}
+link:{char d[P];snprintf(d,P,"%s/my",SROOT);mkdir(d,0755);snprintf(d,P,"%s/my",SDIR);symlink("adata/git/my",d);}
 }
 
+static void ensure_git_id(void) {
+    char n[128];pcmd("git config user.name 2>/dev/null",n,128);
+    if(n[0]&&n[0]!='\n')return;
+    pcmd("gh api user -q .login 2>/dev/null",n,128);n[strcspn(n,"\n")]=0;
+    char e[128],c[B];
+    if(n[0]){pcmd("gh api user -q .email 2>/dev/null",e,128);e[strcspn(e,"\n")]=0;
+        if(!e[0]||!strcmp(e,"null"))snprintf(e,128,"%s@users.noreply.github.com",n);
+    }else{gethostname(n,128);snprintf(e,128,"%s@local",n);}
+    snprintf(c,B,"git config --global user.name '%s'&&git config --global user.email '%s'",n,e);
+    (void)!system(c);printf("\xe2\x9c\x93 git id: %s <%s>\n",n,e);
+}
 /* ═══ SYNC — append-only, hub_save cleans old {name}_*.txt (see 2026-03-06 HSU incident) ═══ */
 static void sync_repo(void) {
+    ensure_git_id();
     char c[B];
     snprintf(c,B,"D='%s';rm -f $D/.git/index.lock;git -C $D add -A&&git -C $D commit -qm sync;git -C $D pull --no-rebase --no-edit -q origin main;git -C $D push -q origin main",SROOT);
     (void)!system(c);
