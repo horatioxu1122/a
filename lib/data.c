@@ -77,13 +77,13 @@ static void load_proj(void) {
     for (int i = 0; i < n && NPJ < MP; i++) {
         kvs_t kv = kvfile(paths[i]);
         const char *nm = kvget(&kv, "Name"); if (!nm) continue;
-        const char *pa = kvget(&kv, "Path");
-        const char *re = kvget(&kv, "Repo");
-        snprintf(PJ[NPJ].name, 128, "%s", nm); snprintf(PJ[NPJ].file, P, "%s", paths[i]);
-        {char*pp=PJ[NPJ].path;snprintf(pp,512,"%s/projects/%s",HOME,nm);
+        const char *pa = kvget(&kv, "Path"), *re = kvget(&kv, "Repo");
+        proj_t *p=&PJ[NPJ];
+        snprintf(p->name, 128, "%s", nm); snprintf(p->file, P, "%s", paths[i]);
+        {char*pp=p->path;snprintf(pp,512,"%s/projects/%s",HOME,nm);
         if(pa){if(pa[0]=='~')snprintf(pp,512,"%s%s",HOME,pa+1);else if(dexists(pa))snprintf(pp,512,"%s",pa);}}
-        snprintf(PJ[NPJ].repo, 512, "%s", re ? re : "");
-        const char *ord = kvget(&kv, "Order"); PJ[NPJ].order = ord ? atoi(ord) : 9999;
+        snprintf(p->repo, 512, "%s", re ? re : "");
+        {const char *o=kvget(&kv,"Order");p->order=o?atoi(o):strcmp(p->path,SDIR)?9999:-1;}
         NPJ++;
     }
     qsort(PJ, (size_t)NPJ, sizeof(proj_t), pj_cmp);
