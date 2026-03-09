@@ -20,7 +20,7 @@ static void ensure_adata(void) {
         if(ghuser[0]){snprintf(c,B,"git -C '%s' remote add origin https://github.com/%s/a-git.git 2>/dev/null",SROOT,ghuser);
             (void)!system(c);printf("\xe2\x9c\x93 Added remote adata/git \xe2\x86\x92 %s/a-git\n",ghuser);}
     }
-link:{char d[P];snprintf(d,P,"%s/my",SROOT);mkdir(d,0755);snprintf(d,P,"%s/my",SDIR);symlink("adata/git/my",d);}
+link:{char d[P];snprintf(d,P,"%s/my",SROOT);mkdir(d,0755);snprintf(d,P,"%s/my",SDIR);unlink(d);symlink("adata/git/my",d);}
 }
 
 static void ensure_git_id(void) {
