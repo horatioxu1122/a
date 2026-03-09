@@ -15,10 +15,11 @@ static void ensure_adata(void) {
     }
     snprintf(c,B,"git -C '%s' remote get-url origin 2>/dev/null",SROOT);
     pcmd(c,out,256);out[strcspn(out,"\n")]=0;
-    if(!out[0]){snprintf(c,B,"gh auth status>/dev/null 2>&1&&git -C '%s' remote add origin https://github.com/seanpattencode/a-git.git 2>/dev/null",SROOT);
-        if(!system(c))puts("\xe2\x9c\x93 Added adata/git remote");
-    }else if(!strstr(out,"a-git")){snprintf(c,B,"git -C '%s' remote set-url origin https://github.com/seanpattencode/a-git.git",SROOT);
-        (void)!system(c);puts("\xe2\x9c\x93 Fixed adata/git remote");}
+    if(!out[0]){char ghuser[64]="";
+        pcmd("gh api user --jq .login 2>/dev/null",ghuser,sizeof(ghuser));ghuser[strcspn(ghuser,"\n")]=0;
+        if(ghuser[0]){snprintf(c,B,"git -C '%s' remote add origin https://github.com/%s/a-git.git 2>/dev/null",SROOT,ghuser);
+            (void)!system(c);printf("\xe2\x9c\x93 Added remote adata/git \xe2\x86\x92 %s/a-git\n",ghuser);}
+    }
 link:{char d[P];snprintf(d,P,"%s/my",SROOT);mkdir(d,0755);snprintf(d,P,"%s/my",SDIR);symlink("adata/git/my",d);}
 }
 
@@ -36,8 +37,13 @@ static void ensure_git_id(void) {
 /* ═══ SYNC — append-only, hub_save cleans old {name}_*.txt (see 2026-03-06 HSU incident) ═══ */
 static void sync_repo(void) {
     ensure_git_id();
-    char c[B];
-    snprintf(c,B,"D='%s';rm -f $D/.git/index.lock;git -C $D add -A&&git -C $D commit -qm sync;git -C $D pull --no-rebase --no-edit -q origin main;git -C $D push -q origin main",SROOT);
+    char c[B],remote[256]="";
+    snprintf(c,B,"git -C '%s' remote get-url origin 2>/dev/null",SROOT);
+    pcmd(c,remote,sizeof(remote));remote[strcspn(remote,"\n")]=0;
+    int has_remote=0;
+    if(remote[0]){char chk[B];snprintf(chk,B,"git -C '%s' ls-remote --exit-code origin HEAD >/dev/null 2>&1",SROOT);has_remote=!system(chk);}
+    snprintf(c,B,"D='%s';rm -f $D/.git/index.lock;git -C $D add -A&&git -C $D commit -qm sync%s",SROOT,
+        has_remote?";git -C $D pull --no-rebase --no-edit -q origin main;git -C $D push -q origin main":"");
     (void)!system(c);
 }
 static void sync_bg(void) {
