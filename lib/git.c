@@ -40,13 +40,12 @@ static void sync_repo(void) {
     char c[B],remote[256]="";
     snprintf(c,B,"git -C '%s' remote get-url origin 2>/dev/null",SROOT);
     pcmd(c,remote,sizeof(remote));remote[strcspn(remote,"\n")]=0;
-    int has_remote=0;
-    if(remote[0]){char chk[B];snprintf(chk,B,"git -C '%s' ls-remote --exit-code origin HEAD >/dev/null 2>&1",SROOT);has_remote=!system(chk);}
-    snprintf(c,B,"D='%s';rm -f $D/.git/index.lock;git -C $D add -A&&git -C $D commit -qm sync%s",SROOT,
-        has_remote?";git -C $D pull --no-rebase --no-edit -q origin main;git -C $D push -q origin main":"");
+    snprintf(c,B,"D='%s';rm -f $D/.git/index.lock;%sgit -C $D add -A&&git -C $D commit -qm sync%s",SROOT,
+        remote[0]?"git -C $D pull --no-edit -q origin main;":"",
+        remote[0]?"&&git -C $D push -q origin main":"");
     (void)!system(c);
 }
 static void sync_bg(void) {
     pid_t p=fork();if(p<0)return;if(p>0){waitpid(p,NULL,WNOHANG);return;}
-    if(fork()>0)_exit(0);setsid();freopen("/dev/null","w",stdout);freopen("/dev/null","w",stderr);sync_repo();_exit(0);
+    if(fork()>0)_exit(0);setsid();freopen("/dev/null","w",stdout);sync_repo();_exit(0);
 }
