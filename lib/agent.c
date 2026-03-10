@@ -21,22 +21,23 @@ static int cmd_run(int argc, char **argv) { fallback_py("run", argc, argv); }
 
 /* ── agent ── */
 static int cmd_agent(int argc, char **argv) {
-    if (argc < 3) { puts("Usage: a agent [run <name>|g|c|l] <task>"); return 1; }
-    /* a agent run <name> — PEP 723 → uv, else → python3 */
-    if (!strcmp(argv[2],"run") && argc > 3) {
-        char py[P]; snprintf(py,P,"%s/agents/%s.py",SROOT,argv[3]);
-        if (!fexists(py)) { fprintf(stderr,"x %s\n",py); return 1; }
-        perf_disarm();
+    if(argc<3){char c[B];snprintf(c,B,"(echo 'Native (a agent run <name>):';cd %s/lab/platonic_agents&&ls *.[pc]*|sed 's/\\..*//'|sort -u;echo;echo 'CLI tools (a <key>):';sed 's/|/ /;s/|.*//' %s/sessions.txt) 2>/dev/null",SDIR,DDIR);
+        return system(c);}
+    if(!strcmp(argv[2],"run")&&argc>3){char f[P];
+        snprintf(f,P,"%s/lab/platonic_agents/%s.py",SDIR,argv[3]);
+        if(!fexists(f))memcpy(f+strlen(f)-2,"c",2);
+        if(!fexists(f))return 1;
+        perf_disarm();if(strstr(f,".c")){execl("/bin/sh","sh",f,(char*)NULL);return 1;}
         char **na=malloc(((unsigned)argc+2)*sizeof(char*));
-        {FILE *f=fopen(py,"r");char h[32]={0};
-        if(f){(void)!fgets(h,32,f);fclose(f);}
+        {FILE *fp=fopen(f,"r");char h[32]={0};
+        if(fp){(void)!fgets(h,32,fp);fclose(fp);}
         if(strstr(h,"/// script")){
             char uv[P];snprintf(uv,P,"%s/.local/bin/uv",HOME);
-            na[0]="uv";na[1]="run";na[2]="--script";na[3]=py;
+            na[0]="uv";na[1]="run";na[2]="--script";na[3]=f;
             for(int i=4;i<argc;i++)na[i]=argv[i];na[argc]=NULL;
             if(access(uv,X_OK)==0){na[0]=uv;execv(uv,na);}
             execvp("uv",na);}}
-        na[0]="python3";na[1]=py;
+        na[0]="python3";na[1]=f;
         for(int i=4;i<argc;i++)na[i-2]=argv[i];na[argc-2]=NULL;
         execvp("python3",na);
         perror("python3"); return 1;

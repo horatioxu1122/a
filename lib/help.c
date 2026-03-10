@@ -86,6 +86,7 @@ static void gen_icache(void) {
     load_proj(); load_apps();
     char ic[P]; snprintf(ic, P, "%s/i_cache.txt", DDIR);
     FILE *f = fopen(ic, "w"); if (!f) return;
+    fputs("a\n",f);
     int i; for (i=0;i<NPJ;i++) fprintf(f, "%d: %s\tproject\n", i, PJ[i].name);
     for (i=0;i<NAP;i++) fprintf(f, "%d: %s\tcmd\n", NPJ+i, AP[i].name);
     fputs("add\tregister project\nadb\tandroid debug\nagent\tai agent run\nagent run\trun agent task\n"

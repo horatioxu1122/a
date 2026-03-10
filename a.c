@@ -509,7 +509,7 @@ static int cmd_cmp(const void *a, const void *b) {
 }
 static const cmd_t CMDS[] = {
     {"--help",cmd_help_full},{"-h",cmd_help_full},
-    {"a",cmd_all},{"adb",cmd_adb},{"add",cmd_add},{"agent",cmd_agent},{"ai",cmd_all},
+    {"a",cmd_agent},{"adb",cmd_adb},{"add",cmd_add},{"agent",cmd_agent},{"ai",cmd_all},
     {"all",cmd_all},{"apk",cmd_apk},{"ask",cmd_ask},{"attach",cmd_attach},
     {"cal",cmd_cal},{"cat",cmd_cat},{"cleanup",cmd_cleanup},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},{"dash",cmd_dash},{"deps",cmd_deps},
