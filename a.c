@@ -290,20 +290,10 @@ exit 0
  * AI agents, and humans. One interface, many surfaces.
  *
  * IMPORTANT — AI agent testing:
- *   Always test with "command a <args>", never "./a <args>". The binary
- *   runs through ~/.local/bin/a (a symlink), which is how real users invoke
- *   it. "./a" bypasses the symlink and hides bugs in path resolution,
- *   install state, and init_paths. Always run "sh a.c" first to rebuild +
- *   re-symlink, then "command a <args>" to test the installed binary.
- *   Example: a bug where "a 0" failed with "Invalid index" was invisible
- *   via ./a (exe in project dir, paths resolve fine) but reproduced via
- *   command a (symlink pointed to a worktree binary, AROOT was wrong).
- *   "sh a.c" also runs the strict -Weverything checker in parallel with the
- *   build. Skipping it (./a, or manual gcc) means code that compiles fine
- *   now but fails the checker on the next real build. Strict checks catch
- *   real bugs (implicit conversions, sign issues, unused results) that
- *   compound over time — the checker is the gatekeeper, not optional.
- *   The pattern: sh a.c && command a 0   — build like install, test like user.
+ *   Main repo: sh a.c && command a <args>  — tests installed symlink.
+ *   Worktree:  sh a.c && ./a <args>        — tests local binary.
+ *   Always sh a.c first — runs -Weverything checker + rebuild.
+ *   After changes: print copy-pastable test commands so they self-verify.
  *
  * Add a command:  write lib/foo.c, add #include + dispatch line here.
  * Remove:         delete the file, delete two lines.
