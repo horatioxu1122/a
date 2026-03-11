@@ -15,7 +15,7 @@
 # Only fix what's unambiguously broken or a user screams for as missing.
 # Functionality fixes must show fewer or equal tokens, same speed or faster.
 # Feature additions: recursively cut until it breaks if cut further.
-# The code converges to maximally fast, short, valuable, boots everywhere.
+# The code converges to maximally fast, short, valuable, runs everywhere.
 #
 # sh a.c              build (two-pass parallel: checker + builder)
 # sh a.c install      full install (deps, compile, shell, CLIs)
