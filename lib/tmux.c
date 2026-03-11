@@ -43,7 +43,7 @@ static void tm_key(const char *s, const char *key) {
  * C: tm_read(sn,buf,B) inspect, tm_send(sn,text) literal, tm_key(sn,"Enter") key */
 
 /* job cmd: agent top + bash bottom for rapid human-ai collaboration */
-static void jcmd_fill(char*b,int cont){snprintf(b,B,"tmux splitw -vd -p50;while :;do claude --dangerously-skip-permissions%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",cont?" --continue":"",LOGDIR);}
+static void jcmd_fill(char*b,int cont){snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;while :;do claude --dangerously-skip-permissions%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",cont?" --continue":"",LOGDIR);}
 
 /* ═══ TMUX CONFIG ═══ */
 

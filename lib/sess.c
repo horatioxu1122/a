@@ -149,19 +149,17 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\n");}
         fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[J\033[1;%dH\033[?25h",plen+blen+3);
         (void)!write(STDOUT_FILENO,fb,(size_t)fl);}
-        /* Read key */
-        char ch; if (read(STDIN_FILENO, &ch, 1) != 1) break;
+        char ch; if(read(0,&ch,1)!=1) break;
         int do_pick=0;
-        if (ch == '\x1b') { /* Escape sequence or Esc */
-            char seq[2]; if (read(STDIN_FILENO, &seq[0], 1) != 1) break;
-            if (seq[0] == '[') {
-                if (read(STDIN_FILENO, &seq[1], 1) != 1) break;
-                if (seq[1] == 'A') { if(sel>0)sel--; } /* Up */
-                else if (seq[1] == 'B') { if(sel<nm-1)sel++; } /* Down */
-                else if (seq[1]=='<'){int mb=0,mx=0,my=0;char mc;
-                    while(read(STDIN_FILENO,&mc,1)==1&&mc!=';')mb=mb*10+mc-'0';
-                    while(read(STDIN_FILENO,&mc,1)==1&&mc!=';')mx=mx*10+mc-'0';
-                    while(read(STDIN_FILENO,&mc,1)==1&&mc!='M'&&mc!='m')my=my*10+mc-'0';
+        if(ch=='\x1b'){int av;usleep(50000);ioctl(0,FIONREAD,&av);if(!av)break;
+            char seq[2];if(read(0,seq,1)!=1)break;
+            if(seq[0]=='['){if(read(0,seq+1,1)!=1)break;
+                if(seq[1]=='A'){if(sel>0)sel--;}
+                else if(seq[1]=='B'){if(sel<nm-1)sel++;}
+                else if(seq[1]=='<'){int mb=0,mx=0,my=0;char mc;
+                    while(read(0,&mc,1)==1&&mc!=';')mb=mb*10+mc-'0';
+                    while(read(0,&mc,1)==1&&mc!=';')mx=mx*10+mc-'0';
+                    while(read(0,&mc,1)==1&&mc!='M'&&mc!='m')my=my*10+mc-'0';
                     (void)mx;if(mc=='M'&&mb==0){int ci=my-2+top;if(ci>=0&&ci<nm){sel=ci;do_pick=1;}}
                     else if(mc=='M'&&(mb==64||mb==65)){if(mb==64&&sel>0)sel--;if(mb==65&&sel<nm-1)sel++;}}
             } else if(prefix[0]){prefix[0]=0;buf[0]=0;blen=0;sel=0;} else break;
