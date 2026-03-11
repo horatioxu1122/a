@@ -9,7 +9,13 @@
 # information access, resource access, of all sentient individuals, and to
 # allow for better mutual error correction and comparative advantage based
 # division of labor. These goals are preliminary but hope to improve over
-# time. The ranked points md elaborates further.
+# time. IDEAS.md elaborates further.
+#
+# Contributions should follow simple rules:
+# Only fix what's unambiguously broken or a user screams for as missing.
+# Functionality fixes must show fewer or equal tokens, same speed or faster.
+# Feature additions: recursively cut until it breaks if cut further.
+# The code converges to maximally fast, short, valuable, boots everywhere.
 #
 # sh a.c              build (two-pass parallel: checker + builder)
 # sh a.c install      full install (deps, compile, shell, CLIs)
