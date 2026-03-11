@@ -33,7 +33,7 @@ static int cmd_note(int argc, char **argv) {
         for(int a=0;a<n-1;a++)for(int b=a+1;b<n;b++){const char*ta=strrchr(gnp[a],'_'),*tb=strrchr(gnp[b],'_');if(ta&&tb&&strcmp(ta,tb)>0){char t[P];memcpy(t,gnp[a],P);memcpy(gnp[a],gnp[b],P);memcpy(gnp[b],t,P);char s[512];memcpy(s,gnt[a],512);memcpy(gnt[a],gnt[b],512);memcpy(gnt[b],s,512);}}
         for(int i=0;i<n;i++)printf("%3d. %s\n",i+1,gnt[i]);return 0;}
     if(argc<=2){int n=load_notes(dir,NULL);while(gn_archived)n=load_notes(dir,NULL);
-        printf("%d pending\n  a n <text>  add\n  a n l       list\n  a n r       review\n  a n ?<q>    search\n",n);return 0;}
+        printf("%d pending\n  a n <text>  add\n  a n l       list\n  a n r       review\n  a n ?<q>    search\n  a n m       AI manage\n",n);return 0;}
     if(argc>2&&(argv[2][0]=='?'||!strcmp(argv[2],"r")||!strcmp(argv[2],"review"))){
         const char *f=argv[2][0]=='?'?argv[2]+1:NULL;int n=load_notes(dir,f);
         if(!n){puts("(none)");return 0;} if(!isatty(STDIN_FILENO)){for(int i=0;i<n&&i<10;i++)puts(gnt[i]);return 0;} perf_disarm();
@@ -47,6 +47,8 @@ static int cmd_note(int argc, char **argv) {
             else if(k=='k'){if(i>0)i--;else show=0;}
             else if(k=='q'||k==3||k==27)break;else if(k=='j')i++;else show=0;}
         raw_exit();if(i>=n)puts("Done");return 0;}
+    if(argc>2&&*argv[2]=='m'){
+        execvp("a",(char*[]){"a","c","Run 'a n l' to see all notes. Read a.c for context. Help me archive stale/done/duplicate notes in bulk. To archive: mkdir -p <dir>/.archive && mv <file> <dir>/.archive/. Large batches, only archive what I approve.",NULL});return 1;}
     {char t[B]="";for(int i=2,l=0;i<argc;i++) l+=snprintf(t+l,(size_t)(B-l),"%s%s",i>2?" ":"",argv[i]);
         note_save(dir,t);sync_bg();puts("\xe2\x9c\x93");
         snprintf(rdir,P,"%s",dir);rapid("n> ",rapid_note);return 0;}
@@ -212,7 +214,7 @@ static int cmd_task(int argc,char**argv){
     perf_disarm();
     char dir[P];snprintf(dir,P,"%s/tasks",SROOT);mkdirp(dir);const char*sub=argc>2?argv[2]:NULL;
     if(!sub){int n=load_tasks(dir);
-        printf("%d tasks\n  \033[90ml list  r review  add <t>  rank  d #  v vision  h help\033[0m\n",n);return 0;}
+        printf("%d tasks\n  \033[90ml list  r review  add <t>  rank  d #  v vision  m ai  h help\033[0m\n",n);return 0;}
     if(!strcmp(sub,"v")||!strcmp(sub,"vision")){
         char vf[P];snprintf(vf,P,"%s/vision.txt",SROOT);
         size_t vl;char*vc=readf(vf,&vl);
@@ -231,7 +233,7 @@ static int cmd_task(int argc,char**argv){
         writef(vf,wb);sync_bg();puts("\xe2\x9c\x93");return 0;}
     int grn=0;
     if(!strcmp(sub,"help")||!strcmp(sub,"-h")||!strcmp(sub,"h")){
-        puts("  a task          vision + scream + #1\n  a task v        edit vision\n  a task l        list\n  a task r        review (navigate)\n  a task rank     reprioritize walk-through\n  a task add <t>  add (prefix 5-digit pri)\n  a task d #      archive\n  a task pri # N  set priority\n  a task flag     AI triage\n  a task deadline # MM-DD\n  a task due      by deadline\n  a task sync     sync");
+        puts("  a task          vision + scream + #1\n  a task v        edit vision\n  a task l        list\n  a task r        review (navigate)\n  a task rank     reprioritize walk-through\n  a task add <t>  add (prefix 5-digit pri)\n  a task d #      archive\n  a task pri # N  set priority\n  a task m        AI manage\n  a task deadline # MM-DD\n  a task due      by deadline\n  a task sync     sync");
         return 0;}
     if(!strcmp(sub,"rank")){int n=load_tasks(dir);if(!n){puts("No tasks");return 0;}
         int changed=0;
@@ -242,6 +244,7 @@ static int cmd_task(int argc,char**argv){
         }if(changed){sync_bg();n=load_tasks(dir);puts("\nNew order:");
             for(int i=0;i<n;i++)printf("  %d. P%s %.50s\n",i+1,T[i].p,T[i].t);}
         return 0;}
+    if(*sub=='m'){execvp("a",(char*[]){"a","c","Run 'a t l' to see all tasks. Read a.c for context. Help me manage tasks: archive stale/done/duplicates via 'a task d <dirname>...', reprioritize via 'a task pri # N'. Large batches, only archive what I approve.",NULL});return 1;}
     if(*sub=='l'){int n=load_tasks(dir);if(!n){puts("No tasks");return 0;}
         for(int i=0;i<n;i++){char ct[256];task_counts(T[i].d,ct,256);
             printf("  %d. P%s %.50s%s\n",i+1,T[i].p,T[i].t,ct);}return 0;}
