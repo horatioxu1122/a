@@ -37,12 +37,8 @@ static void ensure_git_id(void) {
 /* ═══ SYNC — append-only, hub_save cleans old {name}_*.txt (see 2026-03-06 HSU incident) ═══ */
 static void sync_repo(void) {
     ensure_git_id();
-    char c[B],remote[256]="";
-    snprintf(c,B,"git -C '%s' remote get-url origin 2>/dev/null",SROOT);
-    pcmd(c,remote,sizeof(remote));remote[strcspn(remote,"\n")]=0;
-    snprintf(c,B,"D='%s';rm -f $D/.git/index.lock;%sgit -C $D add -A&&git -C $D commit -qm sync%s",SROOT,
-        remote[0]?"git -C $D pull --no-edit -q origin main;":"",
-        remote[0]?"&&git -C $D push -q origin main":"");
+    char c[B];
+    snprintf(c,B,"D='%s';rm -f $D/.git/index.lock $D/.git/refs/remotes/origin/*.lock;git -C $D add -A&&git -C $D commit -qm sync&&git -C $D pull --rebase -q origin main 2>/dev/null;git -C $D push -q origin main 2>/dev/null",SROOT);
     (void)!system(c);
 }
 static void sync_bg(void) {
