@@ -110,10 +110,10 @@ build)
     echo $$ > "$ABIN/.bld"
 
     # Perf gate: tcc compile < python3 subprocess("echo hello world").
-    # subprocess is the fundamental op of a terminal-as-API script that
-    # shells out constantly — if tcc can't compile faster than python
-    # starts + runs one subprocess, there's no speed advantage over
-    # all-python and iteration speed is lost which must be maximized.
+    # Existence proof of domination: if tcc rebuilds from source faster
+    # than python starts + runs one subprocess (the fundamental op of any
+    # terminal-as-API script), no python alternative can iterate faster.
+    # If this gate fails, the architecture is wrong, not the threshold.
     if command -v tcc >/dev/null; then
         PYT=$(date +%s%N);python3 -c 'import subprocess;subprocess.run(["echo","hello world"],capture_output=True)';PYT=$(( $(date +%s%N)-PYT ))
         TCT=$(date +%s%N);tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||exit 1;TCT=$(( $(date +%s%N)-TCT ))
