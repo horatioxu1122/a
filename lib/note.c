@@ -64,10 +64,12 @@ static int load_tasks(const char*dir){
         const char*nm=e->d_name;snprintf(T[n].d,P,"%s/%s",dir,nm);
         int hp=strlen(nm)>5&&nm[5]=='-'&&isdigit(nm[0])&&isdigit(nm[1])&&isdigit(nm[2])&&isdigit(nm[3])&&isdigit(nm[4]);
         if(hp){memcpy(T[n].p,nm,5);T[n].p[5]=0;}else strcpy(T[n].p,"50000");
-        const char*s=hp?nm+6:nm;int tl;
-        const char*u=strchr(s,'_');const char*x=strstr(s,".txt");
-        tl=u?(int)(u-s):x?(int)(x-s):(int)strlen(s);
-        if(tl>255)tl=255;for(int i=0;i<tl;i++)T[n].t[i]=s[i]=='-'||s[i]=='_'?' ':s[i];T[n].t[tl]=0;n++;
+        {char c[P*2],r[B];snprintf(c,P*2,"d=%s;head -qn1 $d/task/*.txt $d/*.txt $d 2>/dev/null|sed 's/^Text: //;q'",T[n].d);
+            pcmd(c,r,B);r[strcspn(r,"\n")]=0;
+            if(!*r){const char*s=hp?nm+6:nm;const char*u=strchr(s,'_');int tl=u?(int)(u-s):(int)strlen(s);
+                if(tl>255)tl=255;for(int i=0;i<tl;i++)r[i]=s[i]=='-'?' ':s[i];r[tl]=0;}
+            snprintf(T[n].t,256,"%s",r);}
+        n++;
     }closedir(d);qsort(T,(size_t)n,sizeof(Tk),tcmp);return n;
 }
 static void task_add(const char*dir,const char*t,int pri){
@@ -247,7 +249,7 @@ static int cmd_task(int argc,char**argv){
     if(*sub=='m'){execvp("a",(char*[]){"a","c","Run 'a t l' to see all tasks. Read a.c for context. Help me manage tasks: archive stale/done/duplicates via 'a task d <dirname>...', reprioritize via 'a task pri # N'. Large batches, only archive what I approve.",NULL});return 1;}
     if(*sub=='l'){int n=load_tasks(dir);if(!n){puts("No tasks");return 0;}
         for(int i=0;i<n;i++){char ct[256];task_counts(T[i].d,ct,256);
-            printf("  %d. P%s %.50s%s\n",i+1,T[i].p,T[i].t,ct);}return 0;}
+            printf("  %d. P%s %s%s\n",i+1,T[i].p,T[i].t,ct);}return 0;}
     if(0){review:;} /* due r jumps here with T[] pre-loaded */
     if(grn||isdigit(*sub)||!strcmp(sub,"rev")||!strcmp(sub,"review")||!strcmp(sub,"r")||!strcmp(sub,"t")){
         int n=grn?grn:load_tasks(dir);if(!n){puts("No tasks");return 0;}
