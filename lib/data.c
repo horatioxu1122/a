@@ -44,7 +44,7 @@ static void init_db(void) {
         const char *C = "claude --dangerously-skip-permissions";
         const char *X = "codex -c model_reasoning_effort=\"high\" --model gpt-5-codex --dangerously-bypass-approvals-and-sandbox";
         char buf[B*4]; snprintf(buf, sizeof(buf),
-            "h|htop|htop\nt|top|top\ng|gemini|gemini --yolo\ngemini|gemini|gemini --yolo\n"
+            "g|gemini|gemini --yolo\ngemini|gemini|gemini --yolo\n"
             "c|claude|%s\nclaude|claude|%s\nl|claude|%s\no|claude|%s\n"
             "co|codex|%s\ncodex|codex|%s\n"
             "a|aider|OLLAMA_API_BASE=http://127.0.0.1:11434 aider --model ollama_chat/mistral\n"

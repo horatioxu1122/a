@@ -65,6 +65,8 @@ static void tm_ensure_conf(void) {
         "set -s set-clipboard on\n"
         "set -g visual-bell off\n"
         "set -g bell-action any\n"
+        "set -g repeat-time 0\n"
+        "set -g assume-paste-time 0\n"
         "set -g status-position bottom\n"
         "set -g status 3\n"
         "set -g status-right \"\"\n"

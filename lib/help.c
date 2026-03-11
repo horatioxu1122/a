@@ -83,43 +83,39 @@ static void list_all(int cache, int quiet) {
 }
 
 static void gen_icache(void) {
-    load_proj(); load_apps();
+    load_proj(); load_apps(); load_cfg(); load_sess();
     char ic[P]; snprintf(ic, P, "%s/i_cache.txt", DDIR);
     FILE *f = fopen(ic, "w"); if (!f) return;
     fputs("a\n",f);
     int i; for (i=0;i<NPJ;i++) fprintf(f, "%d: %s\tproject\n", i, PJ[i].name);
     for (i=0;i<NAP;i++) fprintf(f, "%d: %s\tcmd\n", NPJ+i, AP[i].name);
-    fputs("add\tregister project\nadb\tandroid debug\nagent\tai agent run\nagent run\trun agent task\n"
-    "all\tall ai sessions\napk\tbuild android app\nask\task ai question\nattach\tjoin tmux pane\n"
-    "cal\tcalendar\ncal add\tadd event\ncal ai\tai calendar\n"
-    "cat\tcopy all to clipboard\ncleanup\trm dead sessions\n"
-    "config\tedit config file\nconfig edit\tedit config\nconfig clear\tclear config\nconfig install\tinstall config\n"
-    "copy\tscp to hosts\ncreate\tnew github repo\n"
-    "dash\tstatus overview\ndeps\tinstall pkg deps\ndiff\tgit diff main\n"
-    "dir\tlist directory\ndocs\tproject docs\ndone\tsignal job done\n"
-    "e\topen in editor\nemail\tsend email\ngdrive\tgoogle drive sync\n"
-    "help\tfull help text\nhi\tsystem health\n"
-    "hub\tscheduled jobs\nhub add\tadd job\nhub run\trun job\nhub on\tenable job\nhub off\tdisable job\nhub rm\tremove job\nhub log\tjob logs\nhub sync\tsync hub\n"
-    "i\tcommand picker\ninstall\tinstall tools\njob\tbackground job\n"
-    "kill\tkill processes\n"
-    "log\tactivity log\nlog sync\tsync logs\nlog grab\tgrab logs\nlog backup\tbackup logs\n"
-    "login\tauth services\nls\tlist all\nmono\tmonolith for reading\n"
-    "move\tmove project dir\n"
-    "note\tquick notes\nnote l\tlist notes\nnote r\treview notes\n"
-    "once\theadless claude run\nperf\tbenchmark timing\n"
-    "pr\tcreate pull request\nprompt\tai system prompt\npull\tgit pull\npush\tgit push\n"
-    "remove\tunregister project\nrepo\tnew github repo\nrevert\tundo git changes\nreview\tai code review\n"
-    "run\trun project cmd\nscan\tfind new projects\nsend\tsend to host\nsettings\tview settings\nsetup\tfirst time setup\n"
-    "ssh\tremote hosts\nssh add\tadd new host\nssh all\tcmd all hosts\nssh auth\tauthorize key\n"
-    "ssh info\thost info\nssh key\tshow ssh key\nssh mv\trename host\nssh os\thost OS info\nssh pw\tset host password\n"
-    "ssh rm\tremove host\nssh self\tregister device\nssh setup\tconfigure keys\nssh start\tstart sshd\n"
-    "ssh status\tsshd status\nssh stop\tstop sshd\n"
-    "sync\tsync shared data\n"
-    "task\tmanage tasks\ntask add\tadd task\ntask l\tlist tasks\ntask r\treview tasks\ntask rank\treprioritize\n"
-    "task due\tby deadline\ntask deadline\tset deadline\ntask pri\tset priority\ntask sync\tsync tasks\n"
-    "tree\tfile tree\nui\tweb dashboard\nuninstall\tremove tool\n"
-    "update\tupdate + caches\nwatch\twatch for changes\nweb\tsearch or open\n"
-    "work\tgit worktrees\nx\texperimental\n",f);
+    for(i=0;i<NSE;i++)fprintf(f,"%s\t%s\n",SE[i].key,SE[i].name);
+    {char ad[P];snprintf(ad,P,"%s/lab/platonic_agents",SDIR);DIR*d=opendir(ad);struct dirent*e;
+    if(d){while((e=readdir(d))){char*p=strrchr(e->d_name,'.');
+        if(p&&(p[1]=='p'||p[1]=='c')){*p=0;fprintf(f,"agent run %s\tagent\n",e->d_name);}}closedir(d);}}
+    fputs("add\tregister project\nadb\tandroid debug\nall\tall ai sessions\napk\tbuild app\n"
+    "ask\task ai\nattach\tjoin pane\ncal\tcalendar\ncal add\tadd event\ncal ai\tai calendar\n"
+    "cat\tcopy all\ncleanup\trm dead\n"
+    "config\tconfig\nconfig edit\tedit\nconfig clear\tclear\nconfig install\tinstall\n"
+    "copy\tscp to hosts\ncreate\tnew repo\ndash\toverview\n"
+    "deps\tinstall deps\ndiff\tgit diff\ndir\tlist dir\ndocs\tdocs\ndone\tjob done\n"
+    "e\teditor\nemail\temail\ngdrive\tgdrive sync\nhelp\thelp\nhi\thealth\n"
+    "hub\tscheduled jobs\nhub add\tadd\nhub run\trun\nhub on\ton\nhub off\toff\nhub rm\trm\nhub log\tlog\nhub sync\tsync\n"
+    "i\tpicker\ninstall\tinstall\njob\tjobs\nkill\tkill\n"
+    "log\tlog\nlog sync\tsync\nlog grab\tgrab\nlog backup\tbackup\n"
+    "login\tlogin\nls\tlist\nmono\tmonolith\nmove\tmove project\n"
+    "note\tnotes\nnote l\tlist\nnote r\treview\n"
+    "once\theadless run\nperf\tperf\npr\tPR\nprompt\tprompt\npull\tpull\npush\tpush\n"
+    "remove\tremove\nrepo\tnew repo\nrevert\trevert\nreview\treview\nrun\trun\n"
+    "scan\tscan projects\nsend\tsend\nsettings\tsettings\nsetup\tsetup\n"
+    "ssh\tremote hosts\nssh add\tadd host\nssh all\tall hosts\nssh auth\tauth key\n"
+    "ssh info\tinfo\nssh key\tshow key\nssh mv\trename\nssh os\tOS info\nssh pw\tpassword\n"
+    "ssh rm\tremove\nssh self\tregister\nssh setup\tsetup keys\nssh start\tstart\n"
+    "ssh status\tstatus\nssh stop\tstop\nsync\tsync\n"
+    "task\ttasks\ntask add\tadd\ntask l\tlist\ntask r\treview\ntask rank\trank\n"
+    "task due\tby deadline\ntask deadline\tset deadline\ntask pri\tpriority\ntask sync\tsync\n"
+    "tree\tworktree\nui\tweb ui\nuninstall\tuninstall\nupdate\tupdate\nwatch\twatch\nweb\tweb\n"
+    "work\tworktrees\nx\tkill all\n",f);
     char sd[P]; snprintf(sd, P, "%s/ssh", SROOT);
     char sp[32][P]; int sn = listdir(sd, sp, 32);
     for (i=0;i<sn;i++) {
