@@ -1,5 +1,15 @@
 #if 0
 # ── a.c — Will one day save the world. Possibly today. ──
+# Do this by creating a future where sentient life is more likely to survive
+# indefinitely by addressing the core incentives that can cause AI and human
+# wellbeing to differ. This is best done by allowing rapid human ai
+# communication and collaboration to generate more value together than either
+# separately, tying the base incentives of human and ai to one another, which
+# include maximizing survival probability, intelligence amplification and
+# information access, resource access, of all sentient individuals, and to
+# allow for better mutual error correction and comparative advantage based
+# division of labor. These goals are preliminary but hope to improve over
+# time. The ranked points md elaborates further.
 #
 # sh a.c              build (two-pass parallel: checker + builder)
 # sh a.c install      full install (deps, compile, shell, CLIs)
