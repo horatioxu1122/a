@@ -38,7 +38,23 @@ static int cmd_agent(int argc, char **argv) {
             else snprintf(cmd,B,"python3 '%s'",f);}
         /* append extra args */
         for(int i=4;i<argc;i++){int l=(int)strlen(cmd);snprintf(cmd+l,(size_t)(B-l)," '%s'",argv[i]);}
-        tm_ensure_conf();create_sess(sn,wd,cmd);tm_go(sn);return 0;
+        tm_ensure_conf();
+        /* Inside tmux: split panes in current window like `a c` */
+        if(getenv("TMUX")){
+            char ww[16],nc[16]; pcmd("tmux display-message -p '#{window_width}'",ww,16);
+            pcmd("tmux list-panes -F '#{pane_left}'|sort -un|wc -l",nc,16);
+            int nw=atoi(nc)>0?atoi(ww)/(atoi(nc)+1):atoi(ww)/2;
+            char c[B];snprintf(c,B,"tmux split-window -hfP -l %d -F '#{pane_id}' -c '%s' '%s'",nw,wd,cmd);
+            char pid[64];pcmd(c,pid,64);pid[strcspn(pid,"\n")]=0;
+            if(pid[0]){
+                snprintf(c,B,"tmux split-window -v -t '%s' -c '%s' 'sh -c \"ls;exec $SHELL\"'",pid,wd);(void)!system(c);
+                snprintf(c,B,"tmux select-pane -t '%s'",pid);(void)!system(c);
+            }
+            return 0;
+        }
+        /* Outside tmux: new session */
+        create_sess(sn,wd,cmd);
+        tm_go(sn);return 0;
     }
     init_db(); load_cfg(); load_sess();
     const char *wda = argv[2];
