@@ -105,7 +105,9 @@ build)
     # Any checker failure poisons binary. Missing tools skip gracefully.
     _ensure_cc
     _warn_flags
-    R="${D%%/adata/worktrees/*}"; ABIN="$R/adata/local"; mkdir -p "$ABIN"; rm -f "$ABIN/.chk"
+    # Worktree builds produce ./a locally; main builds go to adata/local/a + symlink
+    R="${D%%/adata/worktrees/*}"; if [[ "$D" == *"/adata/worktrees/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
+    mkdir -p "$ABIN"; rm -f "$ABIN/.chk"
     BIN="$HOME/.local/bin"; mkdir -p "$BIN"
     echo $$ > "$ABIN/.bld"
 
@@ -125,7 +127,7 @@ build)
         TCT=$(date +%s%N);tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||exit 1;TCT=$(( $(date +%s%N)-TCT ))
         [[ $TCT -gt $PYT ]] && { warn "PERF KILL: tcc ${TCT}ns > python ${PYT}ns"; exit 1; }
     else $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" || exit 1; fi
-    ln -sf "$ABIN/a" "$BIN/a"
+    [[ "$D" != *"/adata/worktrees/"* ]] && ln -sf "$ABIN/a" "$BIN/a"
     (
         T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\""
         _c(){ n=$1;shift;{ ! command -v "$1" &>/dev/null||"$@";}>"$T/$n" 2>&1||touch "$T/$n.f";}
@@ -151,6 +153,7 @@ analyze)
     $CC $WARN -DSRC="\"$D\"" --analyze -Xanalyzer -analyzer-output=text \
         -Xanalyzer -analyzer-checker=security,unix,nullability,optin.portability.UnixAPI \
         -Xanalyzer -analyzer-disable-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling "$D/a.c"
+    find "$D" -maxdepth 1 -name '*.plist' -delete
     ;;
 shell)
     _shell_funcs
@@ -475,7 +478,8 @@ static int cmd_j(int c,char**v){
         snprintf(nm,64,"%s-%s-%d%02d%02d%s",bname(wd),ts,h,t->tm_min,t->tm_sec,t->tm_hour>=12?"pm":"am");
         snprintf(wp,P,"%s/%s",wt,nm);
         snprintf(gc,B,"mkdir -p '%s'&&git -C '%s' worktree add -b 'j-%s' '%s' HEAD 2>/dev/null",wt,wd,nm,wp);
-        if(!system(gc)){printf("+ %s\n",wp);snprintf(wd,P,"%s",wp);}
+        if(!system(gc)){char sl[B];snprintf(sl,B,"ln -s '%s' '%s/adata' 2>/dev/null",AROOT,wp);(void)!system(sl);
+            printf("+ %s\n",wp);snprintf(wd,P,"%s",wp);}
     }
     printf("+ job: %s\n  %.*s\n",bname(wd),80,pr);
     if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: git add -A && git commit -m 'job: <summary>', then write .a_done with summary + test commands");
@@ -517,6 +521,9 @@ static int cmd_run_once(int c,char**v){
     fprintf(stderr,"\n\033[31m✗ TIMEOUT\033[0m: a once exceeded %us\n",tl);
     kill(ch,SIGKILL);waitpid(ch,NULL,0);return 124;}
 
+static int cmd_my(int c,char**v){(void)c;(void)v;char d[P];snprintf(d,P,"%s/my",SROOT);
+    execlp("ls","ls","--color",d,(char*)0);return 1;}
+
 /* ═══ DISPATCH TABLE — sorted for bsearch, every alias is one entry ═══ */
 typedef struct { const char *n; int (*fn)(int, char**); } cmd_t;
 static int cmd_cmp(const void *a, const void *b) {
@@ -533,7 +540,7 @@ static const cmd_t CMDS[] = {
     {"help",cmd_help_full},{"hi",cmd_hi},{"hub",cmd_hub},{"i",cmd_i},
     {"install",cmd_install},{"j",cmd_j},{"job",cmd_job},{"jobs",cmd_job},
     {"kill",cmd_kill},{"log",cmd_log},{"login",cmd_login},{"ls",cmd_ls},
-    {"mono",cmd_mono},{"monolith",cmd_mono},{"move",cmd_move},
+    {"mono",cmd_mono},{"monolith",cmd_mono},{"move",cmd_move},{"my",cmd_my},
     {"n",cmd_note},{"note",cmd_note},{"once",cmd_run_once},
     {"p",cmd_push},{"perf",cmd_perf},{"pr",cmd_pr},{"prompt",cmd_prompt},
     {"pull",cmd_pull},{"push",cmd_push},
@@ -637,7 +644,11 @@ int main(int argc, char **argv) {
     /* "a job-foo-bar" — attach to existing tmux session by name */
     if (tm_has(arg)) { tm_go(arg); return 0; }
 
-    /* Not a command — error in C, no silent Python fallback */
+    /* "a weather" — check my/ folder */
+    { char mf[P]; static const char*X[]={"",".py",".c",".sh",".html",0};
+      for(int i=0;X[i];i++){snprintf(mf,P,"%s/my/%s%s",SROOT,arg,X[i]);
+        if(fexists(mf)){perf_disarm();char md[P];snprintf(md,P,"%s/my",SROOT);(void)!chdir(md);argv[1]=mf;return cmd_dir_file(argc,argv);}}}
+
     fprintf(stderr, "a: '%s' is not a command. See 'a help'.\n", arg);
     return 1;
 }

@@ -244,7 +244,8 @@ static int cmd_tree(int argc, char **argv) {
     snprintf(nm,64,"%s-%s-%d%02d%s",bname(proj),ts,h,t->tm_min,t->tm_hour>=12?"pm":"am");
     for(int i=0;i<2;i++){if(i){size_t l=strlen(nm);char a[3]={nm[l-2],nm[l-1],0};sprintf(nm+l-2,"-%02d%s",t->tm_sec,a);}
         snprintf(wp,P,"%s/%s",wt,nm);snprintf(c,B,"mkdir -p '%s' && git -C '%s' worktree add -b 'wt-%s' '%s' HEAD 2>/dev/null",wt,proj,nm,wp);
-        if(!system(c))break;if(i){puts("x Failed");return 1;}}
+        if(!system(c)){char sl[B];snprintf(sl,B,"ln -s '%s' '%s/adata' 2>/dev/null",AROOT,wp);(void)!system(sl);break;}
+        if(i){puts("x Failed");return 1;}}
     printf("\xe2\x9c\x93 %s\n", wp);
     const char *sh = getenv("SHELL"); if (!sh) sh = "/bin/bash";
     if (chdir(wp) == 0) execlp(sh, sh, (char*)NULL);

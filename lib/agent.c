@@ -26,21 +26,19 @@ static int cmd_agent(int argc, char **argv) {
     if(!strcmp(argv[2],"run")&&argc>3){char f[P];
         snprintf(f,P,"%s/lab/platonic_agents/%s.py",SDIR,argv[3]);
         if(!fexists(f))memcpy(f+strlen(f)-2,"c",2);
-        if(!fexists(f))return 1;
-        perf_disarm();if(strstr(f,".c")){execl("/bin/sh","sh",f,(char*)NULL);return 1;}
-        char **na=malloc(((unsigned)argc+2)*sizeof(char*));
-        {FILE *fp=fopen(f,"r");char h[32]={0};
-        if(fp){(void)!fgets(h,32,fp);fclose(fp);}
-        if(strstr(h,"/// script")){
-            char uv[P];snprintf(uv,P,"%s/.local/bin/uv",HOME);
-            na[0]="uv";na[1]="run";na[2]="--script";na[3]=f;
-            for(int i=4;i<argc;i++)na[i]=argv[i];na[argc]=NULL;
-            if(access(uv,X_OK)==0){na[0]=uv;execv(uv,na);}
-            execvp("uv",na);}}
-        na[0]="python3";na[1]=f;
-        for(int i=4;i<argc;i++)na[i-2]=argv[i];na[argc-2]=NULL;
-        execvp("python3",na);
-        perror("python3"); return 1;
+        if(!fexists(f)){printf("x Not found: %s\n",argv[3]);return 1;}
+        perf_disarm();
+        char wd[P];if(!getcwd(wd,P))snprintf(wd,P,"%s",HOME);
+        char sn[256];snprintf(sn,256,"agent-%s-%ld",argv[3],(long)time(NULL));
+        /* build run command: detect uv script vs plain python vs .c */
+        char cmd[B];
+        if(strstr(f,".c")){snprintf(cmd,B,"sh '%s'",f);}
+        else{FILE*fp=fopen(f,"r");char h[32]={0};if(fp){(void)!fgets(h,32,fp);fclose(fp);}
+            if(strstr(h,"/// script"))snprintf(cmd,B,"uv run --script '%s'",f);
+            else snprintf(cmd,B,"python3 '%s'",f);}
+        /* append extra args */
+        for(int i=4;i<argc;i++){int l=(int)strlen(cmd);snprintf(cmd+l,(size_t)(B-l)," '%s'",argv[i]);}
+        tm_ensure_conf();create_sess(sn,wd,cmd);tm_go(sn);return 0;
     }
     init_db(); load_cfg(); load_sess();
     const char *wda = argv[2];

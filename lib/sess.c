@@ -90,7 +90,8 @@ static int cmd_dir_file(int argc, char **argv) { (void)argc;
             else if(!access(".venv/bin/python",X_OK)) snprintf(py,P,".venv/bin/python");
             execvp(py, (char*[]){ py, expanded, NULL });
         }
-        else { const char *ed = getenv("EDITOR"); if (!ed) ed = "e"; execlp(ed, ed, expanded, (char*)NULL); }
+        else{int t=ext?ext[1]:0;const char*ed=t=='c'||t=='s'?"sh":t=='h'?"xdg-open":getenv("EDITOR");
+            if(!ed)ed="e";execlp(ed,ed,expanded,(char*)NULL);}
     }
     return 0;
 }
@@ -110,6 +111,9 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
         if (nl > p && p[0] != '<' && p[0] != '=' && p[0] != '>' && p[0] != '#') { *nl = 0; lines[n++] = p; }
         p = nl + 1;
     }
+    static char myb[64][80];{char md[P];snprintf(md,P,"%s/my",SROOT);DIR*d=opendir(md);struct dirent*e;
+    if(d){while((e=readdir(d))&&n<512){char*p=strrchr(e->d_name,'.');if(p&&e->d_name[0]!='.'){
+    *p=0;int m=n%64;snprintf(myb[m],80,"%s\tmy/",e->d_name);lines[n++]=myb[m];}}closedir(d);}}
     if (!n) { puts("Empty cache"); free(raw); return 1; }
     if (!isatty(STDIN_FILENO)) { for (int i=0;i<n;i++) puts(lines[i]); free(raw); return 0; }
     /* Terminal size */
