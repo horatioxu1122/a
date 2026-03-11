@@ -113,6 +113,12 @@ build)
     # Existence proof of domination: if tcc rebuilds from source faster
     # than python starts + runs one subprocess (the fundamental op of any
     # terminal-as-API script), no python alternative can iterate faster.
+    # The optimal program depends on its deps, which change — so the
+    # optimum moves over time. The only way to chase it is maximum
+    # mutation rate: fast builds, short code, instant feedback. This gate
+    # measures the live dependency (python runtime), self-adjusts as the
+    # ecosystem shifts, and enforces that iteration speed stays high
+    # enough to track the moving target. Static thresholds rot. This does not.
     # If this gate fails, the architecture is wrong, not the threshold.
     if command -v tcc >/dev/null; then
         PYT=$(date +%s%N);python3 -c 'import subprocess;subprocess.run(["echo","hello world"],capture_output=True)';PYT=$(( $(date +%s%N)-PYT ))
