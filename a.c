@@ -101,39 +101,32 @@ _install_node() {
 case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
 build)
-    # TCC (~10ms) instant binary, 8 static checkers + O3 in background.
-    # Any checker failure poisons binary. Missing tools skip gracefully.
-    _ensure_cc
-    _warn_flags
+    # Foreground: TCC compile + symlink. Nothing else.
+    # Background: perf gate, _ensure_cc, checkers, O3. All poison on failure.
     # Worktree builds produce ./a locally; main builds go to adata/local/a + symlink
     R="${D%%/adata/worktrees/*}"; if [[ "$D" == *"/adata/worktrees/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
-    mkdir -p "$ABIN"; rm -f "$ABIN/.chk"
-    BIN="$HOME/.local/bin"; mkdir -p "$BIN"
-    echo $$ > "$ABIN/.bld"
-
-    # Perf gate: tcc compile < python3 subprocess("echo hello world").
-    # Existence proof of domination: if tcc rebuilds from source faster
-    # than python starts + runs one subprocess (the fundamental op of any
-    # terminal-as-API script), no python alternative can iterate faster.
-    # The optimal program depends on its deps, which change — so the
-    # optimum moves over time. The only way to chase it is maximum
-    # mutation rate: fast builds, short code, instant feedback. This gate
-    # measures the live dependency (python runtime), self-adjusts as the
-    # ecosystem shifts, and enforces that iteration speed stays high
-    # enough to track the moving target. Static thresholds rot. This does not.
-    # When this gate fails, the architecture is wrong, not the threshold.
-    if command -v tcc >/dev/null; then
-        PYT=$(date +%s%N);python3 -c 'import subprocess;subprocess.run(["echo","hello world"],capture_output=True)';PYT=$(( $(date +%s%N)-PYT ))
-        TCT=$(date +%s%N);tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||exit 1;TCT=$(( $(date +%s%N)-TCT ))
-        [[ $TCT -gt $PYT ]] && { warn "PERF KILL: tcc ${TCT}ns > python ${PYT}ns"; exit 1; }
-    else $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" || exit 1; fi
-    [[ "$D" != *"/adata/worktrees/"* ]] && ln -sf "$ABIN/a" "$BIN/a"
+    BIN="$HOME/.local/bin"
+    [[ -d "$ABIN" ]] || mkdir -p "$ABIN"
+    [[ -d "$BIN" ]] || mkdir -p "$BIN"
+    [[ -f "$ABIN/.chk" ]] && rm -f "$ABIN/.chk"
+    printf '%s' $$ > "$ABIN/.bld"
+    if [[ -x "$(type -P tcc)" ]]; then
+        TCT=${EPOCHREALTIME/./};tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||exit 1;TCT=$(( ${EPOCHREALTIME/./} - TCT ))000
+    else
+        _ensure_cc; $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" || exit 1
+    fi
+    [[ "$D" != *"/adata/worktrees/"* ]] && { [[ "$(readlink "$BIN/a" 2>/dev/null)" == "$ABIN/a" ]] || ln -sf "$ABIN/a" "$BIN/a"; }
     (
         T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\""
+        # Perf gate: tcc compile < python3 subprocess. Poisons binary on failure.
+        if command -v tcc >/dev/null && [[ -n "$TCT" ]]; then
+            PYT=$(date +%s%N);python3 -c 'import subprocess;subprocess.run(["echo","hello world"],capture_output=True)';PYT=$(( $(date +%s%N)-PYT ))
+            [[ $TCT -gt $PYT ]] && { echo "PERF KILL: tcc ${TCT}ns > python ${PYT}ns" >"$ABIN/.chk"; touch "$T/0.f"; }
+        fi
+        _ensure_cc; _warn_flags
         _c(){ n=$1;shift;{ ! command -v "$1" &>/dev/null||"$@";}>"$T/$n" 2>&1||touch "$T/$n.f";}
         _rgcc(){ command -v gcc &>/dev/null&&! gcc --version 2>&1|grep -q clang;}
         _c 1 $CC $WARN $A -fsyntax-only "$F" &
-        # clang --analyze removed: all findings (insecureAPI,NullableDeref,DeadStores) are false positives; use sh a.c analyze for ad-hoc runs
         _c 3 clang-tidy --checks='-*,bugprone-branch-clone,bugprone-infinite-loop,bugprone-sizeof-*' -warnings-as-errors='*' "$F" -- $A -std=c17 -w &
         { ! _rgcc||gcc -std=c17 -Werror -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wtrampolines $A -fsyntax-only "$F";}>"$T/4" 2>&1||touch "$T/4.f" &
         { ! _rgcc||{ gcc -fanalyzer $A -fsyntax-only "$F" >"$T/5" 2>&1;! grep -q '\-Wanalyzer' "$T/5";};}||touch "$T/5.f" &
@@ -141,7 +134,7 @@ build)
         { ! command -v cbmc &>/dev/null||timeout 15 cbmc --function main "$F" $A||[ $? -eq 124 ];}>"$T/8" 2>&1||touch "$T/8.f" &
         { $CC $A -fsanitize=undefined,address -fno-omit-frame-pointer -w -o "$T/a.san" "$F"&&"$T/a.san" help >"$T/9" 2>&1;! grep -q 'runtime error\|SUMMARY:.*Sanitizer' "$T/9";}||touch "$T/9.f" &
         wait
-        if ls "$T"/[1-9].f &>/dev/null;then cat "$T"/[1-9] >"$ABIN/.chk" 2>/dev/null
+        if ls "$T"/[0-9].f &>/dev/null;then cat "$T"/[0-9] >"$ABIN/.chk" 2>/dev/null
             [ "$(cat "$ABIN/.bld" 2>&-)" = "$$" ]&&printf '#!/bin/sh\nhead -80 %s/.chk;exit 1' "$ABIN">"$ABIN/a"&&chmod +x "$ABIN/a"
         else $CC $A -O3 -march=native -flto -w -o "$ABIN/a.opt" "$F"&&[ "$(cat "$ABIN/.bld" 2>&-)" = "$$" ]&&mv "$ABIN/a.opt" "$ABIN/a" 2>&-;rm -f "$ABIN/a.opt"
         fi
