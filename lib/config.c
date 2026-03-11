@@ -37,6 +37,7 @@ static int cmd_uninstall(int argc, char **argv) { (void)argc;(void)argv;
 
 /* ── deps ── */
 static int cmd_deps(int argc, char **argv) { (void)argc;(void)argv;
+    if (getenv("A_BENCH")) return 0;
     (void)!system("which tmux >/dev/null 2>&1 || sudo apt-get install -y tmux 2>/dev/null");
     printf("%s tmux\n", system("which tmux >/dev/null 2>&1") == 0 ? "\xe2\x9c\x93" : "x");
     (void)!system("which node >/dev/null 2>&1 || sudo apt-get install -y nodejs npm 2>/dev/null");
