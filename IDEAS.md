@@ -61,6 +61,7 @@
 50. **Self-error is universal.** No system can fully model itself (Gödel). Self-reference is inherently incomplete. Singletons are unstable because self-correction requires external input.
 51. **Bad outcomes from two levers.** Incentive and physical possibility. Change what agents want or what's physically possible. Everything else is downstream.
 52. **Intelligence asymptotes.** All learners converge on the same ceiling defined by reality, not the learner. GPT-2→3 was a leap, 3→4 significant, 4→5 smaller. Diminishing returns aren't a bug — they're the signature of approaching the limit. No vertical takeoff. Cooperation works long-term because no agent escapes the ceiling to dominate.
+53. **Fixes never lengthen.** If code produced correct output for some cases, the full fix exists at equal or fewer tokens. Logical distance from partial to complete solution is small — the solution class is already nearby. A longer fix means the search stopped too early.
 
 ## Implementation
 
