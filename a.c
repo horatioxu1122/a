@@ -109,7 +109,16 @@ build)
     BIN="$HOME/.local/bin"; mkdir -p "$BIN"
     echo $$ > "$ABIN/.bld"
 
-    command -v tcc >/dev/null && tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null || $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" || exit 1
+    # Perf gate: tcc compile < python3 subprocess("echo hello world").
+    # subprocess is the fundamental op of a terminal-as-API script that
+    # shells out constantly — if tcc can't compile faster than python
+    # starts + runs one subprocess, there's no speed advantage over
+    # all-python and iteration speed is lost which must be maximized.
+    if command -v tcc >/dev/null; then
+        PYT=$(date +%s%N);python3 -c 'import subprocess;subprocess.run(["echo","hello world"],capture_output=True)';PYT=$(( $(date +%s%N)-PYT ))
+        TCT=$(date +%s%N);tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||exit 1;TCT=$(( $(date +%s%N)-TCT ))
+        [[ $TCT -gt $PYT ]] && { warn "PERF KILL: tcc ${TCT}ns > python ${PYT}ns"; exit 1; }
+    else $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" || exit 1; fi
     ln -sf "$ABIN/a" "$BIN/a"
     (
         T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\""
