@@ -16,6 +16,8 @@
 # Functionality fixes must show fewer or equal tokens, same speed or faster.
 # Feature additions: recursively cut until it breaks if cut further.
 # The code converges to maximally fast, short, valuable, runs everywhere.
+# The value test is the user running it and not screaming. Only a human
+# can judge this. Test suites cannot. All contributions are user-tested.
 #
 # sh a.c              build (two-pass parallel: checker + builder)
 # sh a.c install      full install (deps, compile, shell, CLIs)
