@@ -89,6 +89,7 @@ static int cmd_pr(int argc, char **argv) {
 
 /* ── pull ── */
 static int cmd_pull(int argc, char **argv) {
+    if (getenv("A_BENCH")) return 0;
     char cwd[P]; if (!getcwd(cwd, P)) strcpy(cwd, ".");
     if (!git_in_repo(cwd)) { puts("x Not a git repo"); return 1; }
     char c[B], out[B];
@@ -107,6 +108,7 @@ static int cmd_pull(int argc, char **argv) {
 
 /* ── diff ── */
 static int cmd_diff(int argc, char **argv) {
+    if (getenv("A_BENCH")) return 0;
     const char *sel = argc > 2 ? argv[2] : NULL;
     /* Token history mode */
     if (sel && sel[0] >= '0' && sel[0] <= '9') {

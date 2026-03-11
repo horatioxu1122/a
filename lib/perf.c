@@ -70,7 +70,7 @@ static int cmd_perf(int argc, char **argv) {
         /* fork commands in parallel */
         struct timespec t0; clock_gettime(CLOCK_MONOTONIC, &t0);
         int nul = open("/dev/null", O_RDWR);
-        char bin[P]; snprintf(bin, P, "%s/a", SDIR);
+        char bin[P]; snprintf(bin, P, "%s/local/a", AROOT);
         for (int i = 0; i < ncmds; i++) {
             res[i].cmd = BENCH_CMDS[i];
             res[i].old_lim = perf_limit(data, BENCH_CMDS[i][0] ? BENCH_CMDS[i] : "(bare)");
@@ -89,7 +89,7 @@ static int cmd_perf(int argc, char **argv) {
         }
         close(nul);
 
-        /* reap with 5s hard deadline — poll each child by PID (not -1) */
+        /* reap with 1s hard deadline — poll each child by PID (not -1) */
         int remaining = 0; for (int i = 0; i < ncmds; i++) if (!res[i].skip) remaining++;
         while (remaining > 0) {
             struct timespec now; clock_gettime(CLOCK_MONOTONIC, &now);
@@ -118,11 +118,8 @@ static int cmd_perf(int argc, char **argv) {
             if (!any) usleep(500);
         }
 
-        /* compute limits + display */
         struct timespec tend; clock_gettime(CLOCK_MONOTONIC, &tend);
-        unsigned total_us = (unsigned)((tend.tv_sec - t0.tv_sec) * 1000000
-            + (tend.tv_nsec - t0.tv_nsec) / 1000);
-        char ft_total[32]; fmt_us(total_us, ft_total, 32);
+        char ft_total[32]; fmt_us((unsigned)((tend.tv_sec-t0.tv_sec)*1000000+(tend.tv_nsec-t0.tv_nsec)/1000),ft_total,32);
         printf("PERF BENCH — device: %s (%s)\n", DEV, ft_total);
         puts("─────────────────────────────────────────────────────────────");
         printf("%-12s %10s %10s %10s  %s\n", "COMMAND", "TIME", "LIMIT", "NEW", "STATUS");
@@ -150,19 +147,13 @@ static int cmd_perf(int argc, char **argv) {
         puts("─────────────────────────────────────────────────────────────");
         printf("%d/%d passed, %d tightened\n\n", passed, shown, tightened);
         if (tightened > 0) {
-            /* merge: read existing limits, update benched ones, write back */
-            unsigned lims[256]; const char *keys[256]; int nlims = 0;
-            for (int i = 0; i < ncmds; i++) {
-                const char *k = BENCH_CMDS[i][0] ? BENCH_CMDS[i] : "(bare)";
-                keys[nlims] = k;
-                lims[nlims] = res[i].skip ? perf_limit(data, k) : res[i].new_lim;
-                nlims++;
-            }
             char pd[P]; snprintf(pd, P, "%s/perf", SROOT); mkdirp(pd);
             FILE *f = fopen(pf, "w");
             if (f) {
-                for (int i = 0; i < nlims; i++)
-                    fprintf(f, "%s:%u\n", keys[i], lims[i]);
+                for (int i = 0; i < ncmds; i++) {
+                    const char *k = BENCH_CMDS[i][0] ? BENCH_CMDS[i] : "(bare)";
+                    fprintf(f, "%s:%u\n", k, res[i].skip ? perf_limit(data, k) : res[i].new_lim);
+                }
                 fclose(f);
                 printf("\033[32m\xe2\x9c\x93\033[0m Saved: %s\n", pf);
             }

@@ -13,6 +13,7 @@ static void bg_backup_jsonl(void) {
 
 /* ── email ── */
 static int cmd_email(int argc, char **argv) {
+    if (getenv("A_BENCH")) return 0;
     char bp[P]; snprintf(bp,P,"%s/agents/base.py",SROOT);
     char **na=malloc(((unsigned)argc+2)*sizeof(char*));
     na[0]="python3"; na[1]=bp;

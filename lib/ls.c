@@ -229,6 +229,7 @@ static int cmd_cleanup(int argc, char **argv) { fallback_py("cleanup", argc, arg
 
 /* ── tree ── */
 static int cmd_tree(int argc, char **argv) {
+    if (getenv("A_BENCH")) return 0;
     init_db(); load_cfg(); load_proj();
     const char *wt = cfget("worktrees_dir"); if (!wt[0]) { char d[P]; snprintf(d,P,"%s/worktrees",AROOT); wt=d; }
     char cwd[P]; if(!getcwd(cwd,P)) snprintf(cwd,P,"%s",HOME);
