@@ -119,7 +119,7 @@ build)
     # measures the live dependency (python runtime), self-adjusts as the
     # ecosystem shifts, and enforces that iteration speed stays high
     # enough to track the moving target. Static thresholds rot. This does not.
-    # If this gate fails, the architecture is wrong, not the threshold.
+    # When this gate fails, the architecture is wrong, not the threshold.
     if command -v tcc >/dev/null; then
         PYT=$(date +%s%N);python3 -c 'import subprocess;subprocess.run(["echo","hello world"],capture_output=True)';PYT=$(( $(date +%s%N)-PYT ))
         TCT=$(date +%s%N);tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||exit 1;TCT=$(( $(date +%s%N)-TCT ))
