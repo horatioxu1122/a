@@ -196,11 +196,10 @@ static int cmd_jobs(int argc, char **argv) {
     hub_load();
     if(!na&&!nr&&!NJ){puts("No jobs");return 0;}
     if(na){puts("ACTIVE");for(int i=0;i<na;i++)printf(" %d %-12s %-5s %-5s %s\n",i,A[i].sn,A[i].cmd,A[i].p,A[i].dev);}
-    if(NJ){if(na)puts("");printf("SCHEDULED\n  %-10s %-6s   %s\n","Name","Sched","Cmd");for(int i=0;i<NJ;i++){
-        int cw=60;char cp[128];int pl=(int)strlen(HJ[i].p);
-        if(pl>cw&&cw>5){int h=cw/2-1;snprintf(cp,128,"%.*s..%s",h,HJ[i].p,HJ[i].p+pl-(cw-h-2));}
-        else snprintf(cp,128,"%s",HJ[i].p);
-        printf("  %-10s %-6s %s %s\n",HJ[i].n,HJ[i].s,HJ[i].en?"\xe2\x9c\x93":" ",cp);}}
+    if(NJ){hub_sort();hub_timers();
+        if(na)puts("");printf("SCHEDULED\n  %-10s %-6s %-8s  %s\n","Name","Sched","Dev","Cmd");for(int i=0;i<NJ;i++){
+        hub_t*j=&HJ[i];char cp[128];hub_trunc(cp,128,j->p,50);
+        printf("  %-10s %-6s %-8.7s%s %s\n",j->n,j->s,j->d,hub_on(j)?"\xe2\x9c\x93":" ",cp);}}
     if(na||NJ)puts("");printf("REVIEW\n  %-4s %-16s %s\n","#","Project","Branch");
     if(nr)for(int i=0;i<nr;i++){
         char*d=R[i].n,*s=strrchr(d,'-'),*s2=NULL;if(s){for(char*p=s-1;p>=d;p--)if(*p=='-'){s2=p;break;}}

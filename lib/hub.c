@@ -51,6 +51,28 @@ static void hub_timer(hub_t *j, int on) {
     (void)!system(buf);
 }
 
+static int hub_smin(const char*s){int h=0,m=0;if(!s||!*s)return 9999;
+    if(strchr(s,'/'))return 0;sscanf(s,"%d:%d",&h,&m);return h*60+m;}
+static void hub_sort(void){for(int i=0;i<NJ-1;i++)for(int j=i+1;j<NJ;j++)
+    if(hub_smin(HJ[j].s)<hub_smin(HJ[i].s)){hub_t t=HJ[i];HJ[i]=HJ[j];HJ[j]=t;}}
+static char HUB_TL[B*4];
+static void hub_timers(void){
+#ifdef __ANDROID__
+    pcmd("crontab -l 2>/dev/null",HUB_TL,sizeof(HUB_TL));
+#else
+    pcmd("systemctl --user list-timers 2>/dev/null",HUB_TL,sizeof(HUB_TL));
+#endif
+}
+static int hub_on(hub_t*j){char p[96];
+#ifdef __ANDROID__
+    snprintf(p,96,"aio:%s",j->n);
+#else
+    snprintf(p,96,"aio-%s.timer",j->n);
+#endif
+    return(!strcmp(j->d,DEV))?j->en&&strstr(HUB_TL,p)!=NULL:j->en;}
+static void hub_trunc(char*o,int sz,const char*s,int cw){int l=(int)strlen(s);
+    if(l>cw&&cw>5){int h=cw/2-1;snprintf(o,(size_t)sz,"%.*s..%s",h,s,s+l-(cw-h-2));}
+    else snprintf(o,(size_t)sz,"%s",s);}
 static hub_t *hub_find(const char *s) {
     if(s[0]>='0'&&s[0]<='9') { int i=atoi(s); return i<NJ?&HJ[i]:NULL; }
     for(int i=0;i<NJ;i++) if(!strcmp(HJ[i].n,s)) return &HJ[i];
@@ -66,26 +88,12 @@ static int cmd_hub(int argc, char **argv) {
         char url[512],c[B];snprintf(c,B,"git -C '%s' remote get-url origin 2>/dev/null",SROOT);
         pcmd(c,url,512);url[strcspn(url,"\n")]=0;
         printf("Hub: %d jobs\n  %s\n  %s\n\n",NJ,hd,url);
-        char tl[B*4];
-#ifdef __ANDROID__
-        pcmd("crontab -l 2>/dev/null",tl,sizeof(tl));
-#else
-        pcmd("systemctl --user list-timers 2>/dev/null",tl,sizeof(tl));
-#endif
+        hub_timers();
         int tw=80; struct winsize ws; if(ioctl(STDOUT_FILENO,TIOCGWINSZ,&ws)==0) tw=ws.ws_col;
         int m=tw<60, cw=tw-(m?32:48);
         printf(m?"# %-8s %-9s On Cmd\n":"# %-10s %-6s %-12s %-8s On Cmd\n","Name",m?"Last":"Sched","Last","Dev");
         for(int i=0;i<NJ;i++) {
-            hub_t *j=&HJ[i]; char pat[96];
-#ifdef __ANDROID__
-            snprintf(pat,96,"aio:%s",j->n);
-#else
-            snprintf(pat,96,"aio-%s.timer",j->n);
-#endif
-            int on=(!strcmp(j->d,DEV))?j->en&&strstr(tl,pat)!=NULL:j->en;
-            char cp[512]; int pl=(int)strlen(j->p);
-            if(pl>cw&&cw>5){int h=cw/2-1;snprintf(cp,512,"%.*s..%s",h,j->p,j->p+pl-(cw-h-2));}
-            else snprintf(cp,512,"%s",j->p);
+            hub_t *j=&HJ[i]; int on=hub_on(j); char cp[512]; hub_trunc(cp,512,j->p,cw);
             const char *lr=j->lr[0]?j->lr+5:"-";
             if(m) printf("%-2d%-9.8s%-10.9s%s %s\n",i,j->n,lr,on?"\xe2\x9c\x93":" ",cp);
             else printf("%-2d%-11.10s%-7.6s%-13.12s%-8.7s%s %s\n",i,j->n,j->s,lr,j->d,on?"\xe2\x9c\x93":" ",cp);
@@ -103,6 +111,7 @@ static int cmd_hub(int argc, char **argv) {
         printf("\xe2\x9c\x93 %s @ %s\n",j.n,j.s); return 0;
     }
 
+    if(sub[0]>='0'&&sub[0]<='9'){argv[3]=argv[2];argv[2]=(char*)"run";sub="run";argc=4;}
     if(!strcmp(sub,"run")||!strcmp(sub,"on")||!strcmp(sub,"off")||!strcmp(sub,"rm")) {
         hub_t *j=argc>3?hub_find(argv[3]):NULL;
         if(!j) { fprintf(stderr,"x %s?\n",argc>3?argv[3]:"(missing)"); return 1; }
