@@ -419,10 +419,10 @@ static int cmd_sess(int, char**);
 #include "lib/project.c"  /* cd-to-project + add/remove/scan */
 #include "lib/config.c"   /* set, config, prompt, install */
 #include "lib/push.c"     /* push, pull, diff, revert */
+#include "lib/hub.c"      /* hub: scheduled jobs */
 #include "lib/ls.c"       /* ls, kill, copy, send, jobs */
 #include "lib/note.c"     /* notes + tasks (priority/review) */
 #include "lib/ssh.c"      /* ssh connect/add/broadcast */
-#include "lib/hub.c"      /* hub: scheduled jobs */
 #include "lib/net.c"      /* sync, update, log, login */
 #include "lib/cal.c"      /* calendar events */
 #include "lib/agent.c"    /* autonomous agent + multi-run */
