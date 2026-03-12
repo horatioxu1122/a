@@ -80,7 +80,7 @@ _shell_funcs() {
     for RC in "$HOME/.bashrc" "$HOME/.zshrc"; do
         touch "$RC"
         grep -q '.local/bin' "$RC" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$RC"
-        sed -i.bak '/^_ADD=/d;/^a() {/,/^}/d;/^aio() /d;/^ai() /d' "$RC";rm "$RC.bak"
+        sed -i.bak '/^_ADD=/d;/^a() {/,/^}/d;/^aio() /d;/^ai() /d;/aios/d' "$RC";rm "$RC.bak"
         echo "_ADD=\"${D%%/adata/worktrees/*}/adata/local\"" >> "$RC"
         cat >> "$RC" << 'AFUNC'
 a() {
@@ -152,7 +152,7 @@ build)
         { ! _rgcc||{ gcc -fanalyzer $A -fsyntax-only "$F" >"$T/5" 2>&1;! grep -q '\-Wanalyzer' "$T/5";};}||touch "$T/5.f" &
         _c 6 cppcheck --error-exitcode=1 --quiet --suppress=syntaxError $A "$F" & _c 7 frama-c -eva -eva-no-print -no-unicode -cpp-extra-args="$A" "$F" &
         { ! command -v cbmc &>/dev/null||timeout 15 cbmc --function main "$F" $A||[ $? -eq 124 ];}>"$T/8" 2>&1||touch "$T/8.f" &
-        { $CC $A -fsanitize=undefined,address -fno-omit-frame-pointer -w -o "$T/a.san" "$F"&&"$T/a.san" help >"$T/9" 2>&1;! grep -q 'runtime error\|SUMMARY:.*Sanitizer' "$T/9";}||touch "$T/9.f" &
+        { $CC $A -fsanitize=undefined,address -fno-omit-frame-pointer -w -o "$T/a.san" "$F"&&A_BENCH=1 "$T/a.san" help >"$T/9" 2>&1;! grep -q 'runtime error\|SUMMARY:.*Sanitizer' "$T/9";}||touch "$T/9.f" &
         wait
         if ls "$T"/[0-9].f &>/dev/null;then cat "$T"/[0-9] >"$ABIN/.chk" 2>/dev/null
             [ "$(cat "$ABIN/.bld" 2>&-)" = "$$" ]&&printf '#!/bin/sh\nhead -80 %s/.chk;exit 1' "$ABIN">"$ABIN/a"&&chmod +x "$ABIN/a"

@@ -12,6 +12,9 @@ static void init_paths(void) {
          if(!lstat(op,&ps)&&S_ISDIR(ps.st_mode)){
              snprintf(mc,B,"mv -n '%s/'* '%s/' 2>/dev/null;rm -rf '%s';sed -i 's|^_ADD=.*|_ADD=\"%s/a/adata/local\"|' '%s/.bashrc' '%s/.zshrc' 2>/dev/null",op,h,op,h,h,h);
              (void)!system(mc);
+             /* fix symlinks that pointed into the old ~/projects/ or ~/p/ dir */
+             snprintf(mc,B,"find '%s' -maxdepth 3 -type l 2>/dev/null|while read l;do t=$(readlink \"$l\");case \"$t\" in */%s/*)ln -sfn \"%s/${t#*/%s/}\" \"$l\";;esac;done",h,od[i],h,od[i]);
+             (void)!system(mc);
              snprintf(mc,B,"%s/.local/bin/a",h);unlink(mc);
              snprintf(op,P,"%s/a/adata/local/a",h);symlink(op,mc);
              fprintf(stderr,"! migrated ~/%s → ~/\n",od[i]);}}}
@@ -46,7 +49,7 @@ static void init_paths(void) {
     char new_dev[P]; snprintf(new_dev, P, "%s/.device", DDIR);
     struct stat mst;
     if (strcmp(old_sib, AROOT) != 0 && stat(old_sib, &mst) == 0 && (stat(new_dev, &mst) != 0 || stat(SROOT, &mst) != 0)) {
-        char mc[B]; snprintf(mc, B, "find '%s' -xtype l -delete 2>/dev/null;cp -rn '%s/'* '%s/' 2>/dev/null", AROOT, old_sib, AROOT);
+        char mc[B]; snprintf(mc, B, "find '%s' -xtype l -delete 2>/dev/null;cp -rn '%s/'* '%s/' 2>/dev/null;find '%s' -xtype l -delete 2>/dev/null", AROOT, old_sib, AROOT, AROOT);
         (void)!system(mc);
     }
     /* Also migrate from old ~/.local/share/a/ */
