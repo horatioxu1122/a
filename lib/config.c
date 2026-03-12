@@ -110,22 +110,21 @@ static int cmd_add(int argc, char **argv) {
     init_db(); load_cfg();
     char *args[16]; int na = 0;
     for (int i = 2; i < argc && na < 16; i++) if (strcmp(argv[i],"--global")) args[na++] = argv[i];
-    /* App add: a add <name> <command...> or a add <interp> <script> */
+    if (!na) { list_all(0,0); puts("a add <path>     project dir\na add .          current dir\na add <n> <cmd>  command"); return 0; }
     if (na >= 2 && !dexists(args[0])) {
-        char name[128], cmd[B] = "";
-        snprintf(name, 128, "%s", args[0]);
+        char *name=args[0], cmd[B]="";
         for(int i=1,l=0;i<na;i++) l+=snprintf(cmd+l,(size_t)(B-l),"%s%s",i>1?" ":"",args[i]);
-        char d[P]; snprintf(d, P, "%s/workspace/cmds", SROOT); mkdirp(d);
-        char f[P]; snprintf(f, P, "%s/%s.txt", d, name);
-        char cwd[P]; if(!getcwd(cwd,P)) snprintf(cwd,P,".");
-        char data[B]; snprintf(data, B, "Name: %s\nCommand: %s\n", name, cmd);
-        writef(f, data); sync_bg();
-        printf("\xe2\x9c\x93 Added: %s\n", name); list_all(1, 0); return 0;
+        char d[P]; snprintf(d,P,"%s/workspace/cmds",SROOT); mkdirp(d);
+        char f[P]; snprintf(f,P,"%s/%s.txt",d,name);
+        char data[B]; snprintf(data,B,"Name: %s\nCommand: %s\n",name,cmd);
+        writef(f,data); sync_bg();
+        printf("\xe2\x9c\x93 Added: %s\n",name); list_all(1,0); return 0;
     }
     /* Project add */
-    char path[P];
-    if (na > 0) { char *a = args[0]; if (a[0]=='~') snprintf(path,P,"%s%s",HOME,a+1); else snprintf(path,P,"%s",a); }
-    else if (!getcwd(path, P)) strcpy(path, ".");
+    char path[P], *a = args[0];
+    if (!strcmp(a,".")) { if(!getcwd(path,P)) strcpy(path,"."); }
+    else if (a[0]=='~') snprintf(path,P,"%s%s",HOME,a+1);
+    else snprintf(path,P,"%s",a);
     if (!dexists(path)) { printf("x Not a directory: %s\n", path); return 1; }
     const char *name = bname(path);
     char d[P]; snprintf(d, P, "%s/workspace/projects", SROOT); mkdirp(d);
