@@ -69,4 +69,4 @@ Simple code — you can read all of it. Fork it, change it, make it yours. PRs a
 Full framework: [IDEAS.md](IDEAS.md) — 79 points, ranked.
 
 These ideas are provisional. The ability to correct quickly is more
-important than having the right answer initially.
+important than having the right answer initially.The space of good clean correct ideas and messy but convergent ideas to those ideal is obviously full of more convergent than clean, and our first goal therefore is to find the messy convergent ones and converge them to the clean correct ones. 
