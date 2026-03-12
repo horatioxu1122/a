@@ -192,7 +192,7 @@ static int cmd_ssh(int argc,char**argv){
         if(system(tc)){char pw[256];printf("Password for %s: ",H[idx].name);
             if(fgets(pw,256,stdin)){pw[strcspn(pw,"\n")]=0;if(pw[0]){snprintf(H[idx].pw,256,"%s",pw);ssh_savex(dir,H[idx].name,H[idx].host,pw,0,0);}}}}
     {char cmd[B]="",c[B*2],cd[64]="";
-        {char cwd[P];if(getcwd(cwd,P)){char*p=strstr(cwd,"/projects/");if(p){p+=10;char*s=strchr(p,'/');if(s)*s=0;snprintf(cd,64,"cd ~/projects/%s 2>/dev/null;",p);}}}
+        {char cwd[P];size_t hl=strlen(HOME);if(getcwd(cwd,P)&&!strncmp(cwd,HOME,hl)&&cwd[hl]=='/'){char*p=cwd+hl+1;char*s=strchr(p,'/');if(s)*s=0;if(*p&&*p!='.')snprintf(cd,64,"cd ~/%s 2>/dev/null;",p);}}
         for(int i=3;i<argc;i++){int l=(int)strlen(cmd);snprintf(cmd+l,(size_t)(B-l),"%s%s",l?" ":"",argv[i]);}
         int n=ssh_pre(c,(int)sizeof c,H[idx].pw,"-tt -oConnectTimeout=5 -oStrictHostKeyChecking=accept-new",port,hp);
         if(cmd[0]||cd[0])snprintf(c+n,(size_t)(sizeof(c)-(size_t)n)," 'bash -c '\"'\"'%sexport PATH=$HOME/.local/bin:$PATH; %s'\"'\"''",cd,cmd[0]?cmd:"exec bash -l");

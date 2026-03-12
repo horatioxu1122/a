@@ -9,7 +9,7 @@
 #
 # MIGRATION NOTES (2026-02-03)
 # ----------------------------
-# Problem: Local ~/projects/a-sync/ had no git remote configured. Only had
+# Problem: Local ~/a-sync/ had no git remote configured. Only had
 # a single "init" commit while remote a-git repo had all the real data.
 # Local and remote were completely diverged (51 local-only files, 69 remote-only).
 #
@@ -42,7 +42,7 @@
 # ============================================================================
 
 """adata/git sync:
-  git+github:  ~/projects/adata/git/ -> a-git repo (common ssh login hub notes workspace docs tasks)
+  git+github:  ~/adata/git/ -> a-git repo (common ssh login hub notes workspace docs tasks)
 All files use append-only timestamps."""
 
 import os, subprocess as sp, time, shlex, threading
@@ -98,7 +98,7 @@ def _broadcast():
         for h, pw in hosts:
             try:
                 p = h.rsplit(':', 1)
-                cmd = (['sshpass', '-p', pw] if pw else []) + ['ssh', '-oConnectTimeout=2', '-oStrictHostKeyChecking=no'] + (['-p', p[1]] if len(p) > 1 else []) + [p[0], 'cd ~/projects/adata/git 2>/dev/null && git pull -q origin main || cd ~/adata/git && git pull -q origin main']
+                cmd = (['sshpass', '-p', pw] if pw else []) + ['ssh', '-oConnectTimeout=2', '-oStrictHostKeyChecking=no'] + (['-p', p[1]] if len(p) > 1 else []) + [p[0], 'cd ~/adata/git 2>/dev/null && git pull -q origin main || cd ~/adata/git && git pull -q origin main']
                 sp.run(cmd, capture_output=True, timeout=5)
             except: pass
     threading.Thread(target=_ping, daemon=True).start()
@@ -245,7 +245,7 @@ HELP = """a sync - Append-only sync to GitHub (no conflicts possible)
   a sync all       Sync + broadcast to SSH hosts
   a sync help      Show this help
 
-Data: ~/projects/adata/git/ -> github.com/seanpattencode/a-git
+Data: ~/adata/git/ -> github.com/seanpattencode/a-git
 Folders: common ssh login agents notes workspace docs tasks"""
 
 def run():
@@ -285,7 +285,7 @@ def run():
 # FOLDER STRUCTURE
 # ============================================================================
 #
-# Location: ~/projects/adata/git/ (data tier 1)
+# Location: ~/adata/git/ (data tier 1)
 # Remote:   github.com/seanpattencode/a-git (private repo)
 #
 # Synced folders (git tracked):
@@ -314,7 +314,7 @@ def run():
 # ============================================================================
 #
 # DIAGNOSTIC COMMANDS:
-#   cd ~/projects/adata/git
+#   cd ~/adata/git
 #   git remote -v              # Should show origin -> a-git.git
 #   git status                 # Should be clean or show untracked files
 #   git log --oneline -5       # Should show "sync" commits, not just "init"
@@ -364,8 +364,8 @@ def run():
 #   # If URL is empty or status is CONFLICT, something is wrong
 #
 # NUCLEAR OPTION (re-clone from scratch):
-#   mv ~/projects/adata/git ~/projects/adata/git-backup
-#   gh repo clone seanpattencode/a-git ~/projects/adata/git
+#   mv ~/adata/git ~/adata/git-backup
+#   gh repo clone seanpattencode/a-git ~/adata/git
 #   # Then manually merge any local-only files from backup
 #
 # ============================================================================

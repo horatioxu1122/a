@@ -75,12 +75,9 @@ static int cmd_wt(int argc, char **argv) { fallback_py("wt", argc, argv); }
 static int cmd_dir_file(int argc, char **argv) { (void)argc;
     const char *arg = argv[1];
     char expanded[P];
-    if (arg[0] == '/' && !strncmp(arg, "/projects/", 10)) {
-        snprintf(expanded, P, "%s%s", HOME, arg);
-        if (dexists(expanded)) { printf("%s\n", expanded); execlp("ls", "ls", expanded, (char*)NULL); return 0; }
-    }
     if (arg[0] == '~') snprintf(expanded, P, "%s%s", HOME, arg+1);
     else snprintf(expanded, P, "%s", arg);
+    if (!dexists(expanded)&&!fexists(expanded)&&arg[0]=='/') snprintf(expanded,P,"%s%s",HOME,arg);
     if (dexists(expanded)) { printf("%s\n", expanded); execlp("ls", "ls", expanded, (char*)NULL); }
     else if (fexists(expanded)) {
         const char *ext = strrchr(expanded, '.');

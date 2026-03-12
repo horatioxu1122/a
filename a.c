@@ -18,6 +18,8 @@
 # The code converges to maximally fast, short, valuable, runs everywhere.
 # The value test is the user running it and not screaming. Only a human
 # can judge this. Test suites cannot. All contributions are user-tested.
+# a lives in ~ — wherever the default terminal opens. Projects are just
+# folders next to it. No special projects/ directory needed.
 #
 # sh a.c              build (two-pass parallel: checker + builder)
 # sh a.c install      full install (deps, compile, shell, CLIs)
@@ -34,13 +36,13 @@
 # (owned by shell:shell 0771). Direct commands skip sandbox path and work.
 # Also set CLAUDE_CODE_TMPDIR=$HOME/.tmp (see _shell_funcs below).
 # Manual build (bypass sandbox): run compiler directly, not "bash a.c".
-#   D=/data/data/com.termux/files/home/projects/a
+#   D=/data/data/com.termux/files/home/a
 #   clang-21 -DSRC="\"$D\"" -isystem "$HOME/micromamba/include" \
 #     -O3 -march=native -flto -w -o "$D/a" "$D/a.c"
 
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
     # Bootstrap: when piped (curl | sh), clone repo and run install
-    set -e; A="$HOME/projects/a"
+    set -e; A="$HOME/a"
     command -v git >/dev/null || { echo "Install git first"; exit 1; }
     [ -d "$A/.git" ] && { echo "a already installed at $A"; exec sh "$A/a.c" install; }
     git clone https://github.com/seanpattencode/a.git "$A" && exec sh "$A/a.c" install
@@ -84,7 +86,7 @@ _shell_funcs() {
 a() {
     local dd="$_ADD"
     [[ -z "$1" ]] && { [[ -t 1 ]] && set -- i || { cat $dd/help_cache.txt 2>/dev/null || command a; return; }; }
-    local d="${1/#\~/$HOME}"; [[ "$1" == "/projects/"* ]] && d="$HOME$1"
+    local d="${1/#\~/$HOME}"
     [[ -d "$d" ]] && { echo "📂 $d"; cd "$d"; return; }
     [[ "$1" == *.c && -f "$1" ]] && { sh "$@"; return; }
     [[ "$1" == *.py && -f "$1" ]] && { local py=python3 ev=1; [[ -n "$VIRTUAL_ENV" ]] && py="$VIRTUAL_ENV/bin/python" ev=0; [[ -x .venv/bin/python ]] && py=.venv/bin/python ev=0; local s=$(($(date +%s%N)/1000000)); if command -v uv &>/dev/null && [[ -f pyproject.toml || -f uv.lock ]]; then uv run python "$@"; ev=0; else $py "$@"; fi; local r=$?; echo "{\"cmd\":\"$1\",\"ms\":$(($(($(date +%s%N)/1000000))-s)),\"ts\":\"$(date -Iseconds)\"}" >> $dd/timing.jsonl; [[ $r -ne 0 && $ev -ne 0 ]] && printf '  try: a c fix python env for this project\n'; return $r; }
@@ -215,7 +217,7 @@ install)
     esac
     _ensure_cc
     sh "$D/a.c" && ok "a compiled" || warn "Build failed"
-    E="$HOME/projects/editor"
+    E="$HOME/editor"
     [[ -f "$E/e.c" ]] || git clone https://github.com/seanpattencode/editor "$E" 2>/dev/null || :
     [[ -f "$E/e.c" ]] && sh "$E/e.c" install || :
     _shell_funcs

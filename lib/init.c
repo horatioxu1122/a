@@ -2,6 +2,24 @@
 static void init_paths(void) {
     const char *h = getenv("HOME"); if (!h) h = "/tmp";
     snprintf(HOME, P, "%s", h);
+    /* Projects live in ~ — wherever the default terminal opens.
+     * a is just a folder there. Projects are just folders next to it. */
+    {struct stat ps; char op[P];
+     snprintf(op,P,"%s/p",h);
+     if(lstat(op,&ps)==0&&S_ISDIR(ps.st_mode)){
+         char mc[B]; snprintf(mc,B,"mv '%s/'* '%s/' 2>/dev/null;rmdir '%s' 2>/dev/null",op,h,op);
+         (void)!system(mc);
+         snprintf(mc,B,"%s/.local/bin/a",h); unlink(mc);
+         snprintf(op,P,"%s/a/adata/local/a",h); symlink(op,mc);
+         fprintf(stderr,"! migrating ~/p/ → ~/ (projects now in home)\n");}
+     snprintf(op,P,"%s/projects",h);
+     if(lstat(op,&ps)==0&&S_ISLNK(ps.st_mode)) unlink(op);
+     else if(lstat(op,&ps)==0&&S_ISDIR(ps.st_mode)){
+         char mc[B]; snprintf(mc,B,"mv '%s/'* '%s/' 2>/dev/null;rmdir '%s' 2>/dev/null",op,h,op);
+         (void)!system(mc);
+         snprintf(mc,B,"%s/.local/bin/a",h); unlink(mc);
+         snprintf(op,P,"%s/a/adata/local/a",h); symlink(op,mc);
+         fprintf(stderr,"! migrating ~/projects/ → ~/ (projects now in home)\n");}}
     {const char*t=getenv("TMPDIR");snprintf(TMP,P,"%s",t&&*t?t:"/tmp");}
     char self[P]; ssize_t n = -1;
 #ifdef __APPLE__
@@ -22,12 +40,12 @@ static void init_paths(void) {
             snprintf(SROOT, P, "%s/git", AROOT);
         }
     }
-    if (!SROOT[0]) { snprintf(AROOT, P, "%s/projects/a/adata", h); snprintf(SROOT, P, "%s/git", AROOT); }
+    if (!SROOT[0]) { snprintf(AROOT, P, "%s/a/adata", h); snprintf(SROOT, P, "%s/git", AROOT); }
     /* All local state lives in adata/ — if it's not in adata, nobody knows
      * where it is. Maximum visibility for humans and LLMs. */
     snprintf(DDIR, P, "%s/local", AROOT);
     { char tmp[P]; snprintf(tmp,P,"%s",DDIR); for(char*p=tmp+1;*p;p++) if(*p=='/'){*p=0;mkdir(tmp,0755);*p='/';} mkdir(tmp,0755); }
-    /* One-time migration: old sibling ~/projects/adata/ → inside project dir */
+    /* One-time migration: old sibling adata/ → inside project dir */
     char old_sib[P]; snprintf(old_sib, P, "%.*s/adata", (int)(strlen(SDIR) - strlen("/a")), SDIR);
     /* only migrate if old sibling exists and new doesn't have .device yet */
     char new_dev[P]; snprintf(new_dev, P, "%s/.device", DDIR);

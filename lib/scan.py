@@ -31,14 +31,14 @@ def run():
         cloned = {os.path.basename(p) for p, _ in load_proj()}
         if name:
             match = next((r for r in repos if r['name']==name), None)
-            if match and name not in cloned: _clone([0],[(name,match['url'],'')],os.path.expanduser('~/projects')); return
+            if match and name not in cloned: _clone([0],[(name,match['url'],'')],os.path.expanduser('~')); return
             elif name in cloned: print(f"○ {name} already added"); return
         repos = [(r['name'],r['url'],r.get('pushedAt','')[:10]) for r in repos if r['name'] not in cloned and (not name or name.lower() in r['name'].lower())]
         if not repos: print("No new GitHub repos"); return
         idxs = _pick(repos, sel, lambda i,r: f"  {i}. {r[0]:<25} {r[2]}")
-        if idxs: _clone(idxs, repos, os.path.expanduser('~/projects'))
+        if idxs: _clone(idxs, repos, os.path.expanduser('~'))
     else:
-        d = os.path.expanduser(next((a for a in args if a not in (sel,)), '~/projects'))
+        d = os.path.expanduser(next((a for a in args if a not in (sel,)), '~'))
         existing = {p for p, _ in load_proj()}
         repos = sorted([p.parent for p in Path(d).rglob('.git') if p.exists() and str(p.parent) not in existing and '/.' not in str(p.parent)], key=lambda x: x.name.lower())[:50]
         if not repos: print(f"No new repos in {d}"); return

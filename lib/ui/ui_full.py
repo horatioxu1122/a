@@ -91,7 +91,7 @@ async def spa(r):
         for f in sorted(os.listdir(pd)):
             if f.endswith('.txt'):
                 kv=_kv(f'{pd}/{f}');n=kv.get('Name')
-                if n: p=(kv.get('Path','') or f'~/projects/{n}').replace('~',os.path.expanduser('~'));po+=f'<option value="{E(p)}">{E(n)}</option>'
+                if n: p=(kv.get('Path','') or f'~/{n}').replace('~',os.path.expanduser('~'));po+=f'<option value="{E(p)}">{E(n)}</option>'
     do='<option value="">local</option>';dd=f'{_G}/ssh'
     if os.path.isdir(dd):
         for f in sorted(os.listdir(dd)):
@@ -157,7 +157,7 @@ async def jobs_api(r):
             args.append(prompt)
             if device:
                 q = prompt.replace("'", "'\\''")
-                cd = f"cd ~/projects/{os.path.basename(project)} && " if project else ''
+                cd = f"cd ~/{os.path.basename(project)} && " if project else ''
                 inner = f"{cd}{_A} all l:{count} '{q}'" if count > 1 else f"{cd}{_A} c '{q}'"
                 args = [_A, 'ssh', device, inner]
         S.Popen(args, env=env, start_new_session=True, stdout=S.DEVNULL, stderr=S.DEVNULL)

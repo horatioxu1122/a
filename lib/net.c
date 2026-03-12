@@ -44,7 +44,7 @@ static int cmd_log(int argc, char **argv) {
             pcmd(c, cnt, 64); int loc = atoi(cnt);
             if (!strcmp(dn, DEV)) { printf("%-16s %6d %6s  local (this device)\n", dn, loc, "-"); }
             else {
-                snprintf(c, B, "'%s/a' ssh '%s' 'ls ~/projects/a/adata/backup/%s/*.jsonl 2>/dev/null | wc -l' 2>/dev/null", DDIR, dn, dn);
+                snprintf(c, B, "'%s/a' ssh '%s' 'ls ~/a/adata/backup/%s/*.jsonl 2>/dev/null | wc -l' 2>/dev/null", DDIR, dn, dn);
                 pcmd(c, cnt, 64); int rn = atoi(cnt);
                 printf("%-16s %6d %6d  %s\n", dn, loc, rn, rn ? "remote \xe2\x9c\x93" : "remote (no JSONL)");
             }

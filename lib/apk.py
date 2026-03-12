@@ -38,7 +38,7 @@ def run():
     if IT:gp+="android.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2\n"
     w(D+"/gradle.properties",gp);w(D+"/app/src/main/AndroidManifest.xml",MF);w(D+"/app/src/main/java/com/aios/a/M.kt",KT)
     if not os.path.exists(D+"/gradlew"):
-        for s in [R+"/lab/android/A",*glob.glob(H+"/projects/androidDev/apks/*")]:
+        for s in [R+"/lab/android/A",*glob.glob(H+"/androidDev/apks/*")]:
             if os.path.exists(s+"/gradlew"):
                 shutil.copy(s+"/gradlew",D+"/gradlew");os.chmod(D+"/gradlew",0o755)
                 wd=s+"/gradle/wrapper";os.makedirs(D+"/gradle/wrapper",exist_ok=True)

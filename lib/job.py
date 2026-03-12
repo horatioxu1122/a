@@ -26,8 +26,8 @@ def _save_logs(jn, log, wp='', dev=''):
     import shutil, glob as G
     if dev:
         # copy JSONL on remote, then scp back to local
-        _ssh(dev,f"mkdir -p ~/projects/a/adata/backup/{dev} && cp ~/.claude/projects/*{jn}*/*.jsonl ~/projects/a/adata/backup/{dev}/ 2>/dev/null",15)
-        S.run(f"scp -q {dev}:'~/projects/a/adata/backup/{dev}/*{jn}*.jsonl' '{bdir}/' 2>/dev/null",shell=True,timeout=60)
+        _ssh(dev,f"mkdir -p ~/a/adata/backup/{dev} && cp ~/.claude/projects/*{jn}*/*.jsonl ~/a/adata/backup/{dev}/ 2>/dev/null",15)
+        S.run(f"scp -q {dev}:'~/a/adata/backup/{dev}/*{jn}*.jsonl' '{bdir}/' 2>/dev/null",shell=True,timeout=60)
     else:
         for f in G.glob(os.path.expanduser(f'~/.claude/projects/*{jn}*/*.jsonl')): shutil.copy2(f,bdir)
     # push to gdrive
@@ -152,9 +152,9 @@ def run():
         elif not proj:
             if args[i].isdigit() and int(args[i]) < len(PROJ): proj = PROJ[int(args[i])][0]; i += 1
             elif os.path.isdir(os.path.expanduser(args[i])): proj = os.path.expanduser(args[i]); i += 1
-            elif os.path.isdir(os.path.expanduser(f'~/projects/{args[i]}')): proj = os.path.expanduser(f'~/projects/{args[i]}'); i += 1
+            elif os.path.isdir(os.path.expanduser(f'~/{args[i]}')): proj = os.path.expanduser(f'~/{args[i]}'); i += 1
             else:
-                u=next((r for p,r in PROJ if os.path.basename(p)==args[i] and r),'');d=os.path.expanduser(f'~/projects/{args[i]}');proj=d if u and not S.run(['git','clone',u,d],capture_output=True).returncode else sys.exit(print(f"x No local project: {args[i]}"))
+                u=next((r for p,r in PROJ if os.path.basename(p)==args[i] and r),'');d=os.path.expanduser(f'~/{args[i]}');proj=d if u and not S.run(['git','clone',u,d],capture_output=True).returncode else sys.exit(print(f"x No local project: {args[i]}"))
                 i+=1;continue
         else: pp.append(args[i]); i += 1
     prompt = open(pfile).read().strip() if pfile else ' '.join(pp)
@@ -252,21 +252,21 @@ def _run_local(ak, proj, rn, prompt, jn, br, wp, wt, sn, watch=False, timeout=60
 def _run_remote(dev, ak, proj, rn, prompt, jn, br, ts, sn):
     _db_job(jn, 'ssh-setup', 'running', dev, sn)
     # Ensure repo on remote
-    rc, _, _ = _ssh(dev, f'test -d ~/projects/{rn}/.git', timeout=10)
+    rc, _, _ = _ssh(dev, f'test -d ~/{rn}/.git', timeout=10)
     if rc:
         r = S.run(['git', '-C', proj, 'remote', 'get-url', 'origin'], capture_output=True, text=True)
         url = r.stdout.strip()
         if not url: print("x No remote origin"); return
         print(f"  Cloning {rn} on {dev}...")
-        rc, _, err = _ssh(dev, f'git clone {url} ~/projects/{rn}', timeout=60)
+        rc, _, err = _ssh(dev, f'git clone {url} ~/{rn}', timeout=60)
         if rc: print(f"x Clone: {err}"); return
     else:
-        _ssh(dev, f'cd ~/projects/{rn} && git checkout main && git pull --ff-only', timeout=30)
+        _ssh(dev, f'cd ~/{rn} && git checkout main && git pull --ff-only', timeout=30)
 
     # Worktree
-    wt = f'~/projects/a/adata/worktrees/{jn}'
+    wt = f'~/a/adata/worktrees/{jn}'
     _db_job(jn, 'worktree', 'running', dev, sn)
-    rc, _, err = _ssh(dev, f'mkdir -p ~/projects/a/adata/worktrees && git -C ~/projects/{rn} worktree add -b {br} {wt} HEAD', timeout=30)
+    rc, _, err = _ssh(dev, f'mkdir -p ~/a/adata/worktrees && git -C ~/{rn} worktree add -b {br} {wt} HEAD', timeout=30)
     if rc: print(f"x Worktree: {err}"); return
     print(f"+ Worktree: {wt}")
 
@@ -294,9 +294,9 @@ def _run_remote(dev, ak, proj, rn, prompt, jn, br, ts, sn):
     _db_job(jn, 'waiting', 'running', dev, sn)
     print("Waiting for agent...")
     _ssh_wait_done(dev, sn, timeout=600)
-    _,summary,_=_ssh(dev,"cat ~/projects/a/adata/local/.done 2>/dev/null",5)
+    _,summary,_=_ssh(dev,"cat ~/a/adata/local/.done 2>/dev/null",5)
     _,lg,_=_ssh(dev,f"tmux capture-pane -t '{sn}' -S -1000 -p",10)
-    _save_logs(jn, lg, f'~/projects/a/adata/worktrees/{jn}', dev)
+    _save_logs(jn, lg, f'~/a/adata/worktrees/{jn}', dev)
     print("+ Agent finished")
 
     # PR on remote — write script to avoid shell quoting issues

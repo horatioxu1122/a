@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Constants
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-ADATA_ROOT = next((p for p in [Path(SCRIPT_DIR) / 'adata', Path.home() / 'projects' / 'a' / 'adata', Path.home() / 'adata'] if (p / 'git').exists()), Path(SCRIPT_DIR) / 'adata')
+ADATA_ROOT = next((p for p in [Path(SCRIPT_DIR) / 'adata', Path.home() / 'a' / 'adata', Path.home() / 'adata'] if (p / 'git').exists()), Path(SCRIPT_DIR) / 'adata')
 PROMPTS_DIR = ADATA_ROOT / 'git' / 'common' / 'prompts'
 DATA_DIR = str(ADATA_ROOT / 'local')
 DB_PATH = os.path.join(DATA_DIR, "aio.db")
@@ -131,12 +131,12 @@ def init_db():
         if 'device' not in [r[1] for r in c.execute("PRAGMA table_info(agent_logs)")]: c.execute("ALTER TABLE agent_logs ADD COLUMN device TEXT")
         if c.execute("SELECT COUNT(*) FROM config").fetchone()[0] == 0:
             dp = get_prompt('default') or ''
-            for k, v in [('claude_prompt', dp), ('codex_prompt', dp), ('gemini_prompt', dp), ('worktrees_dir', os.path.expanduser("~/projects/a/adata/worktrees")), ('multi_default', 'l:3')]: c.execute("INSERT INTO config VALUES (?, ?)", (k, v))
+            for k, v in [('claude_prompt', dp), ('codex_prompt', dp), ('gemini_prompt', dp), ('worktrees_dir', os.path.expanduser("~/a/adata/worktrees")), ('multi_default', 'l:3')]: c.execute("INSERT INTO config VALUES (?, ?)", (k, v))
         c.execute("INSERT OR IGNORE INTO config VALUES ('multi_default', 'l:3')")
         c.execute("INSERT OR IGNORE INTO config VALUES ('claude_prefix', 'Ultrathink. ')")
         np = not c.execute("SELECT 1 FROM projects").fetchone()
         if np:
-            for p in [SCRIPT_DIR, os.path.expanduser("~/aio"), os.path.expanduser("~/projects/aio")]:
+            for p in [SCRIPT_DIR, os.path.expanduser("~/aio"), os.path.expanduser("~/aio")]:
                 if os.path.isdir(p) and os.path.isdir(os.path.join(p, ".git")): c.execute("INSERT INTO projects(path,display_order,device)VALUES(?,0,'*')",(p,)); break
         if np or not c.execute("SELECT 1 FROM apps").fetchone():
             ui = next((p for p in [os.path.join(SCRIPT_DIR, "aioUI.py"), os.path.expanduser("~/aio/aioUI.py"), os.path.expanduser("~/.local/bin/aioUI.py")] if os.path.exists(p)), None)
@@ -159,7 +159,7 @@ def load_proj():
     proj_dir = SYNC_ROOT / 'workspace' / 'projects'; proj_dir.mkdir(parents=True, exist_ok=True); projs = []
     for f in proj_dir.glob('*.txt'):
         d = {k.strip(): v.strip() for line in f.read_text().splitlines() if ':' in line for k, v in [line.split(':', 1)]}
-        if 'Name' in d: projs.append((d.get('Path', f'~/projects/{d["Name"]}'), d.get('Repo', ''), d['Name']))
+        if 'Name' in d: projs.append((d.get('Path', f'~/{d["Name"]}'), d.get('Repo', ''), d['Name']))
     return [(os.path.expanduser(p), r) for p, r, n in sorted(projs, key=lambda x: x[2])]
 
 def load_apps():
