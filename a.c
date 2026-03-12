@@ -458,12 +458,10 @@ static int cmd_j(int c,char**v){
     if(c>2&&v[2][1]=='q'){char ln[B];for(fputs("j> ",stdout);fgets(ln,B,stdin);fputs("j> ",stdout)){
         ln[strcspn(ln,"\n")]=0;if(!*ln)continue;char*a[]={"a","j","--no-wt",ln,0};cmd_j(4,a);}return 0;}
     if(c==3&&!strcmp(v[2],"a")){if(!getenv("TMUX")){puts("x Needs tmux");return 1;}
-        init_db();load_cfg();char cf[P],pf[P],pr[B],cm[B],pid[64];
-        snprintf(cf,P,"%s/job_context.txt",DDIR);
+        char cf[P],pr[B],cm[B],pid[64];snprintf(cf,P,"%s/job_context.txt",DDIR);
         snprintf(cm,B,"(a n l;echo;a t l)>%s 2>/dev/null",cf);(void)!system(cm);
-        snprintf(pf,P,"%s/common/prompts/job.txt",SROOT);
-        if(!fexists(pf))writef(pf,"Job agent. Read context file, ask what to work on. cat a.c for source.\na j, a job, a n l, a t l, a task add/d/pri\n");
-        char*ap=readf(pf,NULL);snprintf(pr,B,"%s\nContext: cat %s",ap?ap:"",cf);if(ap)free(ap);
+        snprintf(pr,B,"%s/common/prompts/job.txt",SROOT);
+        char*ap=readf(pr,NULL);snprintf(pr,B,"%s\nContext: cat %s",ap?ap:"Ask what to work on. cat a.c for source.",cf);if(ap)free(ap);
         snprintf(cm,B,"tmux split-window -fhP -F '#{pane_id}' -c '%s' 'claude --dangerously-skip-permissions'",SDIR);
         pcmd(cm,pid,64);pid[strcspn(pid,"\n")]=0;
         if(pid[0])send_prefix_bg(pid,"claude",SDIR,pr);return 0;}
