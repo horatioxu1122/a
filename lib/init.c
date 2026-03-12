@@ -4,22 +4,17 @@ static void init_paths(void) {
     snprintf(HOME, P, "%s", h);
     /* Projects live in ~ — wherever the default terminal opens.
      * a is just a folder there. Projects are just folders next to it. */
-    {struct stat ps; char op[P];
-     snprintf(op,P,"%s/p",h);
-     if(lstat(op,&ps)==0&&S_ISDIR(ps.st_mode)){
-         char mc[B]; snprintf(mc,B,"mv '%s/'* '%s/' 2>/dev/null;rmdir '%s' 2>/dev/null",op,h,op);
-         (void)!system(mc);
-         snprintf(mc,B,"%s/.local/bin/a",h); unlink(mc);
-         snprintf(op,P,"%s/a/adata/local/a",h); symlink(op,mc);
-         fprintf(stderr,"! migrating ~/p/ → ~/ (projects now in home)\n");}
-     snprintf(op,P,"%s/projects",h);
-     if(lstat(op,&ps)==0&&S_ISLNK(ps.st_mode)) unlink(op);
-     else if(lstat(op,&ps)==0&&S_ISDIR(ps.st_mode)){
-         char mc[B]; snprintf(mc,B,"mv '%s/'* '%s/' 2>/dev/null;rmdir '%s' 2>/dev/null",op,h,op);
-         (void)!system(mc);
-         snprintf(mc,B,"%s/.local/bin/a",h); unlink(mc);
-         snprintf(op,P,"%s/a/adata/local/a",h); symlink(op,mc);
-         fprintf(stderr,"! migrating ~/projects/ → ~/ (projects now in home)\n");}}
+    {struct stat ps; char op[P],mc[B];
+     const char*od[]={"p","projects",NULL};
+     for(int i=0;od[i];i++){
+         snprintf(op,P,"%s/%s",h,od[i]);
+         if(lstat(op,&ps)==0&&S_ISLNK(ps.st_mode)){unlink(op);continue;}
+         if(!lstat(op,&ps)&&S_ISDIR(ps.st_mode)){
+             snprintf(mc,B,"mv -n '%s/'* '%s/' 2>/dev/null;rm -rf '%s';sed -i 's|^_ADD=.*|_ADD=\"%s/a/adata/local\"|' '%s/.bashrc' '%s/.zshrc' 2>/dev/null",op,h,op,h,h,h);
+             (void)!system(mc);
+             snprintf(mc,B,"%s/.local/bin/a",h);unlink(mc);
+             snprintf(op,P,"%s/a/adata/local/a",h);symlink(op,mc);
+             fprintf(stderr,"! migrated ~/%s → ~/\n",od[i]);}}}
     {const char*t=getenv("TMPDIR");snprintf(TMP,P,"%s",t&&*t?t:"/tmp");}
     char self[P]; ssize_t n = -1;
 #ifdef __APPLE__
