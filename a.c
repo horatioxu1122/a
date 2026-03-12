@@ -12,7 +12,7 @@
 # time. IDEAS.md elaborates further.
 #
 # Contributions should follow simple rules:
-# Only fix what's unambiguously broken or a user screams for as missing.
+# Only fix what is unambiguously broken or a user screams for as missing.
 # Functionality fixes must show fewer or equal tokens, same speed or faster.
 # Feature additions: recursively cut until it breaks if cut further.
 # The code converges to maximally fast, short, valuable, runs everywhere.
