@@ -199,6 +199,7 @@ static int cmd_jobs(int argc, char **argv) {
         char*d=R[i].n,*s=strrchr(d,'-'),*s2=NULL;if(s){for(char*p=s-1;p>=d;p--)if(*p=='-'){s2=p;break;}}
         if(s2)printf("  %d  %-16.*s %s\n",na+i,(int)(s2-d),d,s2+1);
         else printf("  %d  %s\n",na+i,d);}}
+    if(!nr)puts("\n  (no worktrees to review)");
     printf("\n  a j \"prompt\"  new job    a j a  agent    a job #  attach    a job rm #|all\n  e %s/common/prompts/job.txt\n",SROOT);
     if(!nr||!isatty(STDIN_FILENO))return 0;
     for(int ri=0;ri>=0&&ri<nr;){

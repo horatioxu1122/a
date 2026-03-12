@@ -459,7 +459,11 @@ static int cmd_j(int c,char**v){
         ln[strcspn(ln,"\n")]=0;if(!*ln)continue;char*a[]={"a","j","--no-wt",ln,0};cmd_j(4,a);}return 0;}
     if(c==3&&!strcmp(v[2],"a")){if(!getenv("TMUX")){puts("x Needs tmux");return 1;}
         char cf[P],pr[B],cm[B],pid[64];snprintf(cf,P,"%s/job_context.txt",DDIR);
-        snprintf(cm,B,"(a n l;echo;a t l)>%s 2>/dev/null",cf);(void)!system(cm);
+        {char nd[P];FILE*f=fopen(cf,"w");if(f){
+            snprintf(nd,P,"%s/notes",SROOT);int nn=load_notes(nd,NULL);
+            for(int i=0;i<nn;i++)fprintf(f,"%d. %s\n",i+1,gnt[i]);
+            fputs("\n",f);snprintf(nd,P,"%s/tasks",SROOT);int nt=load_tasks(nd);
+            for(int i=0;i<nt;i++)fprintf(f,"%d. P%s %s\n",i+1,T[i].p,T[i].t);fclose(f);}}
         snprintf(pr,B,"%s/common/prompts/job.txt",SROOT);
         char*ap=readf(pr,NULL);snprintf(pr,B,"%s\nContext: cat %s",ap?ap:"Ask what to work on. cat a.c for source.",cf);if(ap)free(ap);
         snprintf(cm,B,"tmux split-window -fhP -F '#{pane_id}' -c '%s' 'claude --dangerously-skip-permissions'",SDIR);
