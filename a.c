@@ -457,6 +457,29 @@ static int cmd_j(int c,char**v){
     if(c==3&&v[2][0]>='0'&&v[2][0]<='9')return cmd_jobs(c,v);
     if(c>2&&v[2][1]=='q'){char ln[B];for(fputs("j> ",stdout);fgets(ln,B,stdin);fputs("j> ",stdout)){
         ln[strcspn(ln,"\n")]=0;if(!*ln)continue;char*a[]={"a","j","--no-wt",ln,0};cmd_j(4,a);}return 0;}
+    /* j a — agent pane with notes+tasks context, rightmost vertical split */
+    if(c==3&&!strcmp(v[2],"a")){
+        if(!getenv("TMUX")){puts("x Needs tmux");return 1;}
+        init_db();load_cfg();
+        char cf[P];snprintf(cf,P,"%s/job_context.txt",DDIR);
+        {char sc[B];snprintf(sc,B,"(echo '=== NOTES ===';a n l;echo;echo '=== TASKS ===';a t l) >%s 2>/dev/null",cf);(void)!system(sc);}
+        char pf[P];snprintf(pf,P,"%s/common/prompts/job.txt",SROOT);
+        if(!fexists(pf))writef(pf,
+            "You are the job agent for the \"a\" system. Read the context file given below, then ask the user what they want to work on. Focus on helping them achieve their goals.\n"
+            "Run: cat a.c to understand the system. Key commands:\n"
+            "  a j \"prompt\"    new job (worktree + claude)\n"
+            "  a job           list active jobs + review worktrees\n"
+            "  a job rm #|all  remove jobs\n"
+            "  a n l / a t l   list notes/tasks\n"
+            "  a n \"text\" / a task add \"t\"  add note/task\n"
+            "  a n r / a task d #  review/archive\n"
+            "  a task pri # N  reprioritize\n");
+        char*ap=readf(pf,NULL);
+        char pr[B];snprintf(pr,B,"%s\nContext file: %s\nRun: cat %s",ap?ap:"",cf,cf);
+        if(ap)free(ap);
+        char cm[B],pid[64];snprintf(cm,B,"tmux split-window -fhP -F '#{pane_id}' -c '%s' 'claude --dangerously-skip-permissions'",SDIR);
+        pcmd(cm,pid,64);pid[strcspn(pid,"\n")]=0;
+        if(pid[0])send_prefix_bg(pid,"claude",SDIR,pr);return 0;}
     /* limit concurrent jobs: each claude ~1.2GB RSS */
     {char nb[16]="";pcmd("pgrep -xc claude 2>/dev/null||echo 0",nb,16);
     int nj=atoi(nb)-1;if(nj<0)nj=0; /* -1 for this session */
