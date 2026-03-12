@@ -32,20 +32,20 @@ static void hub_timer(hub_t *j, int on) {
 #ifdef __ANDROID__
     /* Termux: use cron (no systemd) */
     int h=0,m=0; sscanf(j->s,"%d:%d",&h,&m);
-    if(on) snprintf(buf,B,"(crontab -l 2>/dev/null|grep -v 'aio:%s';echo '%d %d * * * %s/.local/bin/a hub run %s # aio:%s')|crontab -",j->n,m,h,HOME,j->n,j->n);
-    else snprintf(buf,B,"(crontab -l 2>/dev/null|grep -v 'aio:%s')|crontab -",j->n);
+    if(on) snprintf(buf,B,"(crontab -l 2>/dev/null|grep -v 'a:%s';echo '%d %d * * * %s/.local/bin/a hub run %s # a:%s')|crontab -",j->n,m,h,HOME,j->n,j->n);
+    else snprintf(buf,B,"(crontab -l 2>/dev/null|grep -v 'a:%s')|crontab -",j->n);
     (void)!system("pgrep crond>/dev/null||crond");
 #else
     char sd[P]; snprintf(sd,P,"%s/.config/systemd/user",HOME); mkdirp(sd);
     if(on) {
         snprintf(buf,B,"[Unit]\nDescription=%s\n[Service]\nType=oneshot\nExecStart=/bin/bash -c '%s/.local/bin/a hub run %s'\n",j->n,HOME,j->n);
-        char svc[P]; snprintf(svc,P,"%s/aio-%s.service",sd,j->n); writef(svc,buf);
+        char svc[P]; snprintf(svc,P,"%s/a-%s.service",sd,j->n); writef(svc,buf);
         snprintf(buf,B,"[Unit]\nDescription=%s\n[Timer]\nOnCalendar=%s\nAccuracySec=1s\nPersistent=true\n[Install]\nWantedBy=timers.target\n",j->n,j->s);
-        char tmr[P]; snprintf(tmr,P,"%s/aio-%s.timer",sd,j->n); writef(tmr,buf);
-        snprintf(buf,B,"systemctl --user daemon-reload && systemctl --user enable --now aio-%s.timer 2>/dev/null",j->n);
+        char tmr[P]; snprintf(tmr,P,"%s/a-%s.timer",sd,j->n); writef(tmr,buf);
+        snprintf(buf,B,"systemctl --user daemon-reload && systemctl --user enable --now a-%s.timer 2>/dev/null",j->n);
     } else {
-        snprintf(buf,B,"systemctl --user disable --now aio-%s.timer 2>/dev/null;"
-            "rm -f '%s/aio-%s.timer' '%s/aio-%s.service'",j->n,sd,j->n,sd,j->n);
+        snprintf(buf,B,"systemctl --user disable --now a-%s.timer 2>/dev/null;"
+            "rm -f '%s/a-%s.timer' '%s/a-%s.service'",j->n,sd,j->n,sd,j->n);
     }
 #endif
     (void)!system(buf);
@@ -65,9 +65,9 @@ static void hub_timers(void){
 }
 static int hub_on(hub_t*j){char p[96];
 #ifdef __ANDROID__
-    snprintf(p,96,"aio:%s",j->n);
+    snprintf(p,96,"a:%s",j->n);
 #else
-    snprintf(p,96,"aio-%s.timer",j->n);
+    snprintf(p,96,"a-%s.timer",j->n);
 #endif
     return(!strcmp(j->d,DEV))?j->en&&strstr(HUB_TL,p)!=NULL:j->en;}
 static void hub_trunc(char*o,int sz,const char*s,int cw){int l=(int)strlen(s);
@@ -139,6 +139,7 @@ static int cmd_hub(int argc, char **argv) {
     }
 
     if(!strcmp(sub,"sync")) {
+        {char c[B];snprintf(c,B,"systemctl --user disable --now aio-*.timer 2>/dev/null;rm -f %s/.config/systemd/user/aio-*.{timer,service} 2>/dev/null",HOME);(void)!system(c);}
         for(int i=0;i<NJ;i++) hub_timer(&HJ[i],0);
         int m=0; for(int i=0;i<NJ;i++) if(!strcmp(HJ[i].d,DEV)&&HJ[i].en) { hub_timer(&HJ[i],1); m++; }
         printf("\xe2\x9c\x93 synced %d jobs\n",m); return 0;

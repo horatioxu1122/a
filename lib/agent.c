@@ -25,11 +25,10 @@ static int cmd_a_default(int c,char**v){
 
 /* ── agent ── */
 static int cmd_agent(int argc, char **argv) {
-    if(argc<3){char c[B];snprintf(c,B,"(echo 'Native (a agent run <name>):';cd %s/lab/platonic_agents&&ls *.[pc]*|sed 's/\\..*//'|sort -u;echo;echo 'CLI tools (a <key>):';sed 's/|/ /;s/|.*//' %s/sessions.txt) 2>/dev/null",SDIR,DDIR);
+    if(argc<3){char c[B];snprintf(c,B,"ls %s/agents/*.py 2>/dev/null|xargs -I{} basename {} .py|grep -v base",SROOT);
         return system(c);}
     if(!strcmp(argv[2],"run")&&argc>3){char f[P];
-        snprintf(f,P,"%s/lab/platonic_agents/%s.py",SDIR,argv[3]);
-        if(!fexists(f))memcpy(f+strlen(f)-2,"c",2);
+        snprintf(f,P,"%s/agents/%s.py",SROOT,argv[3]);
         if(!fexists(f)){printf("x Not found: %s\n",argv[3]);return 1;}
         perf_disarm();
         char wd[P];if(!getcwd(wd,P))snprintf(wd,P,"%s",HOME);
