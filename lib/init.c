@@ -45,7 +45,7 @@ static void init_paths(void) {
     /* only migrate if old sibling exists and new doesn't have .device yet */
     char new_dev[P]; snprintf(new_dev, P, "%s/.device", DDIR);
     struct stat mst;
-    if (strcmp(old_sib, AROOT) != 0 && stat(old_sib, &mst) == 0 && (stat(new_dev, &mst) != 0 || !dexists(SROOT))) {
+    if (strcmp(old_sib, AROOT) != 0 && stat(old_sib, &mst) == 0 && (stat(new_dev, &mst) != 0 || stat(SROOT, &mst) != 0)) {
         char mc[B]; snprintf(mc, B, "find '%s' -xtype l -delete 2>/dev/null;cp -rn '%s/'* '%s/' 2>/dev/null", AROOT, old_sib, AROOT);
         (void)!system(mc);
     }
