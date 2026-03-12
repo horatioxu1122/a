@@ -41,7 +41,8 @@ static int cmd_ssh(int argc,char**argv){
             printf("  %d. %s%s%s: %s%s\n",i,s?"\033[32m":"",H[i].name,s?" (self)\033[0m":"",H[i].host,H[i].pw[0]?" [pw]":"");}
         if(!nh)puts("  (none)");
         puts("\na ssh <#|name> [cmd]  add/self/start/stop/all/rm\n"
-             "  setup/key/auth/os/info/pw/mv");return 0;}
+             "  setup/key/auth/os/info/pw/mv/ping");return 0;}
+
     /* start/stop/status */
     if(!strcmp(sub,"start")){int r=system("sshd 2>/dev/null||service ssh start 2>/dev/null||sudo service ssh start 2>/dev/null||/usr/sbin/sshd 2>/dev/null||sudo /usr/sbin/sshd 2>/dev/null");puts(r?"x sshd":"\xe2\x9c\x93 sshd");return r!=0;}
     if(!strcmp(sub,"stop")){(void)!system("pkill -x sshd 2>/dev/null||sudo pkill -x sshd");puts("\xe2\x9c\x93");return 0;}
@@ -153,7 +154,7 @@ static int cmd_ssh(int argc,char**argv){
         for(int i=0;i<nh;i++){char hp[256],port[8];ssh_parse(H[i].host,hp,port);
             printf("%s: ssh %s%s%s%s\n",H[i].name,strcmp(port,"22")?"-p ":"",strcmp(port,"22")?port:"",strcmp(port,"22")?" ":"",hp);}return 0;}
     /* os — detect remote OS on all hosts */
-    if(!strcmp(sub,"os")){
+    if(!strcmp(sub,"os")||!strcmp(sub,"ping")){
         struct{int fd;pid_t pid;char nm[128],host[256],pw[256];}S[32];int ns=0;
         for(int i=0;i<nh&&ns<32;i++){int pfd[2];if(pipe(pfd))continue;
             pid_t p=fork();if(p==0){close(pfd[0]);char hp[256],port[8];ssh_parse(H[i].host,hp,port);
@@ -167,6 +168,7 @@ static int cmd_ssh(int argc,char**argv){
             if(o[0]){ssh_savex(dir,S[i].nm,S[i].host,S[i].pw,"OS",o);printf("\xe2\x9c\x93 %s: %s\n",S[i].nm,o);}
             else printf("x %s\n",S[i].nm);}
         return 0;}
+
     /* all/broadcast — parallel */
     if((!strcmp(sub,"all")||!strcmp(sub,"*"))&&argc>3){
         char cmd[B]="";for(int i=3,l=0;i<argc;i++)l+=snprintf(cmd+l,(size_t)(B-l),"%s%s",i>3?" ":"",argv[i]);
