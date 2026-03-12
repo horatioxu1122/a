@@ -199,7 +199,7 @@ static int cmd_jobs(int argc, char **argv) {
         char*d=R[i].n,*s=strrchr(d,'-'),*s2=NULL;if(s){for(char*p=s-1;p>=d;p--)if(*p=='-'){s2=p;break;}}
         if(s2)printf("  %d  %-16.*s %s\n",na+i,(int)(s2-d),d,s2+1);
         else printf("  %d  %s\n",na+i,d);}}
-    printf("\n  a j \"prompt\"       new job (cwd)    a j <#> \"prompt\"  (project #)\n  a j a              agent (notes+tasks)\n  e %s/common/prompts/job.txt\n  a job #            attach/cd        a job rm #|all    remove\n",SROOT);
+    printf("\n  a j \"prompt\"  new job    a j a  agent    a job #  attach    a job rm #|all\n  e %s/common/prompts/job.txt\n",SROOT);
     if(!nr||!isatty(STDIN_FILENO))return 0;
     for(int ri=0;ri>=0&&ri<nr;){
         printf("\n\033[1m\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81 %d/%d %s\033[0m\n",ri+1,nr,R[ri].n);
