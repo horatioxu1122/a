@@ -640,8 +640,7 @@ int main(int argc, char **argv) {
       if (l >= 3 && arg[l-1] == '+' && arg[l-2] == '+' && arg[0] != 'w')
           return cmd_wt_plus(argc, argv); }
 
-    /* "a wfoo" — w-prefix not in table = worktree */
-    if (arg[0] == 'w' && !fexists(arg))
+    if (arg[0] == 'w' && arg[1] && !fexists(arg))
         return cmd_wt(argc, argv);
 
     /* "a c" — session key from sessions.txt */
