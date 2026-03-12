@@ -70,10 +70,10 @@ static int cmd_e(int argc, char **argv) {
 static int cmd_config(int argc, char **argv) {
     init_db(); load_cfg();
     if (argc < 3) {
-        for (int i = 0; i < NCF; i++) {
-            char v[54]; snprintf(v, 54, "%s", CF[i].v);
-            printf("  %s: %s%s\n", CF[i].k, v, strlen(CF[i].v)>50?"...":"");
-        }
+        static const char*show[]={"default_agent","claude_prefix","multi_default","worktrees_dir","tmux_conf",NULL};
+        for(const char**s=show;*s;s++){const char*v=cfget(*s);
+            printf("  %-16s%s\n",*s,v[0]?v:!strcmp(*s,"default_agent")?"c":"-");}
+        puts("\n  Prompts: claude_prompt codex_prompt gemini_prompt\n  Set: a config <key> <value>  |  a config <key> off");
         return 0;
     }
     const char *key = argv[2];

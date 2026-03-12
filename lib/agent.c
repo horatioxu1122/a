@@ -19,6 +19,10 @@ static int cmd_docs(int argc, char **argv) {
 /* ── run (remote) ── */
 static int cmd_run(int argc, char **argv) { fallback_py("run", argc, argv); }
 
+static int cmd_a_default(int c,char**v){
+    init_db();load_cfg();load_sess();const char*k=cfget("default_agent");
+    static char kb[16];snprintf(kb,16,"%s",k[0]?k:"c");v[1]=kb;return cmd_sess(c,v);}
+
 /* ── agent ── */
 static int cmd_agent(int argc, char **argv) {
     if(argc<3){char c[B];snprintf(c,B,"(echo 'Native (a agent run <name>):';cd %s/lab/platonic_agents&&ls *.[pc]*|sed 's/\\..*//'|sort -u;echo;echo 'CLI tools (a <key>):';sed 's/|/ /;s/|.*//' %s/sessions.txt) 2>/dev/null",SDIR,DDIR);

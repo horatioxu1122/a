@@ -1,7 +1,7 @@
 /* ═══ HELP TEXT ═══ */
 static const char *HELP_SHORT =
     "a j \"prompt\"     Job: worktree + agent\n"
-    "a c|co|g|ai     Start claude/codex/gemini/aider\n"
+    "a a|c|co|g|ai   Default/claude/codex/gemini/aider\n"
     "a <#>           Open project by number\n"
     "a help          All commands";
 
@@ -12,10 +12,11 @@ static const char *HELP_FULL =
     "  a job               Active jobs + review worktrees\n"
     "  a done \"msg\"        PR + email from worktree\n\n"
     "AGENTS        c=claude  co=codex  g=gemini  ai=aider\n"
+    "  a a                 Default agent (a config default_agent <key>)\n"
     "  a <key>             Start in current dir (a <key> <#> for project)\n"
     "  a <key>++           Start in new worktree\n"
     "  a all               Multi-agent parallel runs\n"
-    "  a agent \"task\"      Autonomous subagent\n\n"
+    "  a agent             Agent menu + autonomous subagent\n\n"
     "PROJECTS\n"
     "  a <#>               cd to project #\n"
     "  a add / remove / move / scan\n"
@@ -71,7 +72,7 @@ static void gen_icache(void) {
     load_proj(); load_apps(); load_cfg(); load_sess();
     char ic[P]; snprintf(ic, P, "%s/i_cache.txt", DDIR);
     FILE *f = fopen(ic, "w"); if (!f) return;
-    fputs("a\n",f);
+    fputs("a\tdefault agent\n",f);
     int i; for (i=0;i<NPJ;i++) fprintf(f, "%d: %s\tproject\n", i, PJ[i].name);
     for (i=0;i<NAP;i++) fprintf(f, "%d: %s\tcmd\n", NPJ+i, AP[i].name);
     for(i=0;i<NSE;i++)fprintf(f,"%s\t%s\n",SE[i].key,SE[i].name);
@@ -79,7 +80,7 @@ static void gen_icache(void) {
     if(d){while((e=readdir(d))){char*p=strrchr(e->d_name,'.');
         if(p&&(p[1]=='p'||p[1]=='c')){*p=0;fprintf(f,"agent run %s\tagent\n",e->d_name);}}closedir(d);}}
     fputs("add\tregister project\nadb\tandroid debug\nall\tall ai sessions\napk\tbuild app\n"
-    "ask\task ai\nattach\tjoin pane\ncal\tcalendar\ncal add\tadd event\ncal ai\tai calendar\n"
+    "agent\tagent menu\nask\task ai\nattach\tjoin pane\ncal\tcalendar\ncal add\tadd event\ncal ai\tai calendar\n"
     "cat\tcopy all\ncleanup\trm dead\n"
     "config\tconfig\nconfig edit\tedit\nconfig clear\tclear\nconfig install\tinstall\n"
     "copy\tscp to hosts\ncreate\tnew repo\ndash\toverview\n"
