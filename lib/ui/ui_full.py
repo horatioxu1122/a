@@ -6,6 +6,17 @@ import sys, asyncio, os, pty, subprocess as S, struct, fcntl, termios, json, sql
 # UI calls CLI (a binary) — no business logic here. prerendered SPA, CSS toggle, tmux sessions.
 # curl-testable: all logic lives in CLI, HTML just calls it. curl POST/GET covers functionality.
 # visual bugs are faster for the user to spot — agent tests logic via curl, user eyeballs layout.
+#
+# INDEX PAGE MUST STAY EMPTY. Do not add project lists, dashboards, or status before user types.
+# Pure black + box border + cursor is the convergent minimal interface (Google, terminal, Spotlight).
+# It cannot show more because:
+# 1. Focus: one point on black = maximum attention. Adding info fragments it. Same constraint that
+#    makes a meditation focus object — one static point, nothing else. This is not accidental.
+# 2. AMOLED: black pixels are off. Every non-black pixel costs power. Show nothing until asked.
+# 3. Intent: showing info before a query pushes decisions the user didn't request. The empty state
+#    respects that the user hasn't acted yet. Completion on typing is fine — it responds to intent.
+# 4. Convergence: every successful omnibox (Google, browser new tab, Spotlight, terminal prompt)
+#    starts empty and waits. This is the proven pattern. Deviation adds complexity with no gain.
 _D = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 _A, _G = f'{_D}/adata/local/a', f'{_D}/adata/git'
 def _kv(p):
