@@ -184,8 +184,12 @@ async def note_api(r):
     return web.Response(text='')
 async def note_archive(r): d=await r.json();f=os.path.basename(d.get('f',''));nd=f'{_G}/notes';ad=f'{nd}/.archive';os.makedirs(ad,exist_ok=True);p=f'{nd}/{f}';os.path.isfile(p) and os.rename(p,f'{ad}/{f}');return web.Response(text='ok')
 async def sync_api(r): S.run(f'cd {_G}&&git pull -q --rebase&&git add -A&&git commit -qm sync;git push -q',shell=True,timeout=15,capture_output=True);return web.Response(text='ok')
+async def u_status(r):
+    p=S.run(['systemctl','--user','is-active','aio-alpha5.service'],capture_output=True,text=True);ok=p.stdout.strip()!='failed'
+    return web.json_response({'ok':ok},headers={'Access-Control-Allow-Origin':'*'})
 
-app = web.Application(); app.add_routes([web.get('/', spa), web.get('/jobs', spa), web.get('/term', spa), web.get('/note', spa), web.get('/ws', term), web.get('/restart', restart), web.get('/api/jobs', jobs_api), web.post('/api/jobs', jobs_api), web.get('/api/job-status', job_status_api), web.get('/api/term', term_capture), web.post('/note', note_api), web.post('/api/note/archive', note_archive), web.get('/api/sync', sync_api)])
+async def my_page(r): return web.FileResponse(f'{_G}/my/{r.match_info["f"]}.html')
+app = web.Application(); app.add_routes([web.get('/', spa), web.get('/jobs', spa), web.get('/term', spa), web.get('/note', spa), web.get('/ws', term), web.get('/restart', restart), web.get('/api/jobs', jobs_api), web.post('/api/jobs', jobs_api), web.get('/api/job-status', job_status_api), web.get('/api/term', term_capture), web.post('/note', note_api), web.post('/api/note/archive', note_archive), web.get('/api/sync', sync_api), web.get('/api/u-status', u_status), web.get('/{f}', my_page), web.static('/my', f'{_G}/my')])
 
 def run(port=1111): web.run_app(app, port=port, print=None)
 if __name__ == '__main__': run(int(sys.argv[1]) if len(sys.argv) > 1 else 1111)
