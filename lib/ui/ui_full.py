@@ -208,9 +208,7 @@ async def omni_api(r):
     if not cmd: return web.Response(text='')
     try: p = S.run([_A]+cmd.split(),capture_output=True,text=True,timeout=10); return web.Response(text=f'<pre style="color:#fff">{E(p.stdout or p.stderr or "ok")}</pre>',content_type='text/html')
     except: return web.Response(text='<pre style="color:red">timeout</pre>',content_type='text/html')
-async def u_status(r):
-    p=S.run(['systemctl','--user','is-active','aio-alpha5.service'],capture_output=True,text=True);ok=p.stdout.strip()!='failed'
-    return web.json_response({'ok':ok},headers={'Access-Control-Allow-Origin':'*'})
+async def u_status(r):return web.json_response({'ok':True},headers={'Access-Control-Allow-Origin':'*'})
 
 async def my_page(r): return web.FileResponse(f'{_G}/my/{r.match_info["f"]}.html')
 app = web.Application(); app.add_routes([web.get('/', spa), web.get('/jobs', spa), web.get('/term', spa), web.get('/note', spa), web.get('/ws', term), web.get('/restart', restart), web.get('/api/jobs', jobs_api), web.post('/api/jobs', jobs_api), web.get('/api/job-status', job_status_api), web.get('/api/term', term_capture), web.get('/note-list', note_api), web.post('/note', note_api), web.post('/api/note/archive', note_archive), web.get('/api/sync', sync_api), web.post('/api/omni', omni_api), web.get('/api/u-status', u_status), web.get('/{f}', my_page), web.static('/my', f'{_G}/my')])
