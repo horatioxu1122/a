@@ -21,12 +21,11 @@ HTML = '''<!doctype html>
 <script src="https://cdn.jsdelivr.net/npm/xterm-addon-webgl@0.16.0/lib/xterm-addon-webgl.min.js"></script>
 <style>*{font-family:system-ui}[data-go]{touch-action:manipulation}.b{padding:16px 24px;font-size:24px;background:#1a1a2e;color:#4af;border:2px solid #4af;border-radius:8px;cursor:pointer}.n{font-size:28px;color:#4af;cursor:pointer;padding:20px 40px;border:2px solid #4af;border-radius:12px}.f{background:#111;color:#fff;border:1px solid #333;border-radius:8px}.ni{padding:6px 0;color:#aaa;border-bottom:1px solid #222;display:flex;align-items:center}.nx{background:none;border:1px solid #555;color:#888;padding:12px 20px;margin-right:10px;border-radius:4px;cursor:pointer;font-size:16px}</style>
 <body style="margin:0;height:100vh;background:#000;overflow:hidden">
-<div id=v_index style="display:none;height:100vh;flex-direction:column;align-items:center;justify-content:center;gap:20px">
-  <a data-go="/jobs" class=n>jobs</a>
-  <a data-go="/term" class=n>terminal</a>
-  <a data-go="/note" class=n>note</a>
-  <a onclick="fetch('/restart')" style="font-size:16px;color:#666;cursor:pointer;padding:10px 20px">restart server</a>
+<div id=v_index style="display:none;height:100vh;flex-direction:column;align-items:center;justify-content:center">
+  <form id=omni><input id=qi autofocus placeholder=a class=f style="width:80vw;max-width:600px;font-size:24px;padding:16px;text-align:center"></form>
+  <div id=qo style="width:90vw;max-width:800px;margin-top:20px;max-height:70vh;overflow-y:auto"></div>
 </div>
+__MY__
 <div id=v_term style="display:none;height:100vh">
   <div id=t style="height:100vh"></div>
 </div>
@@ -52,9 +51,10 @@ HTML = '''<!doctype html>
 </div>
 <div id=v_dc style="position:fixed;inset:0;background:#000;color:red;text-align:center;padding-top:45vh;display:none">not connected</div>
 <script>
-var views={'/':'v_index','/jobs':'v_jobs','/term':'v_term','/note':'v_note'}, T, F, W;
-function go(p){history.pushState(null,'',p);show(p);}
-function show(p){for(var k in views)document.getElementById(views[k]).style.display=k===p?(k==='/term'?'block':'flex'):'none';if(p==='/term'&&F)setTimeout(function(){F.fit();T.focus()},0);}
+var views={'/':'v_index','/jobs':'v_jobs','/term':'v_term','/note':'v_note'__MV__}, T, F, W;
+// perf: go() must stay <1ms. show() is DOM toggle only, no network. keep this instrumentation.
+function go(p){var t=performance.now();history.pushState(null,'',p);show(p);console.log('go('+p+') '+(performance.now()-t).toFixed(2)+'ms');}
+function show(p){for(var k in views)document.getElementById(views[k]).style.display=k===p?(k==='/term'?'block':'flex'):'none';if(p==='/term'&&F)setTimeout(function(){F.fit();T.focus()},0);if(p==='/note'&&!nl.children.length)fetch('/note-list').then(function(r){return r.text()}).then(function(h){nl.innerHTML=h});}
 function arcn(f,el){fetch('/api/note/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({f:f})});el.parentElement.remove();}
 function loadjobs(){Promise.all([fetch('/api/jobs').then(function(r){return r.text()}),fetch('/api/job-status').then(function(r){return r.json()})]).then(function(d){
   var h=d[0];if(d[1].length){h+='\\n\\n--- Job PRs ---\\n';d[1].forEach(function(j){
@@ -81,11 +81,18 @@ nf.onsubmit=function(e){e.preventDefault();var c=nc.value.trim();if(c){nc.value=
 var _tg=0;document.addEventListener('touchstart',function(e){var g=e.target.closest('[data-go]');if(g){e.preventDefault();_tg=1;go(g.dataset.go);}},{passive:false});
 document.addEventListener('click',function(e){if(_tg){_tg=0;return;}var g=e.target.closest('[data-go]');if(g)go(g.dataset.go);});
 show(views[location.pathname]?location.pathname:'/');
+omni.onsubmit=function(e){e.preventDefault();var t=performance.now(),v=qi.value.trim();if(!v)return;if(views['/'+v]){go('/'+v);qi.value='';console.log('omni total '+(performance.now()-t).toFixed(2)+'ms');return}var t2=performance.now();fetch('/api/omni',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'q='+encodeURIComponent(v)}).then(function(r){return r.text()}).then(function(h){qo.innerHTML=h;qi.value='';qi.focus();console.log('omni fetch '+(performance.now()-t2).toFixed(2)+'ms')})};
 var _ek='';document.addEventListener('keydown',function(e){if(e.key.length<2)_ek=(_ek+e.key).slice(-5);if(_ek==='crush'){_ek='';(function(){var c=document.createElement('canvas'),x=c.getContext('2d'),Z=16,W=10,H=20,g=Array(W*H).fill(0),P=[[[0,0]],[[0,0],[1,0]],[[0,0],[1,0],[0,1]],[[0,0],[1,0],[2,0]],[[0,0],[1,0],[2,0],[0,1]]],K=['#0ff','#f0f','#0f0','#f80','#f00'],p,px,py,pi,iv,fc=0,cx=4,cy=H-1,jc=0,ky={};c.width=W*Z;c.height=H*Z;c.style.cssText='position:fixed;inset:0;margin:auto;z-index:9999;border:2px solid #4af';document.body.appendChild(c);function np(){pi=Math.random()*5|0;p=P[pi].map(function(a){return a.slice()});px=Math.random()*(W-2)|0;py=0;if(ht(0,0))ov()}function ht(dx,dy){for(var i=0;i<p.length;i++){var a=p[i][0]+px+dx,b=p[i][1]+py+dy;if(a<0||a>=W||b>=H||(b>=0&&g[b*W+a]))return 1}return 0}function lk(){for(var i=0;i<p.length;i++){var a=p[i][0]+px,b=p[i][1]+py;if(b>=0)g[b*W+a]=pi+1}if(g[cy*W+cx]){ov();return}for(var y=H-1;y>=0;y--){var f=1;for(var j=0;j<W;j++)if(!g[y*W+j])f=0;if(f){g.splice(y*W,W);for(var j=0;j<W;j++)g.unshift(0);if(cy<y)cy++;y++}}}function dr(){x.fillStyle='#000';x.fillRect(0,0,c.width,c.height);for(var i=0;i<W*H;i++)if(g[i]){x.fillStyle=K[g[i]-1];x.fillRect((i%W)*Z,(i/W|0)*Z,Z-1,Z-1)}for(var i=0;i<p.length;i++){x.fillStyle=K[pi];x.fillRect((p[i][0]+px)*Z,(p[i][1]+py)*Z,Z-1,Z-1)}x.fillStyle='#fff';x.fillRect(cx*Z+2,cy*Z+2,Z-5,Z-5)}function ov(){clearInterval(iv);c.remove();document.removeEventListener('keydown',kd);document.removeEventListener('keyup',ku)}function kd(e){var k=e.key;if(k==='ArrowLeft'&&!ht(-1,0))px--;if(k==='ArrowRight'&&!ht(1,0))px++;if(k==='ArrowDown'&&!ht(0,1))py++;if(k==='ArrowUp'){var n=p.map(function(a){return[-a[1],a[0]]});var o=p;p=n;if(ht(0,0))p=o}ky[k]=1;if(k==='Escape')return ov();dr();e.preventDefault()}function ku(e){delete ky[e.key]}document.addEventListener('keydown',kd);document.addEventListener('keyup',ku);np();iv=setInterval(function(){fc++;if(fc%3===0){if(ky.a&&cx>0&&!g[cy*W+cx-1])cx--;if(ky.d&&cx<W-1&&!g[cy*W+cx+1])cx++}if(fc%4===0){if(jc>0){jc--;if(cy>0&&!g[(cy-1)*W+cx])cy--}else if(cy<H-1&&!g[(cy+1)*W+cx])cy++}if(ky.w&&(cy>=H-1||g[(cy+1)*W+cx])){jc=3;delete ky.w}if(fc%8===0){if(!ht(0,1))py++;else{lk();np()}}dr()},50)})()}});
 </script>'''
 
 async def spa(r):
     S.Popen(['git','-C',_G,'pull','-q','--rebase'],stdout=S.DEVNULL,stderr=S.DEVNULL)
+    md=f'{_G}/my';my_divs='';my_views=''
+    if os.path.isdir(md):
+        for f in sorted(os.listdir(md)):
+            if f.endswith('.html'):
+                n=f[:-5];my_divs+=f'\n<div id=v_{n} style="display:none;height:100vh">{open(f"{md}/{f}").read()}</div>'
+                my_views+=f',\'/{n}\':\'v_{n}\''
     po='<option value="">~ (home)</option>';pd=f'{_G}/workspace/projects'
     if os.path.isdir(pd):
         for f in sorted(os.listdir(pd)):
@@ -98,14 +105,6 @@ async def spa(r):
             n=f.endswith('.txt') and _kv(f'{dd}/{f}').get('Name')
             if n: do+=f'<option value="{n}">{n}</option>'
     no = ''
-    nd = f'{_G}/notes'
-    if os.path.isdir(nd):
-        for f in sorted(os.listdir(nd), key=lambda x: x.rsplit('_',1)[-1] if '_' in x else '0', reverse=True):
-            if not f.endswith('.txt') or f.startswith('.'): continue
-            try:
-                for l in open(f'{nd}/{f}'):
-                    if l.startswith('Text: '): no += f'<div class=ni><button onclick="arcn(\'{f}\',this)" class=nx>x</button><span>{E(l[6:].strip())}</span></div>'; break
-            except: pass
     try:
         jo = S.run([_A,'jobs'],capture_output=True,text=True,timeout=10).stdout or 'No jobs'
         dp = f'{_D}/adata/local/aio.db'
@@ -116,7 +115,7 @@ async def spa(r):
                 jo += '\n\n--- Job PRs ---\n'
                 for row in rows: jo += row['status']+(f' [{row["step"]}]' if row['step'] else '')+' '+row['name']+(f' ({row["session"]})' if row['session'] else '')+'\n'
     except: jo = 'No jobs'
-    h = HTML.replace('__PO__',po).replace('__DO__',do).replace('__NO__',no).replace('__JO__',E(jo))
+    h = HTML.replace('__PO__',po).replace('__DO__',do).replace('__NO__',no).replace('__JO__',E(jo)).replace('__MY__',my_divs).replace('__MV__',my_views)
     return web.Response(text=h, content_type='text/html', headers={'Cache-Control':'no-store'})
 
 async def restart(r): os.execv(sys.executable, [sys.executable] + sys.argv)
@@ -181,15 +180,28 @@ async def term_capture(r):
 
 async def note_api(r):
     if r.method == 'POST': d = await r.post(); c = d.get('c', '').strip(); ok = c and not S.run([_A, 'note', c], capture_output=True, timeout=5).returncode; return web.Response(text=f'{_G}/notes' if ok else '', status=200 if ok else 500)
-    return web.Response(text='')
+    nd=f'{_G}/notes';no=''
+    if os.path.isdir(nd):
+        for f in sorted(os.listdir(nd), key=lambda x: x.rsplit('_',1)[-1] if '_' in x else '0', reverse=True):
+            if not f.endswith('.txt') or f.startswith('.'): continue
+            try:
+                for l in open(f'{nd}/{f}'):
+                    if l.startswith('Text: '): no += f'<div class=ni><button onclick="arcn(\'{f}\',this)" class=nx>x</button><span>{E(l[6:].strip())}</span></div>'; break
+            except: pass
+    return web.Response(text=no, content_type='text/html')
 async def note_archive(r): d=await r.json();f=os.path.basename(d.get('f',''));nd=f'{_G}/notes';ad=f'{nd}/.archive';os.makedirs(ad,exist_ok=True);p=f'{nd}/{f}';os.path.isfile(p) and os.rename(p,f'{ad}/{f}');return web.Response(text='ok')
 async def sync_api(r): S.run(f'cd {_G}&&git pull -q --rebase&&git add -A&&git commit -qm sync;git push -q',shell=True,timeout=15,capture_output=True);return web.Response(text='ok')
+async def omni_api(r):
+    d = await r.post(); cmd = d.get('q', '').strip()
+    if not cmd: return web.Response(text='')
+    try: p = S.run([_A]+cmd.split(),capture_output=True,text=True,timeout=10); return web.Response(text=f'<pre style="color:#fff">{E(p.stdout or p.stderr or "ok")}</pre>',content_type='text/html')
+    except: return web.Response(text='<pre style="color:red">timeout</pre>',content_type='text/html')
 async def u_status(r):
     p=S.run(['systemctl','--user','is-active','aio-alpha5.service'],capture_output=True,text=True);ok=p.stdout.strip()!='failed'
     return web.json_response({'ok':ok},headers={'Access-Control-Allow-Origin':'*'})
 
 async def my_page(r): return web.FileResponse(f'{_G}/my/{r.match_info["f"]}.html')
-app = web.Application(); app.add_routes([web.get('/', spa), web.get('/jobs', spa), web.get('/term', spa), web.get('/note', spa), web.get('/ws', term), web.get('/restart', restart), web.get('/api/jobs', jobs_api), web.post('/api/jobs', jobs_api), web.get('/api/job-status', job_status_api), web.get('/api/term', term_capture), web.post('/note', note_api), web.post('/api/note/archive', note_archive), web.get('/api/sync', sync_api), web.get('/api/u-status', u_status), web.get('/{f}', my_page), web.static('/my', f'{_G}/my')])
+app = web.Application(); app.add_routes([web.get('/', spa), web.get('/jobs', spa), web.get('/term', spa), web.get('/note', spa), web.get('/ws', term), web.get('/restart', restart), web.get('/api/jobs', jobs_api), web.post('/api/jobs', jobs_api), web.get('/api/job-status', job_status_api), web.get('/api/term', term_capture), web.get('/note-list', note_api), web.post('/note', note_api), web.post('/api/note/archive', note_archive), web.get('/api/sync', sync_api), web.post('/api/omni', omni_api), web.get('/api/u-status', u_status), web.get('/{f}', my_page), web.static('/my', f'{_G}/my')])
 
 def run(port=1111): web.run_app(app, port=port, print=None)
 if __name__ == '__main__': run(int(sys.argv[1]) if len(sys.argv) > 1 else 1111)
