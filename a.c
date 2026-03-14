@@ -85,7 +85,6 @@ _shell_funcs() {
         cat >> "$RC" << 'AFUNC'
 a() {
     local dd="$_ADD"
-    [[ -z "$1" ]] && { [[ -t 1 ]] && set -- i || { cat $dd/help_cache.txt 2>/dev/null || command a; return; }; }
     local d="${1/#\~/$HOME}"
     [[ -d "$d" ]] && { echo "📂 $d"; cd "$d"; return; }
     [[ "$1" == *.c && -f "$1" ]] && { sh "$@"; return; }
@@ -611,7 +610,7 @@ int main(int argc, char **argv) {
     init_paths();
     G_argc = argc; G_argv = argv;
 
-    if (argc < 2) return cmd_help(argc, argv);
+    if (argc < 2) return (isatty(1)?cmd_i:cmd_help)(argc, argv);
 
     /* Log every command */
     char acmd[B]="";for(int i=1,l=0;i<argc;i++) l+=snprintf(acmd+l,(size_t)(B-l),"%s%s",i>1?" ":"",argv[i]);
