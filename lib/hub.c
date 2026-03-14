@@ -98,7 +98,7 @@ static int cmd_hub(int argc, char **argv) {
             else printf("%-2d%-11.10s%-7.6s%-13.12s%-8.7s%s %s\n",i,j->n,j->s,lr,j->d,on?"\xe2\x9c\x93":" ",cp);
         }
         printf(NJ-sh?"\n%d jobs (+%d disabled, a hub all)\n":"\n%d jobs\n",sh,NJ-sh);
-        printf("a hub <#>       run job\na hub on/off #  toggle\na hub add|rm    create/delete\n");
+        printf("a hub <#>       run job\na hub on/off #  toggle\na hub add|rm    create/delete\na hub all       show disabled\n");
         return 0;
     }
 
