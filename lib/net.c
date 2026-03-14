@@ -12,8 +12,7 @@ static void bg_backup_jsonl(void) {
 }
 
 /* ── email ── */
-static int cmd_email(int argc, char **argv) {
-    if (getenv("A_BENCH")) return 0;
+static int cmd_email(int argc, char **argv) { AB;
     char bp[P]; snprintf(bp,P,"%s/agents/base.py",SROOT);
     char **na=malloc(((unsigned)argc+2)*sizeof(char*));
     na[0]="python3"; na[1]=bp;
@@ -25,8 +24,7 @@ static int cmd_email(int argc, char **argv) {
 /* ── log ── */
 static int cmd_log(int argc, char **argv) {
     const char *sub = argc > 2 ? argv[2] : NULL;
-    if (sub && !strcmp(sub, "sync")) { fallback_py("log", argc, argv); }
-    if (sub && !strcmp(sub, "grab")) { fallback_py("log", argc, argv); }
+    if (sub && (!strcmp(sub,"sync")||!strcmp(sub,"grab"))) fallback_py("log",argc,argv);
     if (sub && !strcmp(sub, "backup")) { perf_disarm();
         char c[B], cnt[64], bdir[P]; snprintf(bdir, P, "%s/backup", AROOT);
         char jdir[P]; snprintf(jdir, P, "%s/git/jobs", AROOT);
@@ -120,8 +118,7 @@ static int cmd_log(int argc, char **argv) {
 static int cmd_login(int argc, char **argv) { fallback_py("login", argc, argv); }
 
 /* ── sync ── */
-static int cmd_sync(int argc, char **argv) {
-    if (getenv("A_BENCH")) return 0;
+static int cmd_sync(int argc, char **argv) { AB;
     printf("%s\n", SROOT);
     ensure_adata();
     sync_repo();
@@ -153,8 +150,7 @@ static int cmd_sync(int argc, char **argv) {
 }
 
 /* ── update ── */
-static int cmd_update(int argc, char **argv) {
-    if (getenv("A_BENCH")) return 0;
+static int cmd_update(int argc, char **argv) { AB;
     const char *sub = argc > 2 ? argv[2] : NULL;
     if (sub && (!strcmp(sub,"help")||!strcmp(sub,"-h"))) {
         puts("a update - Update a from git + refresh caches\n  a update        Pull latest\n  a update shell  Refresh shell config\n  a update cache  Refresh caches");

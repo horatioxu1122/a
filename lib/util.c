@@ -1,4 +1,4 @@
-/* ═══ UTILITIES ═══ */
+/* utilities */
 static int fexists(const char *p) { struct stat s; return stat(p, &s) == 0; }
 static int dexists(const char *p) { struct stat s; return stat(p, &s) == 0 && S_ISDIR(s.st_mode); }
 static void mkdirp(const char *p) { char t[P]; snprintf(t,P,"%s",p); for(char*s=t+1;*s;s++) if(*s=='/'){*s=0;mkdir(t,0755);*s='/';} mkdir(t,0755); }
@@ -36,6 +36,9 @@ static int pcmd(const char *cmd, char *out, int sz) {
 
 static const char *bname(const char *p) { const char *s = strrchr(p, '/'); return s ? s + 1 : p; }
 
+/* join argv[from..argc) with spaces into buf */
+static int ajoin(char*b,int sz,int argc,char**argv,int from){int l=0;for(int i=from;i<argc;i++)l+=snprintf(b+l,(size_t)(sz-l),"%s%s",i>from?" ":"",argv[i]);return l;}
+
 /* rapid input loop — call fn(line) for each line, empty line exits */
 static void rapid(const char *prompt, void (*fn)(const char*)) {
     if (!isatty(STDIN_FILENO)) return; perf_disarm();
@@ -47,7 +50,7 @@ static void rapid(const char *prompt, void (*fn)(const char*)) {
     }
 }
 
-/* ── raw terminal helpers (omnibox-style: enter once, stay in it) ── */
+/* raw terminal helpers */
 static struct termios raw_orig;
 static void raw_enter(void){struct termios r;tcgetattr(0,&raw_orig);r=raw_orig;
     r.c_lflag&=~(tcflag_t)(ICANON|ECHO);r.c_cc[VMIN]=1;r.c_cc[VTIME]=0;tcsetattr(0,TCSAFLUSH,&r);}

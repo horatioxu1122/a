@@ -19,8 +19,7 @@ static int cmd_settings(int argc,char**argv) {
 }
 
 /* ── install ── */
-static int cmd_install(int argc, char **argv) { (void)argc;(void)argv;
-    if (getenv("A_BENCH")) return 0;
+static int cmd_install(int argc, char **argv) { (void)argc;(void)argv; AB;
     char s[P]; snprintf(s, P, "%s/a.c", SDIR);
     execlp("bash", "bash", s, "install", (char*)NULL);
     return 1;
@@ -36,8 +35,7 @@ static int cmd_uninstall(int argc, char **argv) { (void)argc;(void)argv;
 }
 
 /* ── deps ── */
-static int cmd_deps(int argc, char **argv) { (void)argc;(void)argv;
-    if (getenv("A_BENCH")) return 0;
+static int cmd_deps(int argc, char **argv) { (void)argc;(void)argv; AB;
     (void)!system("which tmux >/dev/null 2>&1 || sudo apt-get install -y tmux 2>/dev/null");
     printf("%s tmux\n", system("which tmux >/dev/null 2>&1") == 0 ? "\xe2\x9c\x93" : "x");
     (void)!system("which node >/dev/null 2>&1 || sudo apt-get install -y nodejs npm 2>/dev/null");
@@ -52,8 +50,7 @@ static int cmd_deps(int argc, char **argv) { (void)argc;(void)argv;
 }
 
 /* ── e ── */
-static int cmd_e(int argc, char **argv) {
-    if (getenv("A_BENCH")) return 0;
+static int cmd_e(int argc, char **argv) { AB;
     if (argc > 2 && !strcmp(argv[2], "install")) {
         (void)!system("curl -sL https://raw.githubusercontent.com/seanpattencode/editor/main/e.c|clang -xc -Wno-everything -o ~/.local/bin/e -");
         return 0;
@@ -78,7 +75,7 @@ static int cmd_config(int argc, char **argv) {
     }
     const char *key = argv[2];
     if (argc > 3) {
-        char val[B]=""; for(int i=3,l=0;i<argc;i++) l+=snprintf(val+l,(size_t)(B-l),"%s%s",i>3?" ":"",argv[i]);
+        char val[B]=""; ajoin(val,B,argc,argv,3);
         if (!strcmp(val,"off")||!strcmp(val,"none")||!strcmp(val,"\"\"")||!strcmp(val,"''")) val[0]=0;
         cfset(key, val);
         load_cfg(); list_all(1, 1);
@@ -96,7 +93,7 @@ static int cmd_prompt(int argc, char **argv) {
     }
     char val[B]="",df[P]; snprintf(df,P,"%s/default.txt",d);
     if(argc>2&&!strcmp(argv[2],"clear")){writef(df,"");printf("✓ (cleared)\n");return 0;}
-    if(argc>2)for(int i=2,l=0;i<argc;i++) l+=snprintf(val+l,(size_t)(B-l),"%s%s",i>2?" ":"",argv[i]);
+    if(argc>2)ajoin(val,B,argc,argv,2);
     else { perf_disarm(); printf("%.80s\n%s\n <text>|edit|clear: ",dprompt(),d);
         if(!fgets(val,B,stdin)||val[0]=='\n') return 0; val[strcspn(val,"\n")]=0;
         if(!strcmp(val,"edit")){execlp("e","e",df,(char*)0);return 1;}

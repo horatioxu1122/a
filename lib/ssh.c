@@ -11,8 +11,12 @@ static void ssh_savex(const char*dir,const char*n,const char*h,const char*pw,con
     if(pw&&pw[0])l+=snprintf(d+l,(size_t)(B-l),"Password: %s\n",pw);
     if(k&&v&&v[0])snprintf(d+l,(size_t)(B-l),"%s: %s\n",k,v);
     writef(f,d);sync_repo();}
+static int ssh_idx(const char*a,const void*H_,int nh){
+    typedef struct{char name[128],host[256],pw[256];}ht;const ht*H=(const ht*)H_;
+    if(isdigit((unsigned char)*a))return atoi(a);
+    for(int i=0;i<nh;i++)if(!strcmp(H[i].name,a))return i;return -1;}
 static int cmd_ssh(int argc,char**argv){
-    if(getenv("A_BENCH"))return 0;
+    AB;
     char dir[P];snprintf(dir,P,"%s/ssh",SROOT);mkdirp(dir);sync_bg();
     typedef struct{char name[128],host[256],pw[256];}host_t;
     host_t H[32];int nh=0,arc=0;
@@ -132,21 +136,15 @@ static int cmd_ssh(int argc,char**argv){
         const char*epw=NULL;for(int i=0;i<nh;i++)if(!strcmp(H[i].name,nm)){epw=H[i].pw;break;}
         ssh_savex(dir,nm,h,epw,"OS",os);printf("\xe2\x9c\x93 %s %s [%s]\n",nm,h,os);return 0;}
     /* rm */
-    if(!strcmp(sub,"rm")&&argc>3){int x=-1;const char*a=argv[3];
-        if(isdigit((unsigned char)*a))x=atoi(a);
-        else{for(int i=0;i<nh;i++)if(!strcmp(H[i].name,a)){x=i;break;}}
+    if(!strcmp(sub,"rm")&&argc>3){int x=ssh_idx(argv[3],H,nh);
         if(x>=0&&x<nh){char f[P];snprintf(f,P,"%s/%s.txt",dir,H[x].name);unlink(f);sync_repo();printf("\xe2\x9c\x93 rm %s\n",H[x].name);}return 0;}
     /* pw — change password */
-    if(!strcmp(sub,"pw")&&argc>3){int x=-1;const char*a=argv[3];
-        if(isdigit((unsigned char)*a))x=atoi(a);
-        else{for(int i=0;i<nh;i++)if(!strcmp(H[i].name,a)){x=i;break;}}
+    if(!strcmp(sub,"pw")&&argc>3){int x=ssh_idx(argv[3],H,nh);
         if(x>=0&&x<nh){char pw[256];printf("Password for %s: ",H[x].name);
             if(fgets(pw,256,stdin)){pw[strcspn(pw,"\n")]=0;ssh_savex(dir,H[x].name,H[x].host,pw,0,0);printf("\xe2\x9c\x93 %s\n",H[x].name);}}return 0;}
     /* mv/rename */
     if((!strcmp(sub,"mv")||!strcmp(sub,"rename"))&&argc>4){
-        const char*old=argv[3],*nn=argv[4];int x=-1;
-        if(isdigit((unsigned char)*old))x=atoi(old);
-        else{for(int i=0;i<nh;i++)if(!strcmp(H[i].name,old)){x=i;break;}}
+        const char*old=argv[3],*nn=argv[4];int x=ssh_idx(old,H,nh);
         if(x>=0&&x<nh){char f[P];snprintf(f,P,"%s/%s.txt",dir,H[x].name);unlink(f);
             ssh_savex(dir,nn,H[x].host,H[x].pw,0,0);printf("\xe2\x9c\x93 %s -> %s\n",H[x].name,nn);}return 0;}
     /* info */

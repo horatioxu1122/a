@@ -26,7 +26,7 @@ static int load_notes(const char *dir, const char *f) {
     } closedir(d); return n;
 }
 static int cmd_note(int argc, char **argv) {
-    if (getenv("A_BENCH")) return 0;
+    AB;
     char dir[P]; snprintf(dir,P,"%s/notes",SROOT); mkdirp(dir);
     if(argc>2&&!strcmp(argv[2],"l")){int n;do n=load_notes(dir,NULL);while(gn_archived);
         if(!n){puts("(none)");return 0;}
@@ -49,7 +49,7 @@ static int cmd_note(int argc, char **argv) {
         raw_exit();if(i>=n)puts("Done");return 0;}
     if(argc>2&&*argv[2]=='m'){
         execvp("a",(char*[]){"a","c","Run 'a n l' to see all notes. Read a.c for context. Help me archive stale/done/duplicate notes in bulk. To archive: mkdir -p <dir>/.archive && mv <file> <dir>/.archive/. Large batches, only archive what I approve.",NULL});return 1;}
-    {char t[B]="";for(int i=2,l=0;i<argc;i++) l+=snprintf(t+l,(size_t)(B-l),"%s%s",i>2?" ":"",argv[i]);
+    {char t[B]="";ajoin(t,B,argc,argv,2);
         note_save(dir,t);sync_bg();puts("\xe2\x9c\x93");
         snprintf(rdir,P,"%s",dir);rapid("n> ",rapid_note);return 0;}
 }
@@ -376,12 +376,7 @@ static int cmd_task(int argc,char**argv){
         int n=load_tasks(dir),x=atoi(argv[3])-1;if(x<0||x>=n){puts("x Invalid");return 1;}
         task_repri(x,atoi(argv[4]));sync_bg();return 0;}
     if(!strcmp(sub,"add")||!strcmp(sub,"a")){if(argc<4){puts("a task add [PPPPP] <text>");return 1;}
-        int pri=50000,si=3;
-        if(strlen(argv[3])==5&&isdigit(argv[3][0])&&isdigit(argv[3][1])&&isdigit(argv[3][2])&&isdigit(argv[3][3])&&isdigit(argv[3][4])){
-            pri=atoi(argv[3]);si=4;if(si>=argc){puts("a task add [PPPPP] <text>");return 1;}}
-        char t[B]="";for(int i=si,l=0;i<argc;i++) l+=snprintf(t+l,(size_t)(B-l),"%s%s",i>si?" ":"",argv[i]);
-        task_add(dir,t,pri);printf("\xe2\x9c\x93 P%05d %s\n",pri,t);sync_bg();
-        snprintf(rdir,P,"%s",dir);rapid("t> ",rapid_task);return 0;}
+        argv[2]=argv[3];argc--;goto taskfb;}
     if(*sub=='d'&&!sub[1]){if(argc<4){puts("a task d <#|name>...");return 1;}int n=load_tasks(dir);
         for(int j=3;j<argc;j++){int x=-1,v=atoi(argv[j]);if(v>0&&v<=n)x=v-1;
             else{for(int i=0;i<n;i++){char*b=strrchr(T[i].d,'/');if(b&&!strcmp(b+1,argv[j])){x=i;break;}}}
@@ -389,7 +384,7 @@ static int cmd_task(int argc,char**argv){
         sync_bg();return 0;}
     if(!strcmp(sub,"deadline")){if(argc<5){puts("a task deadline # MM-DD [HH:MM]");return 1;}
         int n=load_tasks(dir),x=atoi(argv[3])-1;if(x<0||x>=n){puts("x Invalid");return 1;}
-        char raw[64]="";for(int j=4,l=0;j<argc;j++) l+=snprintf(raw+l,(size_t)(64-l),"%s%s",j>4?" ":"",argv[j]);
+        char raw[64]="";ajoin(raw,64,argc,argv,4);
         char dn[32];dl_norm(raw,dn,32);
         char df[P];snprintf(df,P,"%s/deadline.txt",T[x].d);writef(df,dn);printf("\xe2\x9c\x93 %s\n",dn);sync_bg();return 0;}
     if(!strcmp(sub,"due")){int n=load_tasks(dir);if(!n){puts("No tasks");return 0;}
@@ -443,13 +438,13 @@ static int cmd_task(int argc,char**argv){
         char sd[P];snprintf(sd,P,"%s/%s",T[x].d,sub);mkdirp(sd);
         struct timespec tp;clock_gettime(CLOCK_REALTIME,&tp);
         char ts[32],fn[P];strftime(ts,32,"%Y%m%dT%H%M%S",localtime(&tp.tv_sec));
-        char t[B]="";for(int i=4,l=0;i<argc;i++) l+=snprintf(t+l,(size_t)(B-l),"%s%s",i>4?" ":"",argv[i]);
+        char t[B]="";ajoin(t,B,argc,argv,4);
         snprintf(fn,P,"%s/%s.%09ld_%s.txt",sd,ts,tp.tv_nsec,DEV);writef(fn,t);
         printf("\xe2\x9c\x93 %s: %.40s\n",sub,t);sync_bg();return 0;}}
-    {int pri=50000,si=2;
+    taskfb:{int pri=50000,si=2;
     if(argc>2&&strlen(argv[2])==5&&isdigit(argv[2][0])&&isdigit(argv[2][1])&&isdigit(argv[2][2])&&isdigit(argv[2][3])&&isdigit(argv[2][4])){
         pri=atoi(argv[2]);si=3;if(si>=argc){puts("a task [PPPPP] <text>");return 1;}}
-    char t[B]="";for(int i=si,l=0;i<argc;i++) l+=snprintf(t+l,(size_t)(B-l),"%s%s",i>si?" ":"",argv[i]);
+    char t[B]="";ajoin(t,B,argc,argv,si);
     task_add(dir,t,pri);printf("\xe2\x9c\x93 P%05d %s\n",pri,t);sync_bg();
     snprintf(rdir,P,"%s",dir);rapid("t> ",rapid_task);return 0;}
 }

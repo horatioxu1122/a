@@ -1,9 +1,8 @@
 /* ── push ── */
-static int cmd_push(int argc, char **argv) {
-    if (getenv("A_BENCH")) return 0;
+static int cmd_push(int argc, char **argv) { AB;
     char cwd[P]; if(!getcwd(cwd,P)) snprintf(cwd,P,".");
     char msg[B]="";
-    if(argc>2)for(int i=2,l=0;i<argc;i++) l+=snprintf(msg+l,(size_t)(B-l),"%s%s",i>2?" ":"",argv[i]);
+    if(argc>2)ajoin(msg,B,argc,argv,2);
     else snprintf(msg, B, "Update %s", bname(cwd));
 
     if (!git_in_repo(cwd)) {
@@ -70,7 +69,7 @@ static int cmd_pr(int argc, char **argv) {
     if (!git_in_repo(cwd)) { puts("x Not a git repo"); return 1; }
     char br[128]; pcmd("git rev-parse --abbrev-ref HEAD 2>/dev/null",br,128); br[strcspn(br,"\n")]=0;
     if (!strcmp(br,"main")||!strcmp(br,"master")) { puts("x On main — create a branch first"); return 1; }
-    char title[256]=""; if(argc>2){int l=0;for(int i=2;i<argc;i++)l+=snprintf(title+l,(size_t)(256-l),"%s%s",i>2?" ":"",argv[i]);}
+    char title[256]=""; if(argc>2)ajoin(title,256,argc,argv,2);
     else snprintf(title,256,"%s",br);
     char qt[512],qb[512]; sq(title,qt,512); sq(br,qb,512);
     /* commit + push if needed */
@@ -88,8 +87,7 @@ static int cmd_pr(int argc, char **argv) {
 }
 
 /* ── pull ── */
-static int cmd_pull(int argc, char **argv) {
-    if (getenv("A_BENCH")) return 0;
+static int cmd_pull(int argc, char **argv) { AB;
     char cwd[P]; if (!getcwd(cwd, P)) strcpy(cwd, ".");
     if (!git_in_repo(cwd)) { puts("x Not a git repo"); return 1; }
     char c[B], out[B];
@@ -107,8 +105,7 @@ static int cmd_pull(int argc, char **argv) {
 }
 
 /* ── diff ── */
-static int cmd_diff(int argc, char **argv) {
-    if (getenv("A_BENCH")) return 0;
+static int cmd_diff(int argc, char **argv) { AB;
     const char *sel = argc > 2 ? argv[2] : NULL;
     /* Token history mode */
     if (sel && sel[0] >= '0' && sel[0] <= '9') {

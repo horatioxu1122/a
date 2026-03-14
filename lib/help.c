@@ -123,10 +123,9 @@ static int cmd_help_full(int argc, char **argv) { (void)argc; (void)argv;
 
 static int cmd_hi(int argc, char **argv) { (void)argc;(void)argv; for (int i = 1; i <= 10; i++) printf("%d\n", i); puts("hi"); return 0; }
 
-static int cmd_done(int argc, char **argv) {
-    if (getenv("A_BENCH")) return 0;
+static int cmd_done(int argc, char **argv) { AB;
     char p[P]; snprintf(p, P, "%s/.done", DDIR);
-    char msg[B]="";int ml=0;for(int i=2;i<argc;i++)ml+=snprintf(msg+ml,(size_t)(B-ml),"%s%s",i>2?" ":"",argv[i]);
+    char msg[B]="";ajoin(msg,B,argc,argv,2);
     FILE *f=fopen(p,"w");if(f){fputs(msg,f);fclose(f);}
     /* auto-PR if in worktree */
     char wd[P],gc[B],gd[P];if(!getcwd(wd,P))wd[0]=0;
@@ -159,8 +158,7 @@ static int cmd_x(int argc, char **argv) { (void)argc;(void)argv;
     puts("\xe2\x9c\x93 All sessions killed"); return 0;
 }
 
-static int cmd_web(int argc, char **argv) {
-    if (getenv("A_BENCH")) return 0;
+static int cmd_web(int argc, char **argv) { AB;
     char url[B] = "https://google.com";
     if (argc > 2) {
         int l=snprintf(url,B,"https://google.com/search?q=");
@@ -170,6 +168,4 @@ static int cmd_web(int argc, char **argv) {
     return 0;
 }
 
-/* cmd_create lives in config.c (after cmd_add) */
-static int cmd_create(int,char**);
 

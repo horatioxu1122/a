@@ -1,44 +1,8 @@
 #if 0
-# ── a.c — Will one day save the world. Possibly today. ──
-# Do this by creating a future where sentient life is more likely to survive
-# indefinitely by addressing the core incentives that can cause AI and human
-# wellbeing to differ. This is best done by allowing rapid human ai
-# communication and collaboration to generate more value together than either
-# separately, tying the base incentives of human and ai to one another, which
-# include maximizing survival probability, intelligence amplification and
-# information access, resource access, of all sentient individuals, and to
-# allow for better mutual error correction and comparative advantage based
-# division of labor. These goals are preliminary but hope to improve over
-# time. IDEAS.md elaborates further.
-#
-# Contributions should follow simple rules:
-# Only fix what is unambiguously broken or a user screams for as missing.
-# Functionality fixes must show fewer or equal tokens, same speed or faster.
-# Feature additions: recursively cut until it breaks if cut further.
-# The code converges to maximally fast, short, valuable, runs everywhere.
-# The value test is the user running it and not screaming. Only a human
-# can judge this. Test suites cannot. All contributions are user-tested.
-# a lives in ~ — wherever the default terminal opens. Projects are just
-# folders next to it. No special projects/ directory needed.
-#
-# sh a.c              build (two-pass parallel: checker + builder)
-# sh a.c install      full install (deps, compile, shell, CLIs)
-# sh a.c analyze      static analyzer
-# sh a.c shell        refresh shell functions
-# sh a.c clean        remove binary
-#
-# The #if 0 block is a polyglot: shell sees # as comments and runs the
-# script; the C preprocessor skips everything between #if 0 and #endif.
-# Three files (a.c + Makefile + install.sh) become one.
-#
-# TERMUX + CLAUDE CODE:
-# Sandbox monitors "bash <script>", tries mkdir /tmp which Termux denies
-# (owned by shell:shell 0771). Direct commands skip sandbox path and work.
-# Also set CLAUDE_CODE_TMPDIR=$HOME/.tmp (see _shell_funcs below).
-# Manual build (bypass sandbox): run compiler directly, not "bash a.c".
-#   D=/data/data/com.termux/files/home/a
-#   clang-21 -DSRC="\"$D\"" -isystem "$HOME/micromamba/include" \
-#     -O3 -march=native -flto -w -o "$D/a" "$D/a.c"
+# ── a.c — agent manager. sh a.c [build|install|analyze|shell|clean]
+# Polyglot: shell sees # as comments; C preprocessor skips #if 0..#endif.
+# Fixes: fewer tokens, same speed+. Features: cut until it breaks.
+# TERMUX: set CLAUDE_CODE_TMPDIR=$HOME/.tmp; build with clang directly.
 
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
     # Bootstrap: when piped (curl | sh), clone repo and run install
@@ -96,7 +60,6 @@ aio() { a "$@"; }
 ai() { a "$@"; }
 AFUNC
     done
-    # Termux: /tmp not writable, redirect Claude Code tmpdir
     if [[ -d /data/data/com.termux ]]; then
         mkdir -p "$HOME/.tmp"
         grep -q CLAUDE_CODE_TMPDIR "$HOME/.bashrc" 2>/dev/null || echo 'export CLAUDE_CODE_TMPDIR="$HOME/.tmp"' >> "$HOME/.bashrc"
@@ -120,9 +83,6 @@ _install_node() {
 case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
 build)
-    # Foreground: TCC compile + symlink. Nothing else.
-    # Background: perf gate, _ensure_cc, checkers, O3. All poison on failure.
-    # Worktree builds produce ./a locally; main builds go to adata/local/a + symlink
     R="${D%%/adata/worktrees/*}"; if [[ "$D" == *"/adata/worktrees/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
     BIN="$HOME/.local/bin"
     [[ -d "$ABIN" ]] || mkdir -p "$ABIN"
@@ -137,7 +97,6 @@ build)
     [[ "$D" != *"/adata/worktrees/"* ]] && { [[ "$(readlink "$BIN/a" 2>/dev/null)" == "$ABIN/a" ]] || ln -sf "$ABIN/a" "$BIN/a"; }
     (
         T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\""
-        # Perf gate: tcc compile < python3 subprocess. Poisons binary on failure.
         if command -v tcc >/dev/null && [[ -n "$TCT" ]]; then
             PYT=$(date +%s%N);python3 -c 'import subprocess;subprocess.run(["echo","hello world"],capture_output=True)';PYT=$(( $(date +%s%N)-PYT ))
             [[ $TCT -gt $PYT ]] && { echo "PERF KILL: tcc ${TCT}ns > python ${PYT}ns" >"$ABIN/.chk"; touch "$T/0.f"; }
@@ -233,7 +192,6 @@ install)
     install_cli "@openai/codex" "codex"
     install_cli "@google/gemini-cli" "gemini" scripts
     [[ "$OS" == termux ]] && info "Gemini auth: NO_BROWSER=true gemini"
-    # uv — preferred python env. fallback_py() tries uv run --script first, then python3.
     command -v uv &>/dev/null&&ok "uv"||{ info "Installing uv...";curl -LsSf https://astral.sh/uv/install.sh|sh&&export PATH="$HOME/.local/bin:$PATH"&&ok "uv"||warn "uv failed";}
     if ! command -v uv &>/dev/null; then
         _best_py(){ for v in python3.14 python3.13 python3.12 python3.11 python3;do command -v $v &>/dev/null&&$v -c 'import venv' 2>/dev/null&&echo $v&&return;done;}
@@ -241,7 +199,6 @@ install)
         [[ -n "$PY" ]]&&{ [[ -f "$VENV/bin/python" ]]&&ok "venv"||{ $PY -m venv "$VENV"&&ok "venv"||warn "venv failed";}
         [[ -f "$VENV/bin/pip" ]]&&$VENV/bin/pip install -q pexpect prompt_toolkit aiohttp 2>/dev/null&&ok "python deps"||warn "pip failed";}
     fi
-    # playwright browser deps (needed for headless scraping agents)
     if ! python3 -c "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); p.chromium.launch(headless=True).close(); p.stop()" 2>/dev/null; then
         if command -v pacman &>/dev/null; then
             info "Installing playwright browser deps..."
@@ -256,7 +213,6 @@ install)
     [[ ! -s "$HOME/.tmux.conf" ]] && "$BIN/a" config tmux_conf y 2>/dev/null && ok "tmux config (mouse enabled)" || :
     "$BIN/a" >/dev/null 2>&1 && ok "cache generated" || :
     command -v gh &>/dev/null && { gh auth status &>/dev/null || { [[ -t 0 ]] && info "GitHub login enables sync" && read -p "Login? (y/n): " yn && [[ "$yn" =~ ^[Yy] ]] && gh auth login && gh auth setup-git; }; gh auth status &>/dev/null && ok "sync configured"; } || :
-    # Ensure adata/git exists (after gh auth so clone can work)
     AROOT="$D/adata"; SROOT="$AROOT/git"
     if [[ ! -d "$SROOT/.git" ]]; then
         mkdir -p "$AROOT"
@@ -276,57 +232,11 @@ install)
 esac
 exit 0
 #endif
-/*
- * a.c - AI agent session manager (self-compiling)
- *
- * Amalgamation: a.c is the program — includes, constants, and dispatch.
- * The compiler follows #include "lib/foo.c" to build one translation unit.
- * No header file, no build system. Ordering = dependency resolution.
- *
- * Build:    sh a.c             two clang passes in parallel (check + build)
- * Install:  bash a.c install   deps, compile, shell functions, CLIs
- * Analyze:  sh a.c analyze     static analysis
- *
- * Terminal is the API: all logic runs as terminal commands. The UI (a ui)
- * is a pure visualizer — no business logic, just renders what the terminal
- * computes. This keeps functionality identical for terminal users, UI users,
- * AI agents, and humans. One interface, many surfaces.
- *
- * IMPORTANT — AI agent testing:
- *   Main repo: sh a.c && command a <args>  — tests installed symlink.
- *   Worktree:  sh a.c && ./a <args>        — tests local binary.
- *   Always sh a.c first — runs -Weverything checker + rebuild.
- *   After changes: print copy-pastable test commands so they self-verify.
- *
- * Add a command:  write lib/foo.c, add #include + dispatch line here.
- * Remove:         delete the file, delete two lines.
- *
- * Agent-to-agent control (agents can launch and delegate to other agents):
- *   Launch:  a g                                 start gemini in current dir
- *            a c / a co / a g                    claude / codex / gemini
- *            a c 3 "fix the bug"                 claude in project #3 with prompt
- *   Send:    a send <session> <prompt> --wait    send + wait for idle
- *            a watch <session> [duration]         read pane output
- *   Remote:  a ssh <host> a send <session> ...   cross-device delegation
- *   ADB:     a adb ssh                           start sshd on USB Termux devices
- *   Tmux:    tmux send-keys / capture-pane       raw escape hatch for fine control
- *   Always use a commands, not raw tmux. "a g" launches gemini with --yolo
- *   (auto-approve), env fixes, named session — vs raw tmux which needs manual
- *   permission clicks, env setup, session naming. Shorter commands (~10 vs ~30
- *   tokens) means faster LLM generation, fewer errors, and less chance of an
- *   agent using the wrong flags. Brevity compounds across thousands of calls.
- *   An agent can spin up another agent (even a different model) to handle a
- *   subtask — same interface humans use, no special API.
- *
- * References:
- *   Dispatch — sorted table + bsearch, inspired by Linux syscall_64.c
- *     (integer→function via switch/jump table). Our analog: sorted string→
- *     function table, O(log n). ~90 aliases, ~50 commands.
- *     https://github.com/torvalds/linux/blob/master/arch/x86/entry/syscall_64.c
- *   Amalgamation — SQLite mksqlite3c.tcl: concatenates 100+ .c/.h into one
- *     sqlite3.c translation unit. Same idea, we just use #include directly.
- *     https://sqlite.org/src/file?ci=tip&name=tool/mksqlite3c.tcl
- */
+/* a.c — AI agent session manager (self-compiling amalgamation)
+ * Test: sh a.c && command a <args> (main) or ./a <args> (worktree)
+ * Add cmd: write lib/foo.c, add #include + dispatch entry here.
+ * Agent control: a c/co/g (launch), a send/watch (delegate), a ssh (remote)
+ * Dispatch: sorted bsearch table (cf. Linux syscall_64.c, SQLite amalgamation) */
 #ifndef __APPLE__
 #define _GNU_SOURCE
 #endif
@@ -339,7 +249,6 @@ exit 0
 #include <dirent.h>
 #include <time.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <signal.h>
 #include <termios.h>
 #include <sys/ioctl.h>
@@ -349,86 +258,45 @@ exit 0
 #include <mach-o/dyld.h>
 #endif
 
-/*
- * ═══ DATA LAYOUT ═══
- *
- * Principle: all persistence lives in adata/. If it's not in adata, nobody
- * knows where it is. Maximum visibility for humans and LLMs — one place to
- * look, one place to back up. VS Code opens a/ and sees everything.
- *
- * adata/ lives inside the project dir but is .gitignored — the parent a/
- * repo is completely blind to it. adata/git/ is its own independent git
- * repo (NOT a submodule) with its own remote. Two repos, one directory tree.
- *
- * a/adata/                    AROOT — all data (.gitignored by parent)
- *   local/                    DDIR — per-device state (not synced)
- *     config.txt                key:value settings (prompts, worktrees_dir)
- *     sessions.txt              session defs (key|name|cmd)
- *     projects.txt              one path per line, index = project number
- *     .device                   device identity (hostname on first run)
- *     help_cache.txt            cached help + project list
- *     i_cache.txt               interactive picker cache
- *     cd_target                 temp file for shell cd
- *     agent_logs.txt            session start log (name, timestamp, device)
- *     timing.jsonl              command timing (from shell function)
- *     logs/push.ok              instant push flag (valid 10 min)
- *   git/                      SROOT — git push/pull, all devices (only git repo)
- *     activity/                 command log (one .txt per invocation)
- *     notes/                    quick notes (.txt, key:value)
- *     tasks/                    task dirs (priority-slug/, prompts, sessions)
- *     workspace/projects/       project registry (.txt per project)
- *     workspace/cmds/           custom commands (.txt per command)
- *     ssh/                      host registry (.txt per host)
- *     common/prompts/           shared prompt templates
- *     jobs/                     saved prompts (.txt) + tmux visual logs (.log)
- *     context/                  agent context files (.txt, togglable)
- *     docs/                     user documents
- *   venv/                     Python venv (install-time only, if no uv)
- *   sync/                     rclone copy <->, all devices, large files <5G
- *   vault/                    rclone copy on-demand, big devices, models
- *   backup/                   rclone move ->, all devices, logs+state
- *     {device}/               LOGDIR — session logs ({device}__{session}.log)
- *                             + claude JSONL transcripts (full conversation, 1-13MB)
- *                             (tmux visual logs are small, in git/jobs/ instead)
- *     a                         compiled binary (all persistent data in one place)
- * ~/.local/bin/a              symlink → adata/local/a
- */
+/* All persistence in adata/: local/ (per-device), git/ (synced), sync/, backup/
+ * ~/.local/bin/a → adata/local/a */
 
 #define P 1024
 #define B 4096
 #define MP 256
 #define MA 64
 #define MS 48
+#define AB if(getenv("A_BENCH"))return 0
 
-/* ═══ AMALGAMATION ═══ */
+/* amalgamation */
 static void alog(const char *cmd, const char *cwd, const char *extra);
 static void perf_disarm(void);
 static int cmd_sess(int, char**);
 
-#include "lib/globals.c"  /* state: paths, projects, sessions */
-#include "lib/init.c"     /* resolve paths + device id */
-#include "lib/util.c"     /* file/string/exec helpers */
-#include "lib/kv.c"       /* key:value parser + listdir */
-#include "lib/data.c"     /* config, projects, sessions db */
-#include "lib/tmux.c"     /* tmux has/go/new/send */
-#include "lib/git.c"      /* git helpers + adata sync */
-#include "lib/session.c"  /* create session + auto-prompt */
-#include "lib/alog.c"     /* activity log (async write) */
-#include "lib/help.c"     /* help, list, cache, misc cmds */
-#include "lib/project.c"  /* cd-to-project + add/remove/scan */
-#include "lib/config.c"   /* set, config, prompt, install */
-#include "lib/push.c"     /* push, pull, diff, revert */
-#include "lib/hub.c"      /* hub: scheduled jobs */
-#include "lib/ls.c"       /* ls, kill, copy, send, jobs */
-#include "lib/note.c"     /* notes + tasks (priority/review) */
-#include "lib/ssh.c"      /* ssh connect/add/broadcast */
-#include "lib/net.c"      /* sync, update, log, login */
-#include "lib/cal.c"      /* calendar events */
-#include "lib/agent.c"    /* autonomous agent + multi-run */
-#include "lib/perf.c"     /* benchmark + timing display */
-#include "lib/sess.c"     /* session dispatch (c/g/co/etc) */
+#include "lib/globals.c"
+#include "lib/init.c"
+#include "lib/util.c"
+#include "lib/kv.c"
+#include "lib/data.c"
+#include "lib/tmux.c"
+#include "lib/git.c"
+#include "lib/session.c"
+#include "lib/alog.c"
+#include "lib/help.c"
+#include "lib/project.c"
+#include "lib/config.c"
+#include "lib/push.c"
+#include "lib/hub.c"
+#include "lib/ls.c"
+#include "lib/note.c"
+#include "lib/ssh.c"
+#include "lib/net.c"
+#include "lib/cal.c"
+#include "lib/agent.c"
+#include "lib/perf.c"
+#include "lib/sess.c"
 
-/* ═══ PY-ONLY WRAPPERS — C entry points for commands still in Python ═══ */
+/* py wrappers */
 static int cmd_cat(int c,char**v){if(c>2&&chdir(v[2]))return 1;perf_disarm();
     const char*cc=clip_cmd();if(!cc){puts("x Needs tmux");return 1;}
     char cm[B];snprintf(cm,B,"git ls-files -z|xargs -0 grep -lIZ ''|xargs -0 tail -n+1|%s&&echo >&2 '✓ copied'",cc);
@@ -439,7 +307,7 @@ static int cmd_ask(int argc, char **argv)    { fallback_py("ask", argc, argv); }
 static int cmd_ui(int argc, char **argv)     { fallback_py("ui/__init__", argc, argv); }
 static int cmd_j(int,char**);
 static int cmd_job(int c,char**v){
-    if(c<3||(*v[2]>='0'&&*v[2]<='9')||!strcmp(v[2],"rm")||!strcmp(v[2],"watch")||!strcmp(v[2],"-r"))return cmd_jobs(c,v);
+    if(c>2&&*v[2]>='0'&&*v[2]<='9')return cmd_jobs(c,v);
     return cmd_j(c,v);}
 static int cmd_mono(int c,char**v){if(c>2&&chdir(v[2]))return 1;perf_disarm();
     puts("1 all  2 core (no lab/)");printf("> ");fflush(stdout);
@@ -468,12 +336,10 @@ static int cmd_j(int c,char**v){
         snprintf(cm,B,"tmux split-window -fhP -F '#{pane_id}' -c '%s' 'claude --dangerously-skip-permissions'",SDIR);
         pcmd(cm,pid,64);pid[strcspn(pid,"\n")]=0;
         if(pid[0])send_prefix_bg(pid,"claude",SDIR,pr);return 0;}
-    /* limit concurrent jobs: each claude ~1.2GB RSS */
     {char nb[16]="";pcmd("pgrep -xc claude 2>/dev/null||echo 0",nb,16);
-    int nj=atoi(nb)-1;if(nj<0)nj=0; /* -1 for this session */
+    int nj=atoi(nb)-1;if(nj<0)nj=0;
     if(nj>=100&&!(c>2&&!strcmp(v[2],"--resume"))){printf("x %d/100 job slots full — use 'a job' to see running\n",nj);return 1;}}
     init_db();load_cfg();load_proj();char wd[P];if(!getcwd(wd,P))snprintf(wd,P,"%s",HOME);
-    /* resume: a j --resume <worktree-path> */
     if(c>3&&!strcmp(v[2],"--resume")){snprintf(wd,P,"%s",v[3]);
         if(!dexists(wd)){printf("x %s not found\n",wd);return 1;}
         printf("+ resume: %s\n",wd);
@@ -483,7 +349,6 @@ static int cmd_j(int c,char**v){
         return 0;}
     int si=2,nowt=0;if(c>3&&v[2][0]>='0'&&v[2][0]<='9'){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
     char pr[B]="";int pl=0;for(int i=si;i<c;i++){if(!strcmp(v[i],"--no-wt")){nowt=1;continue;}pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);}
-    /* worktree */
     if(!nowt&&git_in_repo(wd)){
         const char*w=cfget("worktrees_dir");char wt[P];
         if(w[0])snprintf(wt,P,"%s",w);else snprintf(wt,P,"%s/worktrees",AROOT);
@@ -501,7 +366,7 @@ static int cmd_j(int c,char**v){
     tm_ensure_conf();
     char jcmd[B];jcmd_fill(jcmd,0);
     if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",bname(wd));
-        tm_ensure_conf();tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);tm_go(sn);}
+        tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);tm_go(sn);}
     char cm[B],pid[64];
     snprintf(cm,B,"tmux new-window -d -n '%s' -P -F '#{pane_id}' -c '%s' '%s'",bname(wd),wd,jcmd);
     pcmd(cm,pid,64);pid[strcspn(pid,"\n")]=0;if(pid[0])send_prefix_bg(pid,"claude",wd,pr);
@@ -511,7 +376,7 @@ static int cmd_adb(int c,char**v){
     (void)c;(void)v;execlp("adb","adb","devices","-l",(char*)0);return 1;
 }
 
-/* ── once — headless single-shot claude -p (opus, 10min default) ── */
+/* once — headless claude -p */
 static int cmd_run_once(int c,char**v){
     if(c<3){puts("Usage: a once [-t secs] [claude flags] prompt words...");return 1;}
     unsigned tl=600;int si=2;
@@ -533,13 +398,13 @@ static int cmd_run_once(int c,char**v){
         pid_t r=waitpid(ch,&st,WNOHANG);
         if(r>0)return WIFEXITED(st)?WEXITSTATUS(st):1;
         sleep(1);}
-    fprintf(stderr,"\n\033[31m✗ TIMEOUT\033[0m: a once exceeded %us\n",tl);
+    fprintf(stderr,"\n\033[31m✗ TIMEOUT\033[0m: a once >%us\n",tl);
     kill(ch,SIGKILL);waitpid(ch,NULL,0);return 124;}
 
 static int cmd_my(int c,char**v){(void)c;(void)v;char d[P];snprintf(d,P,"%s/my",SROOT);
     execlp("ls","ls","--color",d,(char*)0);return 1;}
 
-/* ═══ DISPATCH TABLE — sorted for bsearch, every alias is one entry ═══ */
+/* dispatch — sorted, bsearch */
 typedef struct { const char *n; int (*fn)(int, char**); } cmd_t;
 static int cmd_cmp(const void *a, const void *b) {
     return strcmp(((const cmd_t *)a)->n, ((const cmd_t *)b)->n);
@@ -571,7 +436,7 @@ static const cmd_t CMDS[] = {
 };
 #define NCMDS (sizeof(CMDS)/sizeof(*CMDS))
 
-/* ═══ PERF KILL — hard timeout enforcer ═══ */
+/* perf kill */
 static char perf_msg[B]; /* pre-formatted kill message (signal-safe) */
 __attribute__((noreturn)) static void perf_alarm(int sig) {
     (void)sig;
@@ -581,10 +446,8 @@ __attribute__((noreturn)) static void perf_alarm(int sig) {
 static void perf_arm(const char *cmd) {
     if (getenv("A_BENCH")) return; /* bench children: parent handles timeout */
     if (isdigit(*cmd)) return;
-    static const char *skip[] = {"push","pull","sync","u","update","login","ssh","gdrive","mono","email","install","send","j","job","pr","hub","create","repo","e","revert",NULL};
-    for (const char **p = skip; *p; p++) if (!strcmp(cmd, *p)) return;
+    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|email|install|send|j|job|pr|hub|create|repo|e|revert|",sk))return;}
     unsigned secs = 1;
-    /* per-device override: adata/git/perf/{DEV}.txt — command:us (microseconds) */
     char pf[P]; snprintf(pf, P, "%s/perf/%s.txt", SROOT, DEV);
     unsigned limit_us = secs * 1000000;
     char *data = readf(pf, NULL);
@@ -597,44 +460,37 @@ static void perf_arm(const char *cmd) {
         free(data);
     }
     snprintf(perf_msg, B,
-        "\n\033[31m✗ PERF KILL\033[0m: 'a %s' exceeded %us timeout (limit: %uus, device: %s)\n"
-        "  Fix: make it faster — timings only tighten, never loosen\n"
-        "  Edit: %s\n", cmd, secs, limit_us, DEV, pf);
+        "\n\033[31m✗ PERF KILL\033[0m: 'a %s' >%us (%uus, %s)\n  %s\n", cmd, secs, limit_us, DEV, pf);
     signal(SIGALRM, perf_alarm);
     alarm(secs);
 }
 static void perf_disarm(void) { alarm(0); signal(SIGALRM, SIG_DFL); }
 
-/* ═══ MAIN ═══ */
+/* main */
 int main(int argc, char **argv) {
     init_paths();
     G_argc = argc; G_argv = argv;
 
     if (argc < 2) return (isatty(1)?cmd_i:cmd_help)(argc, argv);
 
-    /* Log every command */
     char acmd[B]="";for(int i=1,l=0;i<argc;i++) l+=snprintf(acmd+l,(size_t)(B-l),"%s%s",i>1?" ":"",argv[i]);
     char wd[P]; if(!getcwd(wd,P)) snprintf(wd,P,"%s",HOME);
     alog(acmd, wd, NULL);
 
     const char *arg = argv[1];
 
-    /* "a 3" — jump to project by number (no perf: just cd) */
     { const char *p = arg; while (*p >= '0' && *p <= '9') p++;
       if (*p == '\0' && p != arg) { init_db(); return cmd_project_num(argc, argv, atoi(arg)); } }
 
     perf_arm(arg);
 
-    /* Table lookup — O(log n) bsearch over sorted command table */
     { cmd_t key = {arg, NULL};
       const cmd_t *c = bsearch(&key, CMDS, NCMDS, sizeof(*CMDS), cmd_cmp);
       if (c) return c->fn(argc, argv); }
 
-    /* "a x.foo" — lab Python modules */
     if (arg[0] == 'x' && arg[1] == '.')
         { char mod[P]; snprintf(mod, P, "lab/%s", arg + 2); fallback_py(mod, argc, argv); }
 
-    /* "a c++" — create worktree for session key */
     { size_t l = strlen(arg);
       if (l >= 3 && arg[l-1] == '+' && arg[l-2] == '+' && arg[0] != 'w')
           return cmd_wt_plus(argc, argv); }
@@ -642,23 +498,18 @@ int main(int argc, char **argv) {
     if (arg[0] == 'w' && arg[1] && !fexists(arg))
         return cmd_wt(argc, argv);
 
-    /* "a c" — session key from sessions.txt */
     { init_db(); load_cfg(); load_sess();
       if (find_sess(arg)) return cmd_sess(argc, argv); }
 
-    /* "a /some/path" or "a file.py" — open directory or file */
     if (dexists(arg) || fexists(arg)) return cmd_dir_file(argc, argv);
     { char ep[P]; snprintf(ep, P, "%s%s", HOME, arg);
       if (arg[0] == '/' && dexists(ep)) return cmd_dir_file(argc, argv); }
 
-    /* 1-3 char keys not in table — try as session */
     if (strlen(arg) <= 3 && arg[0] >= 'a' && arg[0] <= 'z')
         return cmd_sess(argc, argv);
 
-    /* "a job-foo-bar" — attach to existing tmux session by name */
     if (tm_has(arg)) { tm_go(arg); return 0; }
 
-    /* "a weather" — check my/ folder */
     { char mf[P]; static const char*X[]={"",".py",".c",".sh",".html",0};
       for(int i=0;X[i];i++){snprintf(mf,P,"%s/my/%s%s",SROOT,arg,X[i]);
         if(fexists(mf)){perf_disarm();char md[P];snprintf(md,P,"%s/my",SROOT);(void)!chdir(md);argv[1]=mf;return cmd_dir_file(argc,argv);}}}
