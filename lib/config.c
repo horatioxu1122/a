@@ -110,7 +110,7 @@ static int cmd_add(int argc, char **argv) {
     init_db(); load_cfg();
     char *args[16]; int na = 0;
     for (int i = 2; i < argc && na < 16; i++) if (strcmp(argv[i],"--global")) args[na++] = argv[i];
-    if (!na) { list_all(0,0); puts("a add <path>     project dir\na add .          current dir\na add <n> <cmd>  command"); return 0; }
+    if (!na) { args[na++] = "."; }
     if (na >= 2 && !dexists(args[0])) {
         char *name=args[0], cmd[B]="";
         for(int i=1,l=0;i<na;i++) l+=snprintf(cmd+l,(size_t)(B-l),"%s%s",i>1?" ":"",args[i]);

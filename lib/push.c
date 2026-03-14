@@ -10,7 +10,7 @@ static int cmd_push(int argc, char **argv) {
         /* Check for sub-repos */
         DIR *d = opendir(cwd); struct dirent *e; int nsub = 0;
         char subs[32][256];
-        if (d) { while ((e = readdir(d)) && nsub < 32) { char gp[P]; snprintf(gp,P,"%s/%s/.git",cwd,e->d_name); if (dexists(gp)) snprintf(subs[nsub++],256,"%s",e->d_name); } closedir(d); }
+        if (d) { while ((e = readdir(d)) && nsub < 32) { if(e->d_name[0]=='.')continue; char gp[P]; snprintf(gp,P,"%s/%s/.git",cwd,e->d_name); if (dexists(gp)) snprintf(subs[nsub++],256,"%s",e->d_name); } closedir(d); }
         if (nsub) {
             printf("Push %d repos? ", nsub);
             for (int i = 0; i < nsub; i++) printf("%s%s", subs[i], i<nsub-1?", ":"");
