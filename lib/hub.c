@@ -84,21 +84,21 @@ static int cmd_hub(int argc, char **argv) {
     const char *sub=argc>2?argv[2]:NULL;
     char hd[P]; snprintf(hd,P,"%s/agents",SROOT);
 
-    if(!sub) {
-        char url[512],c[B];snprintf(c,B,"git -C '%s' remote get-url origin 2>/dev/null",SROOT);
-        pcmd(c,url,512);url[strcspn(url,"\n")]=0;
-        printf("Hub: %d jobs\n  %s\n  %s\n\n",NJ,hd,url);
+    if(!sub||!strcmp(sub,"all")) {
+        int all=sub&&!strcmp(sub,"all");
         hub_timers();
-        int tw=80; struct winsize ws; if(ioctl(STDOUT_FILENO,TIOCGWINSZ,&ws)==0) tw=ws.ws_col;
+        int tw=80,sh=0; struct winsize ws; if(ioctl(STDOUT_FILENO,TIOCGWINSZ,&ws)==0) tw=ws.ws_col;
         int m=tw<60, cw=tw-(m?32:48);
         printf(m?"# %-8s %-9s On Cmd\n":"# %-10s %-6s %-12s %-8s On Cmd\n","Name",m?"Last":"Sched","Last","Dev");
         for(int i=0;i<NJ;i++) {
-            hub_t *j=&HJ[i]; int on=hub_on(j); char cp[512]; hub_trunc(cp,512,j->p,cw);
-            const char *lr=j->lr[0]?j->lr+5:"-";
+            hub_t *j=&HJ[i]; if(!all&&!j->en) continue;
+            int on=hub_on(j); char cp[512]; hub_trunc(cp,512,j->p,cw);
+            const char *lr=j->lr[0]?j->lr+5:"-"; sh++;
             if(m) printf("%-2d%-9.8s%-10.9s%s %s\n",i,j->n,lr,on?"\xe2\x9c\x93":" ",cp);
             else printf("%-2d%-11.10s%-7.6s%-13.12s%-8.7s%s %s\n",i,j->n,j->s,lr,j->d,on?"\xe2\x9c\x93":" ",cp);
         }
-        printf("\na hub <#>       run job\na hub on/off #  toggle\na hub add|rm    create/delete\n");
+        printf(NJ-sh?"\n%d jobs (+%d disabled, a hub all)\n":"\n%d jobs\n",sh,NJ-sh);
+        printf("a hub <#>       run job\na hub on/off #  toggle\na hub add|rm    create/delete\n");
         return 0;
     }
 
