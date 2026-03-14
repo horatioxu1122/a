@@ -33,16 +33,14 @@ static int cmd_agent(int argc, char **argv) {
         perf_disarm();
         char wd[P];if(!getcwd(wd,P))snprintf(wd,P,"%s",HOME);
         char sn[256];snprintf(sn,256,"agent-%s-%ld",argv[3],(long)time(NULL));
-        /* build run command: detect uv script vs plain python vs .c */
         char cmd[B];
         if(strstr(f,".c")){snprintf(cmd,B,"sh '%s'",f);}
         else{FILE*fp=fopen(f,"r");char h[32]={0};if(fp){(void)!fgets(h,32,fp);fclose(fp);}
             if(strstr(h,"/// script"))snprintf(cmd,B,"uv run --script '%s'",f);
             else snprintf(cmd,B,"python3 '%s'",f);}
-        /* append extra args */
         for(int i=4;i<argc;i++){int l=(int)strlen(cmd);snprintf(cmd+l,(size_t)(B-l)," '%s'",argv[i]);}
+        if(!isatty(1))return !!system(cmd);
         tm_ensure_conf();
-        /* Inside tmux: split panes in current window like `a c` */
         if(getenv("TMUX")){
             char ww[16],nc[16]; pcmd("tmux display-message -p '#{window_width}'",ww,16);
             pcmd("tmux list-panes -F '#{pane_left}'|sort -un|wc -l",nc,16);
@@ -55,7 +53,6 @@ static int cmd_agent(int argc, char **argv) {
             }
             return 0;
         }
-        /* Outside tmux: new session */
         create_sess(sn,wd,cmd);
         tm_go(sn);return 0;
     }
