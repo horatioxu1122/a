@@ -169,7 +169,7 @@ static int cmd_ssh(int argc,char**argv){
 
     /* all/broadcast — parallel */
     if((!strcmp(sub,"all")||!strcmp(sub,"*"))&&argc>3){
-        char cmd[B]="";for(int i=3,l=0;i<argc;i++)l+=snprintf(cmd+l,(size_t)(B-l),"%s%s",i>3?" ":"",argv[i]);
+        char cmd[B]="";ajoin(cmd,B,argc,argv,3);
         char qc[B];snprintf(qc,B," 'bash -c '\"'\"'export PATH=$HOME/.local/bin:$PATH; %s'\"'\"'' 2>&1",cmd);
         struct{int fd;pid_t pid;char nm[128];}S[32];int ns=0;
         for(int i=0;i<nh&&ns<32;i++){int pfd[2];if(pipe(pfd))continue;

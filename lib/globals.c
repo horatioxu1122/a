@@ -1,4 +1,4 @@
-/* ═══ GLOBALS ═══ */
+/* globals */
 static char HOME[P], TMP[P], DDIR[P], AROOT[P], SROOT[P], SDIR[P], DEV[128], LOGDIR[P];
 static int G_argc; static char **G_argv;
 

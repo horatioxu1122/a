@@ -1,4 +1,4 @@
-/* ═══ HELP TEXT ═══ */
+/* help */
 static const char *HELP_SHORT =
     "a j \"prompt\"     Job: worktree + agent\n"
     "a a|c|co|g|ai   Default/claude/codex/gemini/aider\n"
@@ -36,7 +36,7 @@ static const char *HELP_FULL =
     "  a hub               Scheduled jobs\n"
     "  a config / sync / update / perf";
 
-/* ═══ LIST_ALL + CACHE ═══ */
+/* list + cache */
 static void list_all(int cache, int quiet) {
     load_proj(); load_apps();
     char pfile[P]; snprintf(pfile, P, "%s/projects.txt", DDIR);

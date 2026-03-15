@@ -376,7 +376,12 @@ static int cmd_task(int argc,char**argv){
         int n=load_tasks(dir),x=atoi(argv[3])-1;if(x<0||x>=n){puts("x Invalid");return 1;}
         task_repri(x,atoi(argv[4]));sync_bg();return 0;}
     if(!strcmp(sub,"add")||!strcmp(sub,"a")){if(argc<4){puts("a task add [PPPPP] <text>");return 1;}
-        argv[2]=argv[3];argc--;goto taskfb;}
+        int pri=50000,si=3;
+        if(strlen(argv[3])==5&&isdigit(argv[3][0])&&isdigit(argv[3][1])&&isdigit(argv[3][2])&&isdigit(argv[3][3])&&isdigit(argv[3][4])){
+            pri=atoi(argv[3]);si=4;if(si>=argc){puts("a task add [PPPPP] <text>");return 1;}}
+        char t[B]="";ajoin(t,B,argc,argv,si);
+        task_add(dir,t,pri);printf("\xe2\x9c\x93 P%05d %s\n",pri,t);sync_bg();
+        snprintf(rdir,P,"%s",dir);rapid("t> ",rapid_task);return 0;}
     if(*sub=='d'&&!sub[1]){if(argc<4){puts("a task d <#|name>...");return 1;}int n=load_tasks(dir);
         for(int j=3;j<argc;j++){int x=-1,v=atoi(argv[j]);if(v>0&&v<=n)x=v-1;
             else{for(int i=0;i<n;i++){char*b=strrchr(T[i].d,'/');if(b&&!strcmp(b+1,argv[j])){x=i;break;}}}
@@ -441,7 +446,7 @@ static int cmd_task(int argc,char**argv){
         char t[B]="";ajoin(t,B,argc,argv,4);
         snprintf(fn,P,"%s/%s.%09ld_%s.txt",sd,ts,tp.tv_nsec,DEV);writef(fn,t);
         printf("\xe2\x9c\x93 %s: %.40s\n",sub,t);sync_bg();return 0;}}
-    taskfb:{int pri=50000,si=2;
+    {int pri=50000,si=2;
     if(argc>2&&strlen(argv[2])==5&&isdigit(argv[2][0])&&isdigit(argv[2][1])&&isdigit(argv[2][2])&&isdigit(argv[2][3])&&isdigit(argv[2][4])){
         pri=atoi(argv[2]);si=3;if(si>=argc){puts("a task [PPPPP] <text>");return 1;}}
     char t[B]="";ajoin(t,B,argc,argv,si);

@@ -1,2 +1,5 @@
-summary: reviewed all task files in adata/git/tasks/, produced one-line summaries and identified ~35 outdated/done/duplicate tasks
-test: cat /tmp/a_task_review.txt | head -20 && echo '---' && grep -c '|' /tmp/a_task_review.txt
+summary: cut tokens across a.c + all lib/*.c files
+cuts: AB macro (15 sites), ajoin helper (15 sites), ssh_idx dedup (3 sites),
+      perf_limit dedup, comment header cuts, dead forward decl removed,
+      log sub-check merge, tmux comment block cut
+test: cd ~/a && bash a.c && adata/local/a help && adata/local/a hi && adata/local/a diff

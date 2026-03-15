@@ -1,4 +1,4 @@
-/* ═══ INIT PATHS ═══ */
+/* init */
 static void init_paths(void) {
     const char *h = getenv("HOME"); if (!h) h = "/tmp";
     snprintf(HOME, P, "%s", h);

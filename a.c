@@ -5,7 +5,6 @@
 # TERMUX: set CLAUDE_CODE_TMPDIR=$HOME/.tmp; build with clang directly.
 
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
-    # Bootstrap: when piped (curl | sh), clone repo and run install
     set -e; A="$HOME/a"
     command -v git >/dev/null || { echo "Install git first"; exit 1; }
     [ -d "$A/.git" ] && { echo "a already installed at $A"; exec sh "$A/a.c" install; }
@@ -65,36 +64,33 @@ AFUNC
         grep -q CLAUDE_CODE_TMPDIR "$HOME/.bashrc" 2>/dev/null || echo 'export CLAUDE_CODE_TMPDIR="$HOME/.tmp"' >> "$HOME/.bashrc"
         tmux set-environment -g CLAUDE_CODE_TMPDIR "$HOME/.tmp" 2>/dev/null || :
     fi
-    ok "shell functions (bash + zsh)"
+    ok "shell funcs"
 }
 
 _install_node() {
     mkdir -p "$HOME/.local/bin"; export PATH="$HOME/.local/bin:$PATH"
     ARCH=$(uname -m); [[ "$ARCH" == "x86_64" ]] && ARCH="x64"; [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]] && ARCH="arm64"
-    info "Installing node v22.12.0 ($ARCH) to ~/.local/bin ..."
     if [[ "$OSTYPE" == darwin* ]]; then URL="https://nodejs.org/dist/v22.12.0/node-v22.12.0-darwin-$ARCH.tar.gz"
     else URL="https://nodejs.org/dist/v22.12.0/node-v22.12.0-linux-$ARCH.tar.xz"; fi
-    info "Downloading $URL"
+    info "Installing node v22.12.0 ($ARCH)..."
     if [[ "$URL" == *.gz ]]; then curl -fsSL "$URL" | tar -xzf - -C "$HOME/.local" --strip-components=1
     else curl -fsSL "$URL" | tar -xJf - -C "$HOME/.local" --strip-components=1; fi
-    [[ -x "$HOME/.local/bin/node" ]] && ok "node $($HOME/.local/bin/node -v) installed at ~/.local/bin/node" || warn "node install failed"
+    [[ -x "$HOME/.local/bin/node" ]] && ok "node $($HOME/.local/bin/node -v)" || warn "node install failed"
 }
 
 case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
 build)
     R="${D%%/adata/worktrees/*}"; if [[ "$D" == *"/adata/worktrees/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
-    BIN="$HOME/.local/bin"
-    [[ -d "$ABIN" ]] || mkdir -p "$ABIN"
-    [[ -d "$BIN" ]] || mkdir -p "$BIN"
-    [[ -f "$ABIN/.chk" ]] && rm -f "$ABIN/.chk"
+    BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
+    rm -f "$ABIN/.chk"
     printf '%s' $$ > "$ABIN/.bld"
     if [[ -x "$(type -P tcc)" ]]; then
         TCT=${EPOCHREALTIME/./};tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||exit 1;TCT=$(( ${EPOCHREALTIME/./} - TCT ))000
     else
         _ensure_cc; $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" || exit 1
     fi
-    [[ "$D" != *"/adata/worktrees/"* ]] && { [[ "$(readlink "$BIN/a" 2>/dev/null)" == "$ABIN/a" ]] || ln -sf "$ABIN/a" "$BIN/a"; }
+    [[ "$D" != *"/adata/worktrees/"* ]] && ln -sf "$ABIN/a" "$BIN/a"
     (
         T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\""
         if command -v tcc >/dev/null && [[ -n "$TCT" ]]; then
@@ -152,7 +148,7 @@ install)
         elif [[ "$OS" == termux ]]; then ok "a.local (termux: use localhost:1111)"
         else warn "a.local: run 'echo 127.0.0.1 a.local | sudo tee -a /etc/hosts'"; fi
     else ok "a.local"; fi
-    install_node() { command -v node &>/dev/null && [[ "$(node -v)" == v2[2-9]* || "$(node -v)" == v[3-9]* ]] && return 0; _install_node; }
+    install_node() { local v;v=$(node -v 2>/dev/null)&&[[ "$v" == v2[2-9]*||"$v" == v[3-9]* ]]&&return 0;_install_node; }
     case $OS in
         mac)
             command -v brew &>/dev/null || { info "Installing Homebrew..."; /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"; }
@@ -200,13 +196,9 @@ install)
         [[ -f "$VENV/bin/pip" ]]&&$VENV/bin/pip install -q pexpect prompt_toolkit aiohttp 2>/dev/null&&ok "python deps"||warn "pip failed";}
     fi
     if ! python3 -c "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); p.chromium.launch(headless=True).close(); p.stop()" 2>/dev/null; then
-        if command -v pacman &>/dev/null; then
-            info "Installing playwright browser deps..."
-            sudo pacman -S --noconfirm --needed libxcomposite gtk3 alsa-lib nss 2>/dev/null && ok "playwright deps" || warn "playwright deps (needs sudo)"
-        elif command -v apt-get &>/dev/null; then
-            info "Installing playwright browser deps..."
-            sudo apt-get install -y libxcomposite1 libgtk-3-0t64 libasound2t64 libnss3 2>/dev/null && ok "playwright deps" || warn "playwright deps (needs sudo)"
-        fi
+        info "Installing playwright browser deps..."
+        if command -v pacman &>/dev/null; then sudo pacman -S --noconfirm --needed libxcomposite gtk3 alsa-lib nss 2>/dev/null && ok "playwright deps" || warn "playwright deps"
+        elif command -v apt-get &>/dev/null; then sudo apt-get install -y libxcomposite1 libgtk-3-0t64 libasound2t64 libnss3 2>/dev/null && ok "playwright deps" || warn "playwright deps"; fi
     else ok "playwright deps"; fi
     command -v ollama &>/dev/null&&ok "ollama"||{ [[ -n "$SUDO" || $EUID -eq 0 ]]&&{ info "Installing ollama...";curl -fsSL https://ollama.com/install.sh|sh&&ok "ollama"||warn "ollama failed";}||warn "ollama needs sudo";}
     "$BIN/a" ui on 2>/dev/null && ok "UI service (localhost:1111)" || :
@@ -214,17 +206,12 @@ install)
     "$BIN/a" >/dev/null 2>&1 && ok "cache generated" || :
     command -v gh &>/dev/null && { gh auth status &>/dev/null || { [[ -t 0 ]] && info "GitHub login enables sync" && read -p "Login? (y/n): " yn && [[ "$yn" =~ ^[Yy] ]] && gh auth login && gh auth setup-git; }; gh auth status &>/dev/null && ok "sync configured"; } || :
     AROOT="$D/adata"; SROOT="$AROOT/git"
-    if [[ ! -d "$SROOT/.git" ]]; then
-        mkdir -p "$AROOT"
-        if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
-            gh repo clone seanpattencode/a-git "$SROOT" 2>/dev/null && ok "adata/git cloned" || { git init -q "$SROOT" 2>/dev/null; ok "adata/git initialized (no remote)"; }
-        else
-            git init -q "$SROOT" 2>/dev/null; ok "adata/git initialized (gh auth login to enable sync)"
-        fi
+    if [[ ! -d "$SROOT/.git" ]]; then mkdir -p "$AROOT"
+        { command -v gh &>/dev/null&&gh auth status &>/dev/null 2>&1&&gh repo clone seanpattencode/a-git "$SROOT" 2>/dev/null&&ok "adata/git cloned";}||{ git init -q "$SROOT" 2>/dev/null;ok "adata/git init";}
     fi
     RC="$HOME/.bashrc"; [[ -n "$ZSH_VERSION" ]] && RC="$HOME/.zshrc"
     source "$RC" 2>/dev/null && ok "shell ready (sourced $RC)" || warn "run: source $RC"
-    echo -e "\n${G}✓${R} Install complete — type ${G}a${R} to get started.\n"
+    echo -e "\n${G}✓${R} Install complete — type ${G}a${R}\n"
     ;;
 *)
     echo "Usage: sh a.c [build|install|analyze|shell|clean]"
@@ -301,10 +288,8 @@ static int cmd_cat(int c,char**v){if(c>2&&chdir(v[2]))return 1;perf_disarm();
     const char*cc=clip_cmd();if(!cc){puts("x Needs tmux");return 1;}
     char cm[B];snprintf(cm,B,"git ls-files -z|xargs -0 grep -lIZ ''|xargs -0 tail -n+1|%s&&echo >&2 '✓ copied'",cc);
     return system(cm);}
-static int cmd_apk(int argc, char **argv)    { fallback_py("apk", argc, argv); }
-static int cmd_gdrive(int argc, char **argv) { fallback_py("gdrive", argc, argv); }
-static int cmd_ask(int argc, char **argv)    { fallback_py("ask", argc, argv); }
-static int cmd_ui(int argc, char **argv)     { fallback_py("ui/__init__", argc, argv); }
+#define PY(n,m) static int cmd_##n(int c,char**v){fallback_py(m,c,v);}
+PY(apk,"apk")PY(gdrive,"gdrive")PY(ask,"ask")PY(ui,"ui/__init__")
 static int cmd_j(int,char**);
 static int cmd_job(int c,char**v){
     if(c>2&&*v[2]>='0'&&*v[2]<='9')return cmd_jobs(c,v);
@@ -318,10 +303,9 @@ static int cmd_mono(int c,char**v){if(c>2&&chdir(v[2]))return 1;perf_disarm();
         if(l+n>=cap){cap=(l+n)*2;d=realloc(d,cap+1);}memcpy(d+l,b,n);l+=n;}pclose(f);}
     if(!d)return 1;d[l]=0;for(char*p=d;(p=strstr(p,"==> "));p+=4)nf++;
     (void)!write(1,d,l);to_clip(d);fprintf(stderr,"✓ %d files %zub\n",nf,l);free(d);return 0;}
-static int cmd_work(int argc, char **argv)   { fallback_py("work", argc, argv); }
+PY(work,"work")
 static int cmd_j(int c,char**v){
-    if(c<3||!strcmp(v[2],"rm")||!strcmp(v[2],"watch")||!strcmp(v[2],"-r"))return cmd_jobs(c,v);
-    if(c==3&&v[2][0]>='0'&&v[2][0]<='9')return cmd_jobs(c,v);
+    if(c<3||!strcmp(v[2],"rm")||!strcmp(v[2],"watch")||!strcmp(v[2],"-r")||(c==3&&isdigit(*v[2])))return cmd_jobs(c,v);
     if(c>2&&v[2][1]=='q'){char ln[B];for(fputs("j> ",stdout);fgets(ln,B,stdin);fputs("j> ",stdout)){
         ln[strcspn(ln,"\n")]=0;if(!*ln)continue;char*a[]={"a","j","--no-wt",ln,0};cmd_j(4,a);}return 0;}
     if(c==3&&!strcmp(v[2],"a")){if(!getenv("TMUX")){puts("x Needs tmux");return 1;}
@@ -373,7 +357,7 @@ static int cmd_j(int c,char**v){
     return 0;}
 static int cmd_adb(int c,char**v){
     if(c>2&&!strcmp(v[2],"ssh"))return system("for s in $(adb devices|awk '/\\tdevice$/{print$1}');do printf '\\033[36m→ %s\\033[0m ' \"$s\";adb -s \"$s\" shell 'am broadcast -n com.termux/.app.TermuxOpenReceiver -a com.termux.RUN_COMMAND --es com.termux.RUN_COMMAND_PATH /data/data/com.termux/files/usr/bin/sshd --ez com.termux.RUN_COMMAND_BACKGROUND true' 2>&1|tail -1;done");
-    (void)c;(void)v;execlp("adb","adb","devices","-l",(char*)0);return 1;
+    execlp("adb","adb","devices","-l",(char*)0);return 1;
 }
 
 /* once — headless claude -p */
@@ -387,13 +371,13 @@ static int cmd_run_once(int c,char**v){
         if(v[i][0]=='-'&&nf<14){flags[nf++]=v[i];
             if((!strcmp(v[i],"--model")||!strcmp(v[i],"--max-budget-usd"))&&i+1<c)flags[nf++]=v[++i];
         }else pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);}
-    char**a=malloc(((unsigned)nf+7)*sizeof(char*));int n=0;
+    char*a[22];int n=0;
     a[n++]="claude";a[n++]="-p";a[n++]="--dangerously-skip-permissions";a[n++]="--model";a[n++]="opus";
     for(int i=0;i<nf;i++)a[n++]=flags[i];
     a[n++]=pr;a[n]=NULL;
     pid_t ch=fork();
     if(ch==0){execvp("claude",a);perror("claude");_exit(127);}
-    free(a);int st;
+    int st;
     for(unsigned elapsed=0;elapsed<tl;elapsed++){
         pid_t r=waitpid(ch,&st,WNOHANG);
         if(r>0)return WIFEXITED(st)?WEXITSTATUS(st):1;
@@ -406,9 +390,7 @@ static int cmd_my(int c,char**v){(void)c;(void)v;char d[P];snprintf(d,P,"%s/my",
 
 /* dispatch — sorted, bsearch */
 typedef struct { const char *n; int (*fn)(int, char**); } cmd_t;
-static int cmd_cmp(const void *a, const void *b) {
-    return strcmp(((const cmd_t *)a)->n, ((const cmd_t *)b)->n);
-}
+static int cmd_cmp(const void*a,const void*b){return strcmp(((const cmd_t*)a)->n,((const cmd_t*)b)->n);}
 static const cmd_t CMDS[] = {
     {"--help",cmd_help_full},{"-h",cmd_help_full},
     {"a",cmd_a_default},{"adb",cmd_adb},{"add",cmd_add},{"agent",cmd_agent},{"ai",cmd_all},
@@ -437,7 +419,7 @@ static const cmd_t CMDS[] = {
 #define NCMDS (sizeof(CMDS)/sizeof(*CMDS))
 
 /* perf kill */
-static char perf_msg[B]; /* pre-formatted kill message (signal-safe) */
+static char perf_msg[B];
 __attribute__((noreturn)) static void perf_alarm(int sig) {
     (void)sig;
     (void)!write(STDERR_FILENO, perf_msg, strlen(perf_msg));
@@ -447,18 +429,12 @@ static void perf_arm(const char *cmd) {
     if (getenv("A_BENCH")) return; /* bench children: parent handles timeout */
     if (isdigit(*cmd)) return;
     {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|email|install|send|j|job|pr|hub|create|repo|e|revert|",sk))return;}
-    unsigned secs = 1;
+    unsigned secs = 1, limit_us = 1000000;
     char pf[P]; snprintf(pf, P, "%s/perf/%s.txt", SROOT, DEV);
-    unsigned limit_us = secs * 1000000;
-    char *data = readf(pf, NULL);
-    if (data) {
-        char needle[128]; snprintf(needle, 128, "\n%s:", cmd);
-        char *m = strstr(data, needle);
-        if (!m && !strncmp(data, cmd, strlen(cmd)) && data[strlen(cmd)] == ':')
-            m = data - 1;
-        if (m) { unsigned us = (unsigned)atoi(m + 1 + strlen(cmd) + 1); if (us > 0) { limit_us = us; secs = (us + 999999) / 1000000; } }
-        free(data);
-    }
+    {char *data = readf(pf, NULL);
+    unsigned pl = perf_limit(data, cmd);
+    if (pl > 0) { limit_us = pl; secs = (pl + 999999) / 1000000; }
+    free(data);}
     snprintf(perf_msg, B,
         "\n\033[31m✗ PERF KILL\033[0m: 'a %s' >%us (%uus, %s)\n  %s\n", cmd, secs, limit_us, DEV, pf);
     signal(SIGALRM, perf_alarm);
@@ -473,14 +449,13 @@ int main(int argc, char **argv) {
 
     if (argc < 2) return (isatty(1)?cmd_i:cmd_help)(argc, argv);
 
-    char acmd[B]="";for(int i=1,l=0;i<argc;i++) l+=snprintf(acmd+l,(size_t)(B-l),"%s%s",i>1?" ":"",argv[i]);
+    char acmd[B]="";ajoin(acmd,B,argc,argv,1);
     char wd[P]; if(!getcwd(wd,P)) snprintf(wd,P,"%s",HOME);
     alog(acmd, wd, NULL);
 
     const char *arg = argv[1];
 
-    { const char *p = arg; while (*p >= '0' && *p <= '9') p++;
-      if (*p == '\0' && p != arg) { init_db(); return cmd_project_num(argc, argv, atoi(arg)); } }
+    if (*arg && !arg[strspn(arg,"0123456789")]) { init_db(); return cmd_project_num(argc, argv, atoi(arg)); }
 
     perf_arm(arg);
 
@@ -491,9 +466,7 @@ int main(int argc, char **argv) {
     if (arg[0] == 'x' && arg[1] == '.')
         { char mod[P]; snprintf(mod, P, "lab/%s", arg + 2); fallback_py(mod, argc, argv); }
 
-    { size_t l = strlen(arg);
-      if (l >= 3 && arg[l-1] == '+' && arg[l-2] == '+' && arg[0] != 'w')
-          return cmd_wt_plus(argc, argv); }
+    {size_t l=strlen(arg);if(l>=3&&arg[l-1]=='+'&&arg[l-2]=='+'&&*arg!='w')return cmd_wt_plus(argc,argv);}
 
     if (arg[0] == 'w' && arg[1] && !fexists(arg))
         return cmd_wt(argc, argv);

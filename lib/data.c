@@ -1,4 +1,4 @@
-/* ═══ DATA FILES ═══ */
+/* data */
 static const char *dprompt(void) {
     static char b[B*4]; char p[P]; snprintf(p,P,"%s/common/prompts/default.txt",SROOT);
     char *d=readf(p,NULL); b[0]=0; if(d){snprintf(b,sizeof(b),"%s ",d);free(d);} return b;
@@ -55,7 +55,7 @@ static void init_db(void) {
     }
 }
 
-/* ═══ DATA LOADERS ═══ */
+/* loaders */
 static void load_cfg(void) {
     NCF = 0; char p[P]; snprintf(p, P, "%s/config.txt", DDIR);
     kvs_t kv = kvfile(p);

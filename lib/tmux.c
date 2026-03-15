@@ -1,4 +1,4 @@
-/* ═══ TMUX HELPERS ═══ */
+/* tmux */
 static int tm_has(const char *s) {
     char e[256];snprintf(e,256,"=%s",s); /* =exact: no prefix match */
     pid_t p=fork();if(p==0){int fd=open("/dev/null",O_WRONLY);
@@ -37,15 +37,8 @@ static void tm_key(const char *s, const char *key) {
     if (p > 0) waitpid(p, NULL, 0);
 }
 
-/* ═══ DIRECTING SESSIONS ═══
- * a watch <s>           — read pane    a send <s> <prompt> --wait — send + wait
- * Example: a c proj "task" → a send claude-proj "next" --wait → a watch claude-proj
- * C: tm_read(sn,buf,B) inspect, tm_send(sn,text) literal, tm_key(sn,"Enter") key */
-
-/* job cmd: agent top + bash bottom for rapid human-ai collaboration */
+/* job cmd */
 static void jcmd_fill(char*b,int cont){snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;while :;do claude --dangerously-skip-permissions%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",cont?" --continue":"",LOGDIR);}
-
-/* ═══ TMUX CONFIG ═══ */
 
 static void tm_ensure_conf(void) {
     char adir[P]; snprintf(adir, P, "%s/.a", HOME);

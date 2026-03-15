@@ -1,4 +1,4 @@
-/* ═══ FALLBACK — PEP 723 (# /// script) → uv; else → python3 (5x faster) ═══ */
+/* fallback py */
 __attribute__((noreturn))
 static void fallback_py(const char *mod, int argc, char **argv) {
     if (getenv("A_BENCH")) _exit(0);
@@ -19,7 +19,7 @@ static void fallback_py(const char *mod, int argc, char **argv) {
     perror("a: python3");_exit(127);
 }
 
-/* ═══ SESSION CREATE ═══ */
+/* session create */
 static void create_sess(const char *sn, const char *wd, const char *cmd) {
     int ai = cmd && (strstr(cmd,"claude") || strstr(cmd,"codex") || strstr(cmd,"gemini") || strstr(cmd,"aider"));
     char wcmd[B*2];

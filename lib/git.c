@@ -1,9 +1,9 @@
-/* ═══ GIT HELPERS ═══ */
+/* git */
 static int git_in_repo(const char *p) {
     char c[P]; snprintf(c, P, "%s/.git", p); return dexists(c)||fexists(c);
 }
 
-/* ═══ ADATA SETUP ═══ */
+/* adata setup */
 static void ensure_adata(void) {
     char c[B],out[256];
     if(!git_in_repo(SROOT)){
@@ -34,7 +34,7 @@ static void ensure_git_id(void) {
     snprintf(c,B,"git config --global user.name '%s'&&git config --global user.email '%s'",n,e);
     (void)!system(c);printf("\xe2\x9c\x93 git id: %s <%s>\n",n,e);
 }
-/* ═══ SYNC — append-only, hub_save cleans old {name}_*.txt (see 2026-03-06 HSU incident) ═══ */
+/* sync */
 static void sync_repo(void) {
     ensure_git_id();
     char c[B];

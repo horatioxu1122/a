@@ -65,7 +65,7 @@ static int cmd_agent(int argc, char **argv) {
     if (!task || !task[0]) { puts("Usage: a agent [g|c|l] <task>"); return 1; }
     /* Build task string */
     char taskstr[B]=""; int si=(s&&!strcmp(wda,s->key))?3:2;
-    for(int i=si,l=0;i<argc;i++) l+=snprintf(taskstr+l,(size_t)(B-l),"%s%s",i>si?" ":"",argv[i]);
+    ajoin(taskstr,B,argc,argv,si);
     char wd[P]; if(!getcwd(wd,P)) snprintf(wd,P,"%s",HOME);
     char sn[256]; snprintf(sn, 256, "agent-%s-%ld", s->key, (long)time(NULL));
     printf("Agent: %s | Task: %.50s...\n", s->key, taskstr);
