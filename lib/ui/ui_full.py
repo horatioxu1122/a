@@ -246,7 +246,10 @@ async def tasks_api(r):
     return web.Response(text=h or '<div style="color:#888">No tasks</div>',content_type='text/html')
 async def task_archive(r):
     d=await r.json();n=os.path.basename(d.get('d',''));td=f'{_G}/tasks';ad=f'{td}/.archive';os.makedirs(ad,exist_ok=True);p=f'{td}/{n}'
-    if os.path.exists(p): os.rename(p,f'{ad}/{n}')
+    if os.path.exists(p):
+        dst=f'{ad}/{n}'
+        if os.path.exists(dst): dst+=f'.{int(__import__("time").time())}'
+        os.rename(p,dst)
     return web.Response(text='ok')
 async def u_status(r):return web.json_response({'ok':True},headers={'Access-Control-Allow-Origin':'*'})
 
