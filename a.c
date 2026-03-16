@@ -3,7 +3,6 @@
 # Polyglot: shell sees # as comments; C preprocessor skips #if 0..#endif.
 # Fixes: fewer tokens, same speed+. Features: cut until it breaks.
 # TERMUX: set CLAUDE_CODE_TMPDIR=$HOME/.tmp; build with clang directly.
-
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
     set -e; A="$HOME/a"
     command -v git >/dev/null || { echo "Install git first"; exit 1; }
@@ -32,13 +31,11 @@ _ensure_cc() {
     command -v gcc &>/dev/null && { warn "using gcc"; CC=gcc; return 0; }
     echo "ERROR: no compiler"; exit 1
 }
-
 _warn_flags() {
     if [[ "$CC" == *clang* ]]; then
         WARN="-std=c17 -Werror -Wno-unknown-warning-option -Weverything -Wno-padded -Wno-disabled-macro-expansion -Wno-reserved-id-macro -Wno-documentation -Wno-declaration-after-statement -Wno-unsafe-buffer-usage -Wno-used-but-marked-unused -Wno-pre-c11-compat -Wno-implicit-void-ptr-cast -Wno-nullable-to-nonnull-conversion -Wno-poison-system-directories --system-header-prefix=/usr/include -isystem /usr/local/include"
     else WARN="-std=c17 -w"; fi
 }
-
 _shell_funcs() {
     for RC in "$HOME/.bashrc" "$HOME/.zshrc"; do
         touch "$RC"
@@ -66,7 +63,6 @@ AFUNC
     fi
     ok "shell funcs"
 }
-
 _install_node() {
     mkdir -p "$HOME/.local/bin"; export PATH="$HOME/.local/bin:$PATH"
     ARCH=$(uname -m); [[ "$ARCH" == "x86_64" ]] && ARCH="x64"; [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]] && ARCH="arm64"
@@ -77,7 +73,6 @@ _install_node() {
     else curl -fsSL "$URL" | tar -xJf - -C "$HOME/.local" --strip-components=1; fi
     [[ -x "$HOME/.local/bin/node" ]] && ok "node $($HOME/.local/bin/node -v)" || warn "node install failed"
 }
-
 case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
 build)
@@ -114,20 +109,11 @@ build)
         fi
     ) >&- 2>&- &
     ;;
-analyze)
-    _ensure_cc
-    _warn_flags
-    $CC $WARN -DSRC="\"$D\"" --analyze -Xanalyzer -analyzer-output=text \
-        -Xanalyzer -analyzer-checker=security,unix,nullability,optin.portability.UnixAPI \
-        -Xanalyzer -analyzer-disable-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling "$D/a.c"
-    find "$D" -maxdepth 1 -name '*.plist' -delete
-    ;;
-shell)
-    _shell_funcs
-    ;;
-clean)
-    rm -f "$D/adata/local/a"
-    ;;
+analyze) _ensure_cc;_warn_flags
+    $CC $WARN -DSRC="\"$D\"" --analyze -Xanalyzer -analyzer-output=text -Xanalyzer -analyzer-checker=security,unix,nullability,optin.portability.UnixAPI -Xanalyzer -analyzer-disable-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling "$D/a.c"
+    find "$D" -maxdepth 1 -name '*.plist' -delete;;
+shell) _shell_funcs;;
+clean) rm -f "$D/adata/local/a";;
 install)
     BIN="$HOME/.local/bin"; mkdir -p "$BIN"; export PATH="$BIN:$PATH"
     if [[ "$OSTYPE" == darwin* ]]; then OS=mac
@@ -210,7 +196,7 @@ install)
         { command -v gh &>/dev/null&&gh auth status &>/dev/null 2>&1&&gh repo clone seanpattencode/a-git "$SROOT" 2>/dev/null&&ok "adata/git cloned";}||{ git init -q "$SROOT" 2>/dev/null;ok "adata/git init";}
     fi
     RC="$HOME/.bashrc"; [[ -n "$ZSH_VERSION" ]] && RC="$HOME/.zshrc"
-    source "$RC" 2>/dev/null && ok "shell ready (sourced $RC)" || warn "run: source $RC"
+    source "$RC" 2>/dev/null && ok "shell ready" || warn "run: source $RC"
     echo -e "\n${G}✓${R} Install complete — type ${G}a${R}\n"
     ;;
 *)
@@ -219,11 +205,7 @@ install)
 esac
 exit 0
 #endif
-/* a.c — AI agent session manager (self-compiling amalgamation)
- * Test: sh a.c && command a <args> (main) or ./a <args> (worktree)
- * Add cmd: write lib/foo.c, add #include + dispatch entry here.
- * Agent control: a c/co/g (launch), a send/watch (delegate), a ssh (remote)
- * Dispatch: sorted bsearch table (cf. Linux syscall_64.c, SQLite amalgamation) */
+/* a.c — self-compiling agent manager. sh a.c && a <args> to test. */
 #ifndef __APPLE__
 #define _GNU_SOURCE
 #endif
@@ -244,9 +226,6 @@ exit 0
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #endif
-
-/* All persistence in adata/: local/ (per-device), git/ (synced), sync/, backup/
- * ~/.local/bin/a → adata/local/a */
 
 #define P 1024
 #define B 4096
@@ -334,8 +313,7 @@ static int cmd_j(int c,char**v){
     int si=2,nowt=0;if(c>3&&v[2][0]>='0'&&v[2][0]<='9'){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
     char pr[B]="";int pl=0;for(int i=si;i<c;i++){if(!strcmp(v[i],"--no-wt")){nowt=1;continue;}pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);}
     if(!nowt&&git_in_repo(wd)){
-        const char*w=cfget("worktrees_dir");char wt[P];
-        if(w[0])snprintf(wt,P,"%s",w);else snprintf(wt,P,"%s/worktrees",AROOT);
+        char wt[P];{const char*w=cfget("worktrees_dir");snprintf(wt,P,"%s%s",w[0]?w:AROOT,w[0]?"":"/worktrees");}
         time_t now=time(NULL);struct tm*t=localtime(&now);char ts[16];
         strftime(ts,16,"%b%d",t);for(char*p=ts;*p;p++)*p=(*p>='A'&&*p<='Z')?*p+32:*p;
         int h=t->tm_hour%12;if(!h)h=12;char nm[64],wp[P],gc[B];
@@ -359,8 +337,6 @@ static int cmd_adb(int c,char**v){
     if(c>2&&!strcmp(v[2],"ssh"))return system("for s in $(adb devices|awk '/\\tdevice$/{print$1}');do printf '\\033[36m→ %s\\033[0m ' \"$s\";adb -s \"$s\" shell 'am broadcast -n com.termux/.app.TermuxOpenReceiver -a com.termux.RUN_COMMAND --es com.termux.RUN_COMMAND_PATH /data/data/com.termux/files/usr/bin/sshd --ez com.termux.RUN_COMMAND_BACKGROUND true' 2>&1|tail -1;done");
     execlp("adb","adb","devices","-l",(char*)0);return 1;
 }
-
-/* once — headless claude -p */
 static int cmd_run_once(int c,char**v){
     if(c<3){puts("Usage: a once [-t secs] [claude flags] prompt words...");return 1;}
     unsigned tl=600;int si=2;
@@ -384,11 +360,8 @@ static int cmd_run_once(int c,char**v){
         sleep(1);}
     fprintf(stderr,"\n\033[31m✗ TIMEOUT\033[0m: a once >%us\n",tl);
     kill(ch,SIGKILL);waitpid(ch,NULL,0);return 124;}
-
 static int cmd_my(int c,char**v){(void)c;(void)v;char d[P];snprintf(d,P,"%s/my",SROOT);
     execlp("ls","ls","--color",d,(char*)0);return 1;}
-
-/* dispatch — sorted, bsearch */
 typedef struct { const char *n; int (*fn)(int, char**); } cmd_t;
 static int cmd_cmp(const void*a,const void*b){return strcmp(((const cmd_t*)a)->n,((const cmd_t*)b)->n);}
 static const cmd_t CMDS[] = {
@@ -417,16 +390,11 @@ static const cmd_t CMDS[] = {
     {"work",cmd_work},{"x",cmd_x},
 };
 #define NCMDS (sizeof(CMDS)/sizeof(*CMDS))
-
-/* perf kill */
 static char perf_msg[B];
-__attribute__((noreturn)) static void perf_alarm(int sig) {
-    (void)sig;
-    (void)!write(STDERR_FILENO, perf_msg, strlen(perf_msg));
-    kill(0, SIGTERM); _exit(124);
-}
+__attribute__((noreturn)) static void perf_alarm(int sig){(void)sig;
+    (void)!write(STDERR_FILENO,perf_msg,strlen(perf_msg));kill(0,SIGTERM);_exit(124);}
 static void perf_arm(const char *cmd) {
-    if (getenv("A_BENCH")) return; /* bench children: parent handles timeout */
+    if (getenv("A_BENCH")) return;
     if (isdigit(*cmd)) return;
     {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|email|install|send|j|job|pr|hub|create|repo|e|revert|",sk))return;}
     unsigned secs = 1, limit_us = 1000000;
@@ -441,11 +409,8 @@ static void perf_arm(const char *cmd) {
     alarm(secs);
 }
 static void perf_disarm(void) { alarm(0); signal(SIGALRM, SIG_DFL); }
-
-/* main */
 int main(int argc, char **argv) {
-    init_paths();
-    G_argc = argc; G_argv = argv;
+    init_paths();G_argc=argc;G_argv=argv;
 
     if (argc < 2) return (isatty(1)?cmd_i:cmd_help)(argc, argv);
 
@@ -463,30 +428,17 @@ int main(int argc, char **argv) {
       const cmd_t *c = bsearch(&key, CMDS, NCMDS, sizeof(*CMDS), cmd_cmp);
       if (c) return c->fn(argc, argv); }
 
-    if (arg[0] == 'x' && arg[1] == '.')
-        { char mod[P]; snprintf(mod, P, "lab/%s", arg + 2); fallback_py(mod, argc, argv); }
-
+    if(*arg=='x'&&arg[1]=='.'){char mod[P];snprintf(mod,P,"lab/%s",arg+2);fallback_py(mod,argc,argv);}
     {size_t l=strlen(arg);if(l>=3&&arg[l-1]=='+'&&arg[l-2]=='+'&&*arg!='w')return cmd_wt_plus(argc,argv);}
-
-    if (arg[0] == 'w' && arg[1] && !fexists(arg))
-        return cmd_wt(argc, argv);
-
-    { init_db(); load_cfg(); load_sess();
-      if (find_sess(arg)) return cmd_sess(argc, argv); }
-
-    if (dexists(arg) || fexists(arg)) return cmd_dir_file(argc, argv);
-    { char ep[P]; snprintf(ep, P, "%s%s", HOME, arg);
-      if (arg[0] == '/' && dexists(ep)) return cmd_dir_file(argc, argv); }
-
-    if (strlen(arg) <= 3 && arg[0] >= 'a' && arg[0] <= 'z')
-        return cmd_sess(argc, argv);
-
-    if (tm_has(arg)) { tm_go(arg); return 0; }
-
-    { char mf[P]; static const char*X[]={"",".py",".c",".sh",".html",0};
-      for(int i=0;X[i];i++){snprintf(mf,P,"%s/my/%s%s",SROOT,arg,X[i]);
-        if(fexists(mf)){perf_disarm();char md[P];snprintf(md,P,"%s/my",SROOT);(void)!chdir(md);argv[1]=mf;return cmd_dir_file(argc,argv);}}}
-
-    fprintf(stderr, "a: '%s' is not a command. See 'a help'.\n", arg);
+    if(*arg=='w'&&arg[1]&&!fexists(arg))return cmd_wt(argc,argv);
+    {init_db();load_cfg();load_sess();if(find_sess(arg))return cmd_sess(argc,argv);}
+    if(dexists(arg)||fexists(arg))return cmd_dir_file(argc,argv);
+    {char ep[P];snprintf(ep,P,"%s%s",HOME,arg);if(*arg=='/'&&dexists(ep))return cmd_dir_file(argc,argv);}
+    if(strlen(arg)<=3&&islower(*arg))return cmd_sess(argc,argv);
+    if(tm_has(arg)){tm_go(arg);return 0;}
+    {char mf[P];static const char*X[]={"",".py",".c",".sh",".html",0};
+     for(int i=0;X[i];i++){snprintf(mf,P,"%s/my/%s%s",SROOT,arg,X[i]);
+      if(fexists(mf)){perf_disarm();char md[P];snprintf(md,P,"%s/my",SROOT);(void)!chdir(md);argv[1]=mf;return cmd_dir_file(argc,argv);}}}
+    fprintf(stderr,"a: unknown '%s'\n",arg);
     return 1;
 }

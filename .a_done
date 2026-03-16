@@ -1,5 +1,6 @@
-summary: cut tokens across a.c + all lib/*.c files
-cuts: AB macro (15 sites), ajoin helper (15 sites), ssh_idx dedup (3 sites),
-      perf_limit dedup, comment header cuts, dead forward decl removed,
-      log sub-check merge, tmux comment block cut
+summary: pass 2 token cuts — PY macro, strspn, stack alloc, shell tightening
+cumulative: -3406 tokens, -198 lines across 19 files (a.c: 668→492, -26%)
+cuts: PY() macro (5 wrappers), merged cmd_j guards, stack array in cmd_run_once,
+      strspn digit check, idempotent mkdir/ln/rm, playwright info dedup,
+      collapsed adata/git init, shortened strings
 test: cd ~/a && bash a.c && adata/local/a help && adata/local/a hi && adata/local/a diff
