@@ -37,6 +37,9 @@ HTML = '''<!doctype html>
   <div id=qo style="width:90vw;max-width:800px;margin-top:20px;max-height:70vh;overflow-y:auto"></div>
 </div>
 __MY__
+<div id=v_tasks style="display:none;height:100vh;flex-direction:column;padding:20px;align-items:center;overflow-y:auto">
+  <div id=tl style="width:95vw;max-width:900px;color:#fff;font-family:monospace;font-size:14px"></div>
+</div>
 <div id=v_term style="display:none;height:100vh">
   <div id=t style="height:100vh"></div>
 </div>
@@ -62,11 +65,12 @@ __MY__
 </div>
 <div id=v_dc style="position:fixed;inset:0;background:#000;color:red;text-align:center;padding-top:45vh;display:none">not connected</div>
 <script>
-var views={'/':'v_index','/jobs':'v_jobs','/term':'v_term','/note':'v_note'__MV__}, T, F, W;
+var views={'/':'v_index','/jobs':'v_jobs','/term':'v_term','/note':'v_note','/tasks':'v_tasks'__MV__}, T, F, W;
 // perf: go() must stay <1ms. show() is DOM toggle only, no network. keep this instrumentation.
 function go(p){var t=performance.now();history.pushState(null,'',p);show(p);console.log('go('+p+') '+(performance.now()-t).toFixed(2)+'ms');}
-function show(p){for(var k in views)document.getElementById(views[k]).style.display=k===p?(k==='/term'?'block':'flex'):'none';if(p==='/term'&&F)setTimeout(function(){F.fit();T.focus()},0);if(p==='/note'&&!nl.children.length)fetch('/note-list').then(function(r){return r.text()}).then(function(h){nl.innerHTML=h});}
+function show(p){for(var k in views)document.getElementById(views[k]).style.display=k===p?(k==='/term'?'block':'flex'):'none';if(p==='/term'&&F)setTimeout(function(){F.fit();T.focus()},0);if(p==='/note'&&!nl.children.length)fetch('/note-list').then(function(r){return r.text()}).then(function(h){nl.innerHTML=h});if(p==='/tasks')fetch('/api/tasks').then(function(r){return r.text()}).then(function(h){tl.innerHTML=h});}
 function arcn(f,el){fetch('/api/note/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({f:f})});el.parentElement.remove();}
+function arct(d,el){fetch('/api/task/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({d:d})});el.parentElement.remove();}
 function loadjobs(){Promise.all([fetch('/api/jobs').then(function(r){return r.text()}),fetch('/api/job-status').then(function(r){return r.json()})]).then(function(d){
   var h=d[0];if(d[1].length){h+='\\n\\n--- Job PRs ---\\n';d[1].forEach(function(j){
     h+=j.status+(j.step?' ['+j.step+']':'')+' '+j.name;
@@ -208,10 +212,46 @@ async def omni_api(r):
     if not cmd: return web.Response(text='')
     try: p = S.run([_A]+cmd.split(),capture_output=True,text=True,timeout=10); return web.Response(text=f'<pre style="color:#fff">{E(p.stdout or p.stderr or "ok")}</pre>',content_type='text/html')
     except: return web.Response(text='<pre style="color:red">timeout</pre>',content_type='text/html')
+async def tasks_api(r):
+    td=f'{_G}/tasks';h=''
+    if not os.path.isdir(td): return web.Response(text='<div style="color:#888">No tasks</div>',content_type='text/html')
+    tasks=[]
+    for d in os.listdir(td):
+        if d.startswith('.'): continue
+        fp=f'{td}/{d}';hp=len(d)>5 and d[5]=='-' and d[:5].isdigit()
+        pri=d[:5] if hp else '50000'
+        slug=(d[6:] if hp else d).split('_')[0].replace('-',' ')
+        # try reading Text: from task subdir
+        txt=''
+        for sp in [f'{fp}/task',fp]:
+            if os.path.isdir(sp):
+                for f in os.listdir(sp):
+                    if f.endswith('.txt'):
+                        try:
+                            for l in open(f'{sp}/{f}'):
+                                if l.startswith('Text: '): txt=l[6:].strip(); break
+                        except: pass
+                    if txt: break
+            if txt: break
+        if not txt and os.path.isfile(fp):
+            try:
+                for l in open(fp):
+                    if l.startswith('Text: '): txt=l[6:].strip(); break
+            except: pass
+        tasks.append((pri,txt or slug,d))
+    tasks.sort()
+    for pri,txt,d in tasks:
+        c='#f44' if pri<='01000' else '#fa0' if pri<='10000' else '#aaa'
+        h+=f'<div class=ni><button onclick="arct(\'{E(d)}\',this)" class=nx>x</button><span style="color:{c}">P{E(pri)}</span> {E(txt[:120])}</div>'
+    return web.Response(text=h or '<div style="color:#888">No tasks</div>',content_type='text/html')
+async def task_archive(r):
+    d=await r.json();n=os.path.basename(d.get('d',''));td=f'{_G}/tasks';ad=f'{td}/.archive';os.makedirs(ad,exist_ok=True);p=f'{td}/{n}'
+    if os.path.exists(p): os.rename(p,f'{ad}/{n}')
+    return web.Response(text='ok')
 async def u_status(r):return web.json_response({'ok':True},headers={'Access-Control-Allow-Origin':'*'})
 
 async def my_page(r): return web.FileResponse(f'{_G}/my/{r.match_info["f"]}.html')
-app = web.Application(); app.add_routes([web.get('/', spa), web.get('/jobs', spa), web.get('/term', spa), web.get('/note', spa), web.get('/ws', term), web.get('/restart', restart), web.get('/api/jobs', jobs_api), web.post('/api/jobs', jobs_api), web.get('/api/job-status', job_status_api), web.get('/api/term', term_capture), web.get('/note-list', note_api), web.post('/note', note_api), web.post('/api/note/archive', note_archive), web.get('/api/sync', sync_api), web.post('/api/omni', omni_api), web.get('/api/u-status', u_status), web.get('/{f}', my_page), web.static('/my', f'{_G}/my')])
+app = web.Application(); app.add_routes([web.get('/', spa), web.get('/jobs', spa), web.get('/term', spa), web.get('/note', spa), web.get('/tasks', spa), web.get('/ws', term), web.get('/restart', restart), web.get('/api/jobs', jobs_api), web.post('/api/jobs', jobs_api), web.get('/api/job-status', job_status_api), web.get('/api/term', term_capture), web.get('/note-list', note_api), web.post('/note', note_api), web.post('/api/note/archive', note_archive), web.get('/api/sync', sync_api), web.post('/api/omni', omni_api), web.get('/api/tasks', tasks_api), web.post('/api/task/archive', task_archive), web.get('/api/u-status', u_status), web.get('/{f}', my_page), web.static('/my', f'{_G}/my')])
 
 def run(port=1111): web.run_app(app, port=port, print=None)
 if __name__ == '__main__': run(int(sys.argv[1]) if len(sys.argv) > 1 else 1111)
