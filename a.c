@@ -508,3 +508,13 @@ int main(int argc, char **argv) {
     fprintf(stderr,"a: unknown '%s'\n",arg);
     return 1;
 }
+/* Repo struture: 
+adata: all persistent data
+lab: experimental work
+lib: flat program files
+my: symlink user program files
+a.c: command dispatch, install, env setup
+AGENTS.md: custom ai instructions
+IDEAS.md: explain why project exists
+README.md: new user information
+*/
