@@ -39,13 +39,16 @@ Sign in, then ask:
 ## Core Commands
 
 ```bash
-a c              # Start Claude (co=codex, g=gemini, a=aider)
+a                # Show all commands 
+a c              # Start Claude (co=codex, g=gemini, a=default agent)
 a push           # Checkpoint: commit + push
 a pull           # Nuke local: reset to remote
+a diff           # Check token diff
 a revert         # Interactive: pick commit to restore
 a <#>            # cd to project by number
 a j "prompt"     # Launch agent job in background
 a n "text"       # Quick note
+a hub            # Schedule operations
 a help           # Full command list
 ```
 
