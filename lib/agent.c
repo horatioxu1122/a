@@ -31,7 +31,7 @@ static int cmd_agent(int argc, char **argv) {
         snprintf(f,P,"%s/agents/%s.py",SROOT,argv[3]);
         if(!fexists(f)){printf("x Not found: %s\n",argv[3]);return 1;}
         perf_disarm();
-        char wd[P];if(!getcwd(wd,P))snprintf(wd,P,"%s",HOME);
+        CWD(wd);
         char sn[256];snprintf(sn,256,"agent-%s-%ld",argv[3],(long)time(NULL));
         char cmd[B];
         if(strstr(f,".c")){snprintf(cmd,B,"sh '%s'",f);}
@@ -66,7 +66,7 @@ static int cmd_agent(int argc, char **argv) {
     /* Build task string */
     char taskstr[B]=""; int si=(s&&!strcmp(wda,s->key))?3:2;
     ajoin(taskstr,B,argc,argv,si);
-    char wd[P]; if(!getcwd(wd,P)) snprintf(wd,P,"%s",HOME);
+    CWD(wd);
     char sn[256]; snprintf(sn, 256, "agent-%s-%ld", s->key, (long)time(NULL));
     printf("Agent: %s | Task: %.50s...\n", s->key, taskstr);
     create_sess(sn, wd, s->cmd);

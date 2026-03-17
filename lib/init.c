@@ -42,7 +42,7 @@ static void init_paths(void) {
     /* All local state lives in adata/ — if it's not in adata, nobody knows
      * where it is. Maximum visibility for humans and LLMs. */
     snprintf(DDIR, P, "%s/local", AROOT);
-    { char tmp[P]; snprintf(tmp,P,"%s",DDIR); for(char*p=tmp+1;*p;p++) if(*p=='/'){*p=0;mkdir(tmp,0755);*p='/';} mkdir(tmp,0755); }
+    mkdirp(DDIR);
     /* One-time migration: old sibling adata/ → inside project dir */
     char old_sib[P]; snprintf(old_sib, P, "%.*s/adata", (int)(strlen(SDIR) - strlen("/a")), SDIR);
     /* only migrate if old sibling exists and new doesn't have .device yet */
@@ -64,22 +64,11 @@ static void init_paths(void) {
     if (f) { if (fgets(DEV, 128, f)) DEV[strcspn(DEV, "\n")] = 0; fclose(f); }
     if (!DEV[0]) {
         gethostname(DEV, 128);
-        char c[P]; snprintf(c, P, "mkdir -p '%s'", DDIR); (void)!system(c);
+        mkdirp(DDIR);
         f = fopen(df, "w"); if (f) { fputs(DEV, f); fclose(f); }
     }
     snprintf(LOGDIR, P, "%s/backup/%s", AROOT, DEV);
-    /* ensure adata README exists */
-    char rm[P]; snprintf(rm, P, "%s/README", AROOT);
-    struct stat st;
-    if (stat(rm, &st) != 0) {
-        f = fopen(rm, "w");
-        if (f) {
-            fputs("adata/ - 4-tier data sync\n\n"
-                  "  git/      git push/pull       all devices     text <15M\n"
-                  "  sync/     rclone copy <->      all devices     large files <5G\n"
-                  "  vault/    rclone copy on-demand big devices     models/datasets\n"
-                  "  backup/   rclone move ->        all devices     logs+state, upload+purge\n", f);
-            fclose(f);
-        }
-    }
+    {char rm[P];snprintf(rm,P,"%s/README",AROOT);struct stat st;
+    if(stat(rm,&st)!=0){f=fopen(rm,"w");if(f){fputs("adata/ - 4-tier data sync\n\n"
+        "  git/    push/pull   sync/   rclone   vault/  on-demand   backup/ upload+purge\n",f);fclose(f);}}}
 }

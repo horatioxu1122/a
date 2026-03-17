@@ -20,9 +20,7 @@ static unsigned perf_limit(const char *data, const char *cmd) {
     return 0;
 }
 
-static void fmt_us(unsigned us, char *buf, size_t sz) {
-    snprintf(buf, sz, "%.3fms", us / 1000.0);
-}
+#define fmt_us(us,buf,sz) snprintf(buf,sz,"%.3fms",(us)/1000.0)
 
 static int cmd_perf(int argc, char **argv) {
     perf_disarm();

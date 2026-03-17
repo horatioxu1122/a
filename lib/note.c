@@ -88,16 +88,17 @@ static void task_printbody(const char*path){
         if(*p&&strncmp(p,"Device: ",8)&&strncmp(p,"Created: ",9))printf("    %s\n",p);
         if(!nl)break;p=nl+1;}
 }
+typedef struct{char n[64];int c;}tcnt_t;
+static int tcnt_cmp(const void*a,const void*b){return strcmp(((const tcnt_t*)a)->n,((const tcnt_t*)b)->n);}
 static int task_counts(const char*dir,char*out,int sz){
     DIR*d=opendir(dir);if(!d){*out=0;return 0;}struct dirent*e;
-    struct{char n[64];int c;}s[32];int nd=0;
+    tcnt_t s[32];int nd=0;
     while((e=readdir(d))&&nd<32){if(e->d_name[0]=='.'||e->d_type!=DT_DIR)continue;
         char sd[P];snprintf(sd,P,"%s/%s",dir,e->d_name);DIR*ds=opendir(sd);if(!ds)continue;
         struct dirent*f;int c=0;while((f=readdir(ds)))if(f->d_type==DT_REG&&strstr(f->d_name,".txt"))c++;
         closedir(ds);if(c){snprintf(s[nd].n,64,"%s",e->d_name);s[nd].c=c;nd++;}
     }closedir(d);if(!nd){*out=0;return 0;}
-    for(int i=0;i<nd-1;i++)for(int j=i+1;j<nd;j++)if(strcmp(s[i].n,s[j].n)>0){
-        char tn[64];int tc;memcpy(tn,s[i].n,64);tc=s[i].c;memcpy(s[i].n,s[j].n,64);s[i].c=s[j].c;memcpy(s[j].n,tn,64);s[j].c=tc;}
+    qsort(s,(size_t)nd,sizeof(tcnt_t),tcnt_cmp);
     int p=snprintf(out,(size_t)sz," [");for(int i=0;i<nd;i++)p+=snprintf(out+p,(size_t)(sz-p),"%s%d %s",i?", ":"",s[i].c,s[i].n);
     snprintf(out+p,(size_t)(sz-p),"]");return nd;
 }
@@ -125,6 +126,7 @@ static void ts_human(const char*ts,char*out,size_t sz){
     strncat(out,tmp,sz-strlen(out)-1);
 }
 typedef struct{char sid[128];char tmx[128];char ts[32];char wd[P];int st;}Sess;
+static int sess_ts_cmp(const void*a,const void*b){return strcmp(((const Sess*)a)->ts,((const Sess*)b)->ts);}
 static int load_sessions(const char*td,Sess*ss,int max){
     DIR*d=opendir(td);if(!d)return 0;struct dirent*e;int ns=0;
     while((e=readdir(d))&&ns<max){
@@ -142,8 +144,7 @@ static int load_sessions(const char*td,Sess*ss,int max){
         ss[ns].st=2;
         ns++;}
     closedir(d);
-    /* sort by timestamp ascending */
-    for(int a=0;a<ns-1;a++)for(int b=a+1;b<ns;b++)if(strcmp(ss[a].ts,ss[b].ts)>0){Sess tmp=ss[a];ss[a]=ss[b];ss[b]=tmp;}
+    qsort(ss,(size_t)ns,sizeof(Sess),sess_ts_cmp);
     return ns;
 }
 static void task_todir(char*p){char tmp[P];snprintf(tmp,P,"%s.tmp",p);rename(p,tmp);mkdir(p,0755);

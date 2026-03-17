@@ -34,11 +34,11 @@ static void create_sess(const char *sn, const char *wd, const char *cmd) {
         snprintf(c, B, "tmux select-pane -t '%s' -U", sn); (void)!system(c);
     }
     /* logging */
-    char c[B]; snprintf(c, B, "mkdir -p '%s'", LOGDIR); (void)!system(c);
+    mkdirp(LOGDIR); char c[B];
     char lf[P]; snprintf(lf, P, "%s/%s__%s.log", LOGDIR, DEV, sn);
     snprintf(c, B, "tmux pipe-pane -t '%s' 'cat >> %s'", sn, lf); (void)!system(c);
     char al[B]; snprintf(al, B, "session:%s log:%s", sn, lf);
-    alog(al, wd, NULL);
+    alog(al, wd);
     /* agent_logs */
     char alf[P]; snprintf(alf, P, "%s/agent_logs.txt", DDIR);
     time_t now = time(NULL);

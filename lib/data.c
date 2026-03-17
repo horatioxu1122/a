@@ -30,14 +30,13 @@ static void init_db(void) {
     mkdirp(DDIR);
     char p[P]; snprintf(p, P, "%s/config.txt", DDIR);
     if (!fexists(p)) {
-        char pp[P], dp[B] = ""; snprintf(pp, P, "%s/common/prompts/default.txt", SROOT);
-        char *pd = readf(pp, NULL); if (pd) { snprintf(dp, B, "%s", pd); free(pd); }
-        char edp[B]; esc_nl(dp, edp, B);
-        char wt[P]; snprintf(wt, P, "%s/worktrees", AROOT);
-        char buf[B*2]; snprintf(buf, sizeof(buf),
-            "claude_prompt: %s\ncodex_prompt: %s\ngemini_prompt: %s\n"
-            "worktrees_dir: %s\nmulti_default: l:3\nclaude_prefix: Ultrathink. \n", edp, edp, edp, wt);
-        writef(p, buf);
+        char pp[P],dp[B]="";snprintf(pp,P,"%s/common/prompts/default.txt",SROOT);
+        char*pd=readf(pp,NULL);if(pd){snprintf(dp,B,"%s",pd);free(pd);}
+        char edp[B];esc_nl(dp,edp,B);
+        char buf[B*2];int l=0;const char*pk[]={"claude_prompt","codex_prompt","gemini_prompt",NULL};
+        for(const char**k=pk;*k;k++)l+=snprintf(buf+l,(size_t)(B*2-l),"%s: %s\n",*k,edp);
+        l+=snprintf(buf+l,(size_t)(B*2-l),"worktrees_dir: %s/worktrees\nmulti_default: l:3\nclaude_prefix: Ultrathink. \n",AROOT);
+        writef(p,buf);
     }
     snprintf(p, P, "%s/sessions.txt", DDIR);
     if (!fexists(p)) {

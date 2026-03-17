@@ -1,5 +1,5 @@
 /* alog */
-static void alog(const char *cmd, const char *cwd, const char *extra) { (void)extra;
+static void alog(const char *cmd, const char *cwd) {
     char dir[P]; snprintf(dir, P, "%s/git/activity", AROOT);
     time_t t = time(NULL); struct tm *tm = localtime(&t);
     struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts);

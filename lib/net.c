@@ -1,13 +1,10 @@
 /* ── bg backup ── */
 static void bg_backup_jsonl(void) {
-    char c[B]; snprintf(c, B, "nohup sh -c '"
-        "mkdir -p %s/backup/%s && "
-        "find ~/.claude/projects -name \"*.jsonl\" 2>/dev/null "
-        "| while read f; do cp -n \"$f\" %s/backup/%s/ 2>/dev/null; done; "
-        "r=$(rclone listremotes 2>/dev/null | grep \"^a-gdrive\" | head -1 | tr -d \":\"); "
-        "[ -n \"$r\" ] && rclone copy %s/backup/%s \"$r:adata/backup/%s/\" --include \"*.jsonl\" -q"
-        "' </dev/null >/dev/null 2>&1 &",
-        AROOT, DEV, AROOT, DEV, AROOT, DEV, DEV);
+    char c[B]; snprintf(c, B, "nohup sh -c 'D=%s/backup/%s;mkdir -p $D&&"
+        "find ~/.claude/projects -name \"*.jsonl\" 2>/dev/null|while read f;do cp -n \"$f\" $D/ 2>/dev/null;done;"
+        "r=$(rclone listremotes 2>/dev/null|grep \"^a-gdrive\"|head -1|tr -d \":\");"
+        "[ -n \"$r\" ]&&rclone copy $D \"$r:adata/backup/%s/\" --include \"*.jsonl\" -q"
+        "' </dev/null >/dev/null 2>&1 &", AROOT, DEV, DEV);
     (void)!system(c);
 }
 

@@ -3,8 +3,7 @@
 typedef struct { char n[64],s[16],p[512],d[64],lr[24]; int en; } hub_t;
 static hub_t HJ[MJ]; static int NJ;
 
-static const char *dfl(const char *a, const char *b) { return a ? a : b; }
-
+#define DFL(a,b) ((a)?(a):(b))
 static void hub_load(void) {
     char hd[P],fp[P];snprintf(hd,P,"%s/agents",SROOT);mkdirp(hd);NJ=0;
     snprintf(fp,P,"ls -t %s/*.txt 2>/dev/null",hd);FILE*f=popen(fp,"r");if(!f)return;
@@ -12,8 +11,8 @@ static void hub_load(void) {
         kvs_t kv=kvfile(fp);const char*nm=kvget(&kv,"Name");if(!nm)continue;
         int di=0;for(;di<NJ&&strcmp(HJ[di].n,nm);di++){} if(di<NJ)continue;
         hub_t*j=&HJ[NJ++];const char*en=kvget(&kv,"Enabled");
-        snprintf(j->n,64,"%s",nm);snprintf(j->s,16,"%s",dfl(kvget(&kv,"Schedule"),""));snprintf(j->p,512,"%s",dfl(kvget(&kv,"Prompt"),""));snprintf(j->d,64,"%s",dfl(kvget(&kv,"Device"),DEV));
-        j->en=!en||en[0]=='t'||en[0]=='T';snprintf(j->lr,24,"%s",dfl(kvget(&kv,"Last-Run"),""));}pclose(f);
+        snprintf(j->n,64,"%s",nm);snprintf(j->s,16,"%s",DFL(kvget(&kv,"Schedule"),""));snprintf(j->p,512,"%s",DFL(kvget(&kv,"Prompt"),""));snprintf(j->d,64,"%s",DFL(kvget(&kv,"Device"),DEV));
+        j->en=!en||en[0]=='t'||en[0]=='T';snprintf(j->lr,24,"%s",DFL(kvget(&kv,"Last-Run"),""));}pclose(f);
 }
 
 static void hub_save(hub_t *j) {
@@ -53,8 +52,8 @@ static void hub_timer(hub_t *j, int on) {
 
 static int hub_smin(const char*s){int h=0,m=0;if(!s||!*s)return 9999;
     if(strchr(s,'/'))return 0;sscanf(s,"%d:%d",&h,&m);return h*60+m;}
-static void hub_sort(void){for(int i=0;i<NJ-1;i++)for(int j=i+1;j<NJ;j++)
-    if(hub_smin(HJ[j].s)<hub_smin(HJ[i].s)){hub_t t=HJ[i];HJ[i]=HJ[j];HJ[j]=t;}}
+static int hub_cmp(const void*a,const void*b){return hub_smin(((const hub_t*)a)->s)-hub_smin(((const hub_t*)b)->s);}
+static void hub_sort(void){qsort(HJ,(size_t)NJ,sizeof(hub_t),hub_cmp);}
 static char HUB_TL[B*4];
 static void hub_timers(void){
 #ifdef __ANDROID__
@@ -126,7 +125,7 @@ static int cmd_hub(int argc, char **argv) {
             strftime(ts,32,"%Y-%m-%d %I:%M:%S%p",t); strftime(j->lr,24,"%Y-%m-%d %H:%M",t);
             hub_save(j); sync_bg();
             FILE *lp=fopen(lf,"a"); if(lp) { fprintf(lp,"\n[%s] %s\n%s",ts,j->n,out); fclose(lp); }
-            char sn[128]; snprintf(sn,128,"hub:%s",j->n); alog(sn,""," ");
+            char sn[128]; snprintf(sn,128,"hub:%s",j->n); alog(sn,"");
             printf("\xe2\x9c\x93\n"); return 0;
         }
         if(!strcmp(sub,"on")||!strcmp(sub,"off")) {

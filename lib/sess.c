@@ -4,7 +4,7 @@ static int cmd_sess(int argc, char **argv) {
     const char *key = argv[1];
     sess_t *s = find_sess(key);
     if (!s) return -1;  /* not a session key */
-    char wd[P]; if(!getcwd(wd,P)) snprintf(wd,P,"%s",HOME);
+    CWD(wd);
     const char *wda = argc > 2 ? argv[2] : NULL;
     /* If wda is a project number */
     if (wda && wda[0] >= '0' && wda[0] <= '9') {

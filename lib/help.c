@@ -49,17 +49,13 @@ static void gen_icache(void) {
         FILE*pf=fopen(fp,"r");if(pf){char h[256];if(fgets(h,256,pf)){
             char*s=strstr(h," - ");if(s){s+=3;s[strcspn(s,"\"\n")]=0;snprintf(desc,128,"%s",s);}}fclose(pf);}
         fprintf(f,"%s\t%s\n",e->d_name,desc[0]?desc:"cmd");}closedir(d);}}
-    /* auto-discover my scripts */
-    {char md[P];snprintf(md,P,"%s/my",SROOT);DIR*d=opendir(md);struct dirent*e;
+    /* auto-discover my + lab scripts */
+    {const char*sd[]={SROOT,SDIR};const char*sl[]={"my","lab"};
+    for(int si=0;si<2;si++){char md[P];snprintf(md,P,"%s/%s",sd[si],sl[si]);DIR*d=opendir(md);struct dirent*e;
     if(d){while((e=readdir(d))){if(e->d_name[0]=='.'||e->d_name[0]=='_')continue;
-        char nm[64];snprintf(nm,64,"%s",e->d_name);char*dot=strrchr(nm,'.');if(dot)*dot=0;
-        fprintf(f,"%s\tmy\n",nm);}closedir(d);}}
-    /* auto-discover lab scripts */
-    {char ld[P];snprintf(ld,P,"%s/lab",SDIR);DIR*d=opendir(ld);struct dirent*e;
-    if(d){while((e=readdir(d))){char*dot=strrchr(e->d_name,'.');
-        if(!dot||e->d_name[0]=='_')continue;
-        if(strcmp(dot,".py")&&strcmp(dot,".c")&&strcmp(dot,".sh")&&strcmp(dot,".html"))continue;*dot=0;
-        fprintf(f,"x.%s\tlab\n",e->d_name);}closedir(d);}}
+        char nm[64];snprintf(nm,64,"%s",e->d_name);char*dot=strrchr(nm,'.');
+        if(si&&(!dot||(strcmp(dot,".py")&&strcmp(dot,".c")&&strcmp(dot,".sh")&&strcmp(dot,".html"))))continue;if(dot)*dot=0;
+        if(si)fprintf(f,"x.%s\tlab\n",nm);else fprintf(f,"%s\tmy\n",nm);}closedir(d);}}}
     /* subcommands not discoverable from filenames */
     fputs("cal add\tadd event\nhub add\tadd\nhub run\trun\nhub rm\trm\nhub log\tlog\n"
     "note l\tlist\nnote r\treview\nssh add\tadd host\nssh all\tall hosts\n"

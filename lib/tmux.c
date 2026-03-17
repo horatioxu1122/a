@@ -93,13 +93,9 @@ static void tm_ensure_conf(void) {
     if (access("/data/data/com.termux",F_OK)==0)
         fprintf(f,"set-environment -g CLAUDE_CODE_TMPDIR \"%s/.tmp\"\n",HOME);
     if (cc) fprintf(f, "set -s copy-command \"%s\"\n", cc);
-    if (cc) {
-        fprintf(f, "bind -T copy-mode MouseDragEnd1Pane send -X copy-pipe-and-cancel \"%s\"\n", cc);
-        fprintf(f, "bind -T copy-mode-vi MouseDragEnd1Pane send -X copy-pipe-and-cancel \"%s\"\n", cc);
-    } else {
-        fputs("bind -T copy-mode MouseDragEnd1Pane send -X copy-pipe-and-cancel\n"
-              "bind -T copy-mode-vi MouseDragEnd1Pane send -X copy-pipe-and-cancel\n", f);
-    }
+    {const char*cm[]={"copy-mode","copy-mode-vi",NULL};
+    for(int i=0;cm[i];i++) cc?fprintf(f,"bind -T %s MouseDragEnd1Pane send -X copy-pipe-and-cancel \"%s\"\n",cm[i],cc)
+        :fprintf(f,"bind -T %s MouseDragEnd1Pane send -X copy-pipe-and-cancel\n",cm[i]);}
     /* tmux >= 3.6: scrollbar support */
     char vbuf[64] = ""; int vmaj = 0, vmin = 0;
     pcmd("tmux -V 2>/dev/null", vbuf, 64);

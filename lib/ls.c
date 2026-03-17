@@ -1,26 +1,24 @@
+/* tmux session list helper */
+static int tm_list(char out[B], char *lines[], int max) {
+    pcmd("tmux list-sessions -F '#{session_name}' 2>/dev/null", out, B);
+    int n=0; char *p=out;
+    while (*p && n < max) { lines[n++]=p; char *e=strchr(p,'\n'); if(e){*e=0;p=e+1;}else break; }
+    return n;
+}
 /* ── ls ── */
 static int cmd_ls(int argc, char **argv) {
+    char out[B]; char *lines[64]; int n=tm_list(out,lines,64);
     if (argc > 2 && argv[2][0] >= '0' && argv[2][0] <= '9') {
-        /* Attach by number */
-        char out[B]; pcmd("tmux list-sessions -F '#{session_name}' 2>/dev/null", out, B);
-        char *lines[64]; int n = 0; char *p = out;
-        while (*p && n < 64) { lines[n++] = p; char *e = strchr(p,'\n'); if (e) { *e=0; p=e+1; } else break; }
         int idx = atoi(argv[2]);
         if (idx >= 0 && idx < n) tm_go(lines[idx]);
         return 0;
     }
-    char out[B]; pcmd("tmux list-sessions -F '#{session_name}' 2>/dev/null", out, B);
-    if (!out[0]) { puts("No sessions"); return 0; }
-    char *p = out; int i = 0;
-    while (*p) {
-        char *e = strchr(p, '\n'); if (e) *e = 0;
-        if (*p) {
-            char c[B], path[512] = "";
-            snprintf(c, B, "tmux display-message -p -t '%s' '#{pane_current_path}' 2>/dev/null", p);
-            pcmd(c, path, 512); path[strcspn(path,"\n")] = 0;
-            printf("  %d  %s: %s\n", i++, p, path);
-        }
-        if (e) p = e + 1; else break;
+    if (!n) { puts("No sessions"); return 0; }
+    for (int i = 0; i < n; i++) {
+        char c[B], path[512] = "";
+        snprintf(c, B, "tmux display-message -p -t '%s' '#{pane_current_path}' 2>/dev/null", lines[i]);
+        pcmd(c, path, 512); path[strcspn(path,"\n")] = 0;
+        printf("  %d  %s: %s\n", i, lines[i], path);
     }
     puts("\nSelect:\n  a ls 0"); return 0;
 }
@@ -32,9 +30,7 @@ static int cmd_kill(int argc, char **argv) {
         (void)!system("pkill -9 -f tmux 2>/dev/null"); (void)!system("clear");
         puts("\xe2\x9c\x93"); return 0;
     }
-    char out[B]; pcmd("tmux list-sessions -F '#{session_name}' 2>/dev/null", out, B);
-    char *lines[64]; int n = 0; char *p = out;
-    while (*p && n < 64) { lines[n++] = p; char *e = strchr(p,'\n'); if (e) { *e=0; p=e+1; } else break; }
+    char out[B]; char *lines[64]; int n=tm_list(out,lines,64);
     if (!n) { puts("No sessions"); return 0; }
     if (sel && sel[0] >= '0' && sel[0] <= '9') {
         int idx = atoi(sel);
@@ -55,7 +51,7 @@ static int cmd_copy(int c,char**v){(void)c;(void)v;char o[B];int ol=0;
 
 /* ── dash ── */
 static int cmd_dash(int argc, char **argv) { (void)argc;(void)argv;
-    char wd[P]; if(!getcwd(wd,P)) snprintf(wd,P,"%s",HOME);
+    CWD(wd);
     if (!tm_has("dash")) {
         char c[B];
         snprintf(c, B, "tmux new-session -d -s dash -c '%s'", wd); (void)!system(c);
@@ -117,6 +113,8 @@ static int cmd_send(int argc, char **argv) {
 }
 
 /* ── jobs ── active panes (local+remote) + review worktrees */
+typedef struct{char n[64],p[256];time_t mt;}wtr_t;
+static int wtr_cmp(const void*a,const void*b){time_t d=((const wtr_t*)b)->mt-((const wtr_t*)a)->mt;return d>0?1:d<0?-1:0;}
 typedef struct{char sn[64],pid[32],cmd[32],p[128],dev[32];}jpane_t;
 static int cmd_jobs(int argc, char **argv) {
     const char *sel=NULL,*rm=NULL;
@@ -168,7 +166,7 @@ static int cmd_jobs(int argc, char **argv) {
         _exit(0);}}
     /* Review worktrees */
     char wd[P];{const char*w=cfget("worktrees_dir");if(w[0])snprintf(wd,P,"%s",w);else snprintf(wd,P,"%s/worktrees",AROOT);}
-    struct{char n[64],p[256];time_t mt;}R[32];int nr=0;
+    wtr_t R[32];int nr=0;
     if(dexists(wd)){DIR*d=opendir(wd);struct dirent*de;if(d){while((de=readdir(d))&&nr<32){
         if(de->d_name[0]=='.')continue;char fp[P];snprintf(fp,P,"%s/%s",wd,de->d_name);
         if(!dexists(fp))continue;
@@ -177,7 +175,7 @@ static int cmd_jobs(int argc, char **argv) {
         snprintf(R[nr].n,64,"%s",de->d_name);snprintf(R[nr].p,256,"%s",fp);
         struct stat st;R[nr].mt=(!stat(fp,&st))?st.st_mtime:0;
         nr++;}closedir(d);}
-    for(int i=0;i<nr-1;i++)for(int j=i+1;j<nr;j++)if(R[j].mt>R[i].mt){char t[328];memcpy(t,&R[i],328);R[i]=R[j];memcpy(&R[j],t,328);}}
+    qsort(R,(size_t)nr,sizeof(wtr_t),wtr_cmp);}
     if(rm&&!strcmp(rm,"all")){for(int i=0;i<nr;i++){char c[B];snprintf(c,B,"rm -rf '%s'",R[i].p);(void)!system(c);}
         printf("\xe2\x9c\x93 %d worktrees\n",nr);return 0;}
     if(rm&&*rm>='0'&&*rm<='9'){int x=atoi(rm);
@@ -231,7 +229,7 @@ static int cmd_jobs(int argc, char **argv) {
 static int cmd_tree(int argc, char **argv) { AB;
     init_db(); load_cfg(); load_proj();
     const char *wt = cfget("worktrees_dir"); if (!wt[0]) { char d[P]; snprintf(d,P,"%s/worktrees",AROOT); wt=d; }
-    char cwd[P]; if(!getcwd(cwd,P)) snprintf(cwd,P,"%s",HOME);
+    CWD(cwd);
     const char *proj = cwd;
     if (argc > 2 && argv[2][0]>='0' && argv[2][0]<='9') { int idx=atoi(argv[2]); if(idx<NPJ) proj=PJ[idx].path; }
     if (!git_in_repo(proj)) { puts("x Not a git repo"); return 1; }

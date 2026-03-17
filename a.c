@@ -234,9 +234,11 @@ exit 0
 #define MA 64
 #define MS 48
 #define AB if(getenv("A_BENCH"))return 0
+#define CWD(w) char w[P];if(!getcwd(w,P))snprintf(w,P,"%s",HOME)
 
 /* amalgamation */
-static void alog(const char *cmd, const char *cwd, const char *extra);
+static void mkdirp(const char *p);
+static void alog(const char *cmd, const char *cwd);
 static void perf_disarm(void);
 static int cmd_sess(int, char**);
 
@@ -302,7 +304,7 @@ static int cmd_j(int c,char**v){
     {char nb[16]="";pcmd("pgrep -xc claude 2>/dev/null||echo 0",nb,16);
     int nj=atoi(nb)-1;if(nj<0)nj=0;
     if(nj>=100&&!(c>2&&!strcmp(v[2],"--resume"))){printf("x %d/100 job slots full — use 'a job' to see running\n",nj);return 1;}}
-    init_db();load_cfg();load_proj();char wd[P];if(!getcwd(wd,P))snprintf(wd,P,"%s",HOME);
+    init_db();load_cfg();load_proj();CWD(wd);
     if(c>3&&!strcmp(v[2],"--resume")){snprintf(wd,P,"%s",v[3]);
         if(!dexists(wd)){printf("x %s not found\n",wd);return 1;}
         printf("+ resume: %s\n",wd);
@@ -419,8 +421,8 @@ int main(int argc, char **argv) {
     if (argc < 2) return (isatty(1)?cmd_i:cmd_help)(argc, argv);
 
     char acmd[B]="";ajoin(acmd,B,argc,argv,1);
-    char wd[P]; if(!getcwd(wd,P)) snprintf(wd,P,"%s",HOME);
-    alog(acmd, wd, NULL);
+    CWD(wd);
+    alog(acmd, wd);
 
     const char *arg = argv[1];
 
