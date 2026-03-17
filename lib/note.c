@@ -47,7 +47,7 @@ static int cmd_note(int argc, char **argv) {
             else if(k=='k'){if(i>0)i--;else show=0;}
             else if(k=='q'||k==3||k==27)break;else if(k=='j')i++;else show=0;}
         raw_exit();if(i>=n)puts("Done");return 0;}
-    if(argc>2&&*argv[2]=='m'){
+    if(argc>2&&!strcmp(argv[2],"m")){
         execvp("a",(char*[]){"a","c","Run 'a n l' to see all notes. Read a.c for context. Help me archive stale/done/duplicate notes in bulk. To archive: mkdir -p <dir>/.archive && mv <file> <dir>/.archive/. Large batches, only archive what I approve.",NULL});return 1;}
     {char t[B]="";ajoin(t,B,argc,argv,2);
         note_save(dir,t);sync_bg();puts("\xe2\x9c\x93");
