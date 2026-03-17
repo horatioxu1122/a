@@ -2,7 +2,15 @@
    Empty screen = focus/meditation mode. First keystroke = command mode with
    suggestions below box and session count above. Backspace to empty = back to focus.
    Build: cc -O2 -o focus_box focus_box.c && ./focus_box
-   Or integrate into cmd_i render path in lib/sess.c */
+   Or integrate into cmd_i render path in lib/sess.c
+
+   FUNDAMENTAL ISSUE: on a bash terminal, the centered box snaps back to the
+   left when you type because terminal output is left-aligned by nature. And if
+   you put it at top-left you are showing the other items in the visible window
+   because they are no longer out in peripheral vision but at visible edges. The
+   centered box only works if output and items are also in the middle, which the
+   terminal does not support as-is. Needs either a full-screen TUI that owns all
+   rendering (like e.c editor) or a non-terminal surface (GUI, web, custom). */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
