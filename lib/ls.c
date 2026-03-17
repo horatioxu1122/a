@@ -64,9 +64,6 @@ static int cmd_dash(int argc, char **argv) { (void)argc;(void)argv;
     tm_go("dash"); return 0;
 }
 
-/* ── attach ── */
-static int cmd_attach(int argc, char **argv) { fallback_py("attach", argc, argv); }
-
 /* ── watch ── */
 static int cmd_watch(int argc, char **argv) {
     if (argc < 3) { puts("Usage: a watch <session> [duration]"); return 1; }
@@ -229,9 +226,6 @@ static int cmd_jobs(int argc, char **argv) {
         else if(k=='k'){if(ri>0)ri--;}else if(k=='q'||k==3||k==27)break;else if(k=='j')ri++;
     }return 0;
 }
-
-/* ── cleanup ── */
-static int cmd_cleanup(int argc, char **argv) { fallback_py("cleanup", argc, argv); }
 
 /* ── tree ── */
 static int cmd_tree(int argc, char **argv) { AB;

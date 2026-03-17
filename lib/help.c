@@ -79,29 +79,29 @@ static void gen_icache(void) {
     {char ad[P];snprintf(ad,P,"%s/lab/platonic_agents",SDIR);DIR*d=opendir(ad);struct dirent*e;
     if(d){while((e=readdir(d))){char*p=strrchr(e->d_name,'.');
         if(p&&(p[1]=='p'||p[1]=='c')){*p=0;fprintf(f,"agent run %s\tagent\n",e->d_name);}}closedir(d);}}
-    fputs("add\tregister project\nadb\tandroid debug\nall\tall ai sessions\napk\tbuild app\n"
-    "agent\tagent menu\nask\task ai\nattach\tjoin pane\ncal\tcalendar\ncal add\tadd event\ncal ai\tai calendar\n"
-    "cat\tcopy all\ncleanup\trm dead\n"
-    "config\tconfig\nconfig edit\tedit\nconfig clear\tclear\nconfig install\tinstall\n"
-    "copy\tscp to hosts\ncreate\tnew repo\ndash\toverview\n"
-    "deps\tinstall deps\ndiff\tgit diff\ndir\tlist dir\ndocs\tdocs\ndone\tjob done\n"
-    "e\teditor\nemail\temail\ngdrive\tgdrive sync\nhelp\thelp\nhi\thealth\n"
-    "hub\tscheduled jobs\nhub add\tadd\nhub run\trun\nhub on\ton\nhub off\toff\nhub rm\trm\nhub log\tlog\nhub sync\tsync\n"
-    "i\tpicker\ninstall\tinstall\njob\tjobs\nkill\tkill\n"
-    "log\tlog\nlog sync\tsync\nlog grab\tgrab\nlog backup\tbackup\n"
-    "login\tlogin\nls\tlist\nmono\tmonolith\nmove\tmove project\n"
-    "note\tnotes\nnote l\tlist\nnote r\treview\n"
-    "once\theadless run\nperf\tperf\npr\tPR\nprompt\tprompt\npull\tpull\npush\tpush\n"
-    "remove\tremove\nrepo\tnew repo\nrevert\trevert\nreview\treview\nrun\trun\n"
-    "scan\tscan projects\nsend\tsend\nsettings\tsettings\nsetup\tsetup\n"
-    "ssh\tremote hosts\nssh add\tadd host\nssh all\tall hosts\nssh auth\tauth key\n"
-    "ssh info\tinfo\nssh key\tshow key\nssh mv\trename\nssh os\tOS info\nssh pw\tpassword\n"
-    "ssh rm\tremove\nssh self\tregister\nssh setup\tsetup keys\nssh start\tstart\n"
-    "ssh status\tstatus\nssh stop\tstop\nsync\tsync\n"
-    "task\ttasks\ntask add\tadd\ntask l\tlist\ntask r\treview\ntask rank\trank\n"
-    "task due\tby deadline\ntask deadline\tset deadline\ntask pri\tpriority\ntask sync\tsync\n"
-    "tree\tworktree\nui\tweb ui\nuninstall\tuninstall\nupdate\tupdate\nwatch\twatch\nweb\tweb\n"
-    "work\tworktrees\nx\tkill all\n",f);
+    /* auto-discover lib .py — extract docstring desc */
+    {char ld[P];snprintf(ld,P,"%s/lib",SDIR);DIR*d=opendir(ld);struct dirent*e;
+    if(d){while((e=readdir(d))){char*dot=strrchr(e->d_name,'.');
+        if(!dot||strcmp(dot,".py")||e->d_name[0]=='_')continue;*dot=0;
+        char fp[P],desc[128]="";snprintf(fp,P,"%s/%s.py",ld,e->d_name);
+        FILE*pf=fopen(fp,"r");if(pf){char h[256];if(fgets(h,256,pf)){
+            char*s=strstr(h," - ");if(s){s+=3;s[strcspn(s,"\"\n")]=0;snprintf(desc,128,"%s",s);}}fclose(pf);}
+        fprintf(f,"%s\t%s\n",e->d_name,desc[0]?desc:"cmd");}closedir(d);}}
+    /* auto-discover my scripts */
+    {char md[P];snprintf(md,P,"%s/my",SROOT);DIR*d=opendir(md);struct dirent*e;
+    if(d){while((e=readdir(d))){if(e->d_name[0]=='.'||e->d_name[0]=='_')continue;
+        char nm[64];snprintf(nm,64,"%s",e->d_name);char*dot=strrchr(nm,'.');if(dot)*dot=0;
+        fprintf(f,"%s\tmy\n",nm);}closedir(d);}}
+    /* auto-discover lab scripts */
+    {char ld[P];snprintf(ld,P,"%s/lab",SDIR);DIR*d=opendir(ld);struct dirent*e;
+    if(d){while((e=readdir(d))){char*dot=strrchr(e->d_name,'.');
+        if(!dot||e->d_name[0]=='_')continue;
+        if(strcmp(dot,".py")&&strcmp(dot,".c")&&strcmp(dot,".sh")&&strcmp(dot,".html"))continue;*dot=0;
+        fprintf(f,"x.%s\tlab\n",e->d_name);}closedir(d);}}
+    /* subcommands not discoverable from filenames */
+    fputs("cal add\tadd event\nhub add\tadd\nhub run\trun\nhub rm\trm\nhub log\tlog\n"
+    "note l\tlist\nnote r\treview\nssh add\tadd host\nssh all\tall hosts\n"
+    "task add\tadd\ntask l\tlist\ntask r\treview\ntask rank\trank\n",f);
     char sd[P]; snprintf(sd, P, "%s/ssh", SROOT);
     char sp[32][P]; int sn = listdir(sd, sp, 32);
     for (i=0;i<sn;i++) {

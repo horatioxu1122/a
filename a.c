@@ -262,13 +262,10 @@ static int cmd_sess(int, char**);
 #include "lib/perf.c"
 #include "lib/sess.c"
 
-/* py wrappers */
 static int cmd_cat(int c,char**v){if(c>2&&chdir(v[2]))return 1;perf_disarm();
     const char*cc=clip_cmd();if(!cc){puts("x Needs tmux");return 1;}
     char cm[B];snprintf(cm,B,"git ls-files -z|xargs -0 grep -lIZ ''|xargs -0 tail -n+1|%s&&echo >&2 '✓ copied'",cc);
     return system(cm);}
-#define PY(n,m) static int cmd_##n(int c,char**v){fallback_py(m,c,v);}
-PY(apk,"apk")PY(gdrive,"gdrive")PY(ask,"ask")PY(ui,"ui/__init__")
 static int cmd_j(int,char**);
 static int cmd_job(int c,char**v){
     if(c>2&&*v[2]>='0'&&*v[2]<='9')return cmd_jobs(c,v);
@@ -282,7 +279,6 @@ static int cmd_mono(int c,char**v){if(c>2&&chdir(v[2]))return 1;perf_disarm();
         if(l+n>=cap){cap=(l+n)*2;d=realloc(d,cap+1);}memcpy(d+l,b,n);l+=n;}pclose(f);}
     if(!d)return 1;d[l]=0;for(char*p=d;(p=strstr(p,"==> "));p+=4)nf++;
     (void)!write(1,d,l);to_clip(d);fprintf(stderr,"✓ %d files %zub\n",nf,l);free(d);return 0;}
-PY(work,"work")
 static int cmd_j(int c,char**v){
     if(c<3||!strcmp(v[2],"rm")||!strcmp(v[2],"watch")||!strcmp(v[2],"-r")||(c==3&&isdigit(*v[2])))return cmd_jobs(c,v);
     if(c>2&&v[2][1]=='q'){char ln[B];for(fputs("j> ",stdout);fgets(ln,B,stdin);fputs("j> ",stdout)){
@@ -364,14 +360,15 @@ static int cmd_my(int c,char**v){(void)c;(void)v;char d[P];snprintf(d,P,"%s/my",
     execlp("ls","ls","--color",d,(char*)0);return 1;}
 typedef struct { const char *n; int (*fn)(int, char**); } cmd_t;
 static int cmd_cmp(const void*a,const void*b){return strcmp(((const cmd_t*)a)->n,((const cmd_t*)b)->n);}
+/* dispatch: C logic+aliases here; lib .py and my scripts auto-discovered */
 static const cmd_t CMDS[] = {
     {"--help",cmd_help_full},{"-h",cmd_help_full},
     {"a",cmd_a_default},{"adb",cmd_adb},{"add",cmd_add},{"agent",cmd_agent},{"ai",cmd_all},
-    {"all",cmd_all},{"apk",cmd_apk},{"ask",cmd_ask},{"attach",cmd_attach},
-    {"cal",cmd_cal},{"cat",cmd_cat},{"cleanup",cmd_cleanup},{"config",cmd_config},
+    {"all",cmd_all},  /* apk,ask,attach,cleanup auto-discovered */
+    {"cal",cmd_cal},{"cat",cmd_cat},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},{"dash",cmd_dash},{"deps",cmd_deps},
     {"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
-    {"e",cmd_e},{"email",cmd_email},{"gdrive",cmd_gdrive},
+    {"e",cmd_e},{"email",cmd_email},  /* gdrive auto-discovered */
     {"help",cmd_help_full},{"hi",cmd_hi},{"hub",cmd_hub},{"i",cmd_i},
     {"install",cmd_install},{"j",cmd_j},{"job",cmd_job},{"jobs",cmd_job},
     {"kill",cmd_kill},{"log",cmd_log},{"login",cmd_login},{"ls",cmd_ls},
@@ -385,9 +382,10 @@ static const cmd_t CMDS[] = {
     {"ssh",cmd_ssh},{"ssh add",cmd_ssh},{"ssh all",cmd_ssh},{"ssh rm",cmd_ssh},
     {"ssh self",cmd_ssh},{"ssh setup",cmd_ssh},{"ssh start",cmd_ssh},{"ssh stop",cmd_ssh},
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
-    {"tree",cmd_tree},{"u",cmd_update},{"ui",cmd_ui},{"uninstall",cmd_uninstall},
-    {"update",cmd_update},{"watch",cmd_watch},{"web",cmd_web},
-    {"work",cmd_work},{"x",cmd_x},
+    {"tree",cmd_tree},{"u",cmd_update},  /* ui auto-discovered */
+    {"uninstall",cmd_uninstall},{"update",cmd_update},{"watch",cmd_watch},{"web",cmd_web},
+    /* work auto-discovered */
+    {"x",cmd_x},
 };
 #define NCMDS (sizeof(CMDS)/sizeof(*CMDS))
 static char perf_msg[B];
@@ -428,7 +426,21 @@ int main(int argc, char **argv) {
       const cmd_t *c = bsearch(&key, CMDS, NCMDS, sizeof(*CMDS), cmd_cmp);
       if (c) return c->fn(argc, argv); }
 
-    if(*arg=='x'&&arg[1]=='.'){char mod[P];snprintf(mod,P,"lab/%s",arg+2);fallback_py(mod,argc,argv);}
+    /* auto-discover lib .py, lib pkg, and lab .py */
+    {char pf[P];snprintf(pf,P,"%s/lib/%s.py",SDIR,arg);
+     if(fexists(pf))fallback_py(arg,argc,argv);
+     snprintf(pf,P,"%s/lib/%s/__init__.py",SDIR,arg);
+     if(fexists(pf)){char m[P];snprintf(m,P,"%s/__init__",arg);fallback_py(m,argc,argv);}
+     const char*la=(*arg=='x'&&arg[1]=='.')?arg+2:arg;
+     snprintf(pf,P,"%s/lab/%s.py",SDIR,la);
+     if(fexists(pf)){perf_disarm();argv[1]=pf;argv[0]="python3";execvp("python3",argv);}
+     snprintf(pf,P,"%s/lab/%s.c",SDIR,la);
+     if(fexists(pf)){perf_disarm();char ob[P],cm[B];snprintf(ob,P,"%s/lab_%s",TMP,la);
+      snprintf(cm,B,"cc -w -o '%s' '%s'&&'%s'",ob,pf,ob);return system(cm);}
+     snprintf(pf,P,"%s/lab/%s.sh",SDIR,la);
+     if(fexists(pf)){perf_disarm();argv[1]=pf;argv[0]="sh";execvp("sh",argv);}
+     snprintf(pf,P,"%s/lab/%s.html",SDIR,la);
+     if(fexists(pf)){perf_disarm();execlp("xdg-open","xdg-open",pf,(char*)0);}}
     {size_t l=strlen(arg);if(l>=3&&arg[l-1]=='+'&&arg[l-2]=='+'&&*arg!='w')return cmd_wt_plus(argc,argv);}
     if(*arg=='w'&&arg[1]&&!fexists(arg))return cmd_wt(argc,argv);
     {init_db();load_cfg();load_sess();if(find_sess(arg))return cmd_sess(argc,argv);}
