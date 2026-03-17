@@ -288,6 +288,7 @@ static int cmd_freq(int c,char**v){perf_disarm();
     for(int i=0;i<nc-1;i++)for(int j=i+1;j<nc;j++)if(ct[j].c>ct[i].c){char tn[64];int tc=ct[i].c;memcpy(tn,ct[i].n,64);ct[i].c=ct[j].c;memcpy(ct[i].n,ct[j].n,64);ct[j].c=tc;memcpy(ct[j].n,tn,64);}
     if(n>nc)n=nc;
     for(int i=0;i<n;i++)printf("%6d %s\n",ct[i].c,ct[i].n);
+    puts("\033[33m! counts include bot/automated use\033[0m");
     return 0;}
 static int cmd_cat(int c,char**v){perf_disarm();
     char m=0;int di=2;
