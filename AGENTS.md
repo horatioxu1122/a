@@ -9,6 +9,7 @@ Logic goes in flat files in lib folder.
 Experiments in lab folder.
 All persistent data lives in adata folder.
 Don't push without approval. 
+The optimal program is maximally short fast and valuable. Edits should converge towards this.
 
 Contribution rules:
 Initiation:
@@ -21,6 +22,7 @@ Run and debug it verifying it works.
 
 Fixes:
 Use "a diff" command to check token count is lower or equal to old code on a fix, longer fixes will not be accepted. This often will require simplification and integration of logic.
+Time all command runs the fix must be faster or same time.
 
 Feature additions:
 For feature additions, once code works, cut it aggressively, verify cuts are shorter with "a diff", and output is correct, until it cannot be cut more. Lab is exempt from cuts.
