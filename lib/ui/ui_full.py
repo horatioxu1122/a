@@ -32,9 +32,9 @@ HTML = '''<!doctype html>
 <script src="https://cdn.jsdelivr.net/npm/xterm-addon-webgl@0.16.0/lib/xterm-addon-webgl.min.js"></script>
 <style>*{font-family:system-ui}[data-go]{touch-action:manipulation}.b{padding:16px 24px;font-size:24px;background:#000;color:#4af;border:2px solid #4af;border-radius:8px;cursor:pointer}.n{font-size:28px;color:#4af;cursor:pointer;padding:20px 40px;border:2px solid #4af;border-radius:12px}.f{background:#000;color:#fff;border:1px solid #333;border-radius:8px}.ni{padding:6px 0;color:#aaa;border-bottom:1px solid #222;display:flex;align-items:center}.nx{background:none;border:1px solid #555;color:#888;padding:12px 20px;margin-right:10px;border-radius:4px;cursor:pointer;font-size:16px}</style>
 <body style="margin:0;height:100vh;background:#000;overflow:hidden">
-<div id=v_index style="display:none;height:100vh;flex-direction:column;align-items:center;justify-content:center">
-  <form id=omni><input id=qi autofocus placeholder="" style="width:80vw;max-width:600px;font-size:24px;padding:16px;text-align:center;background:#000;color:#fff;border:1px solid #333;border-radius:8px;outline:none"></form>
-  <div id=qo style="width:90vw;max-width:800px;margin-top:20px;max-height:70vh;overflow-y:auto"></div>
+<div id=v_index style="display:none;height:100vh;flex-direction:column;align-items:center">
+  <form id=omni style="margin-top:45vh"><input id=qi autofocus placeholder="" style="width:80vw;max-width:600px;font-size:24px;padding:16px;text-align:center;background:#000;color:#fff;border:1px solid #333;border-radius:8px;outline:none"></form>
+  <div id=qo style="width:90vw;max-width:800px;margin-top:20px;max-height:45vh;overflow-y:auto"></div>
 </div>
 __MY__
 <div id=v_tasks style="display:none;height:100vh;flex-direction:column;padding:20px;align-items:center;overflow-y:auto">
@@ -68,7 +68,7 @@ __MY__
 var views={'/':'v_index','/jobs':'v_jobs','/term':'v_term','/note':'v_note','/tasks':'v_tasks'__MV__}, T, F, W;
 // perf: go() must stay <1ms. show() is DOM toggle only, no network. keep this instrumentation.
 function go(p){var t=performance.now();history.pushState(null,'',p);show(p);console.log('go('+p+') '+(performance.now()-t).toFixed(2)+'ms');}
-function show(p){for(var k in views)document.getElementById(views[k]).style.display=k===p?(k==='/term'?'block':'flex'):'none';if(p==='/term'&&F)setTimeout(function(){F.fit();T.focus()},0);if(p==='/note'&&!nl.children.length)fetch('/note-list').then(function(r){return r.text()}).then(function(h){nl.innerHTML=h});if(p==='/tasks')fetch('/api/tasks').then(function(r){return r.text()}).then(function(h){tl.innerHTML=h});}
+function show(p){for(var k in views)document.getElementById(views[k]).style.display=k===p?(k==='/term'?'block':'flex'):'none';if(p==='/term'&&F){connect();setTimeout(function(){F.fit();T.focus()},0);}if(p==='/note'&&!nl.children.length)fetch('/note-list').then(function(r){return r.text()}).then(function(h){nl.innerHTML=h});if(p==='/tasks')fetch('/api/tasks').then(function(r){return r.text()}).then(function(h){tl.innerHTML=h});}
 function arcn(f,el){fetch('/api/note/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({f:f})});el.parentElement.remove();}
 function arct(d,el){fetch('/api/task/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({d:d})});el.parentElement.remove();}
 function loadjobs(){Promise.all([fetch('/api/jobs').then(function(r){return r.text()}),fetch('/api/job-status').then(function(r){return r.json()})]).then(function(d){
@@ -88,7 +88,6 @@ try{
     W.onmessage=function(e){T.write(e.data);};
     W.onerror=W.onclose=function(){v_dc.style.display='';setTimeout(connect,1000);};
   }
-  connect();
   T.onData(function(d){ws(d);});
   new ResizeObserver(function(){F.fit();ws(JSON.stringify({cols:T.cols,rows:T.rows}));}).observe(document.getElementById('t'));
 }catch(e){document.body.innerHTML='<pre style="color:red;padding:20px">'+e+'</pre>';}
@@ -97,7 +96,10 @@ var _tg=0;document.addEventListener('touchstart',function(e){var g=e.target.clos
 document.addEventListener('click',function(e){if(_tg){_tg=0;return;}var g=e.target.closest('[data-go]');if(g)go(g.dataset.go);});
 show(views[location.pathname]?location.pathname:'/');
 qi.onblur=function(){setTimeout(function(){qi.focus()},0)};
-omni.onsubmit=function(e){e.preventDefault();var t=performance.now(),v=qi.value.trim();if(!v)return;if(views['/'+v]){go('/'+v);qi.value='';console.log('omni total '+(performance.now()-t).toFixed(2)+'ms');return}var t2=performance.now();fetch('/api/omni',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'q='+encodeURIComponent(v)}).then(function(r){return r.text()}).then(function(h){qo.innerHTML=h;qi.value='';qi.focus();console.log('omni fetch '+(performance.now()-t2).toFixed(2)+'ms')})};
+var _cmds=__CMDS__,_cs=0;
+qi.oninput=function(){var v=qi.value.toLowerCase();if(!v){qo.innerHTML='';return}_cs=0;var m=_cmds.filter(function(c){return c[0].indexOf(v)>=0}).slice(0,12);qo.innerHTML=m.map(function(c,i){return '<div data-c="'+c[0]+'" style="padding:8px 16px;color:'+(i?'#555':'#4af')+';cursor:pointer;font-size:18px" onclick="qi.value=this.dataset.c;omni.requestSubmit()">a '+c[0]+(c[1]?' <span style=color:#333>'+c[1]+'</span>':'')+'</div>'}).join('')};
+qi.onkeydown=function(e){var it=qo.querySelectorAll('[data-c]');if(!it.length)return;if(e.key==='ArrowDown'){e.preventDefault();_cs=Math.min(_cs+1,it.length-1)}else if(e.key==='ArrowUp'){e.preventDefault();_cs=Math.max(_cs-1,0)}else if(e.key==='Tab'&&it[_cs]){e.preventDefault();qi.value=it[_cs].dataset.c;qi.oninput();return}else return;it.forEach(function(el,i){el.style.color=i===_cs?'#4af':'#555'})};
+omni.onsubmit=function(e){e.preventDefault();var t=performance.now(),it=qo.querySelectorAll('[data-c]'),v=it[_cs]?it[_cs].dataset.c:qi.value.trim();if(!v)return;qo.innerHTML='';if(views['/'+v]){go('/'+v);qi.value='';console.log('omni total '+(performance.now()-t).toFixed(2)+'ms');return}var t2=performance.now();fetch('/api/omni',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'q='+encodeURIComponent(v)}).then(function(r){return r.text()}).then(function(h){qo.innerHTML=h;qi.value='';qi.focus();console.log('omni fetch '+(performance.now()-t2).toFixed(2)+'ms')})};
 var _ek='';document.addEventListener('keydown',function(e){if(e.key.length<2)_ek=(_ek+e.key).slice(-5);if(_ek==='crush'){_ek='';(function(){var c=document.createElement('canvas'),x=c.getContext('2d'),Z=16,W=10,H=20,g=Array(W*H).fill(0),P=[[[0,0]],[[0,0],[1,0]],[[0,0],[1,0],[0,1]],[[0,0],[1,0],[2,0]],[[0,0],[1,0],[2,0],[0,1]]],K=['#0ff','#f0f','#0f0','#f80','#f00'],p,px,py,pi,iv,fc=0,cx=4,cy=H-1,jc=0,ky={};c.width=W*Z;c.height=H*Z;c.style.cssText='position:fixed;inset:0;margin:auto;z-index:9999;border:2px solid #4af';document.body.appendChild(c);function np(){pi=Math.random()*5|0;p=P[pi].map(function(a){return a.slice()});px=Math.random()*(W-2)|0;py=0;if(ht(0,0))ov()}function ht(dx,dy){for(var i=0;i<p.length;i++){var a=p[i][0]+px+dx,b=p[i][1]+py+dy;if(a<0||a>=W||b>=H||(b>=0&&g[b*W+a]))return 1}return 0}function lk(){for(var i=0;i<p.length;i++){var a=p[i][0]+px,b=p[i][1]+py;if(b>=0)g[b*W+a]=pi+1}if(g[cy*W+cx]){ov();return}for(var y=H-1;y>=0;y--){var f=1;for(var j=0;j<W;j++)if(!g[y*W+j])f=0;if(f){g.splice(y*W,W);for(var j=0;j<W;j++)g.unshift(0);if(cy<y)cy++;y++}}}function dr(){x.fillStyle='#000';x.fillRect(0,0,c.width,c.height);for(var i=0;i<W*H;i++)if(g[i]){x.fillStyle=K[g[i]-1];x.fillRect((i%W)*Z,(i/W|0)*Z,Z-1,Z-1)}for(var i=0;i<p.length;i++){x.fillStyle=K[pi];x.fillRect((p[i][0]+px)*Z,(p[i][1]+py)*Z,Z-1,Z-1)}x.fillStyle='#fff';x.fillRect(cx*Z+2,cy*Z+2,Z-5,Z-5)}function ov(){clearInterval(iv);c.remove();document.removeEventListener('keydown',kd);document.removeEventListener('keyup',ku)}function kd(e){var k=e.key;if(k==='ArrowLeft'&&!ht(-1,0))px--;if(k==='ArrowRight'&&!ht(1,0))px++;if(k==='ArrowDown'&&!ht(0,1))py++;if(k==='ArrowUp'){var n=p.map(function(a){return[-a[1],a[0]]});var o=p;p=n;if(ht(0,0))p=o}ky[k]=1;if(k==='Escape')return ov();dr();e.preventDefault()}function ku(e){delete ky[e.key]}document.addEventListener('keydown',kd);document.addEventListener('keyup',ku);np();iv=setInterval(function(){fc++;if(fc%3===0){if(ky.a&&cx>0&&!g[cy*W+cx-1])cx--;if(ky.d&&cx<W-1&&!g[cy*W+cx+1])cx++}if(fc%4===0){if(jc>0){jc--;if(cy>0&&!g[(cy-1)*W+cx])cy--}else if(cy<H-1&&!g[(cy+1)*W+cx])cy++}if(ky.w&&(cy>=H-1||g[(cy+1)*W+cx])){jc=3;delete ky.w}if(fc%8===0){if(!ht(0,1))py++;else{lk();np()}}dr()},50)})()}});
 </script>'''
 
@@ -131,7 +133,8 @@ async def spa(r):
                 jo += '\n\n--- Job PRs ---\n'
                 for row in rows: jo += row['status']+(f' [{row["step"]}]' if row['step'] else '')+' '+row['name']+(f' ({row["session"]})' if row['session'] else '')+'\n'
     except: jo = 'No jobs'
-    h = HTML.replace('__PO__',po).replace('__DO__',do).replace('__NO__',no).replace('__JO__',E(jo)).replace('__MY__',my_divs).replace('__MV__',my_views)
+    ci=S.run([_A,'i'],capture_output=True,text=True,timeout=5);cmds=[[p[0].strip(),p[1].strip() if len(p)>1 else ''] for l in (ci.stdout or '').split('\n') if l.strip() for p in [l.split('\t',1)]]
+    h = HTML.replace('__PO__',po).replace('__DO__',do).replace('__NO__',no).replace('__JO__',E(jo)).replace('__MY__',my_divs).replace('__MV__',my_views).replace('__CMDS__',json.dumps(cmds))
     return web.Response(text=h, content_type='text/html', headers={'Cache-Control':'no-store'})
 
 async def restart(r): os.execv(sys.executable, [sys.executable] + sys.argv)
