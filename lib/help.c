@@ -57,7 +57,8 @@ static void gen_icache(void) {
         if(si&&(!dot||(strcmp(dot,".py")&&strcmp(dot,".c")&&strcmp(dot,".sh")&&strcmp(dot,".html"))))continue;if(dot)*dot=0;
         if(si)fprintf(f,"x.%s\tlab\n",nm);else fprintf(f,"%s\tmy\n",nm);}closedir(d);}}}
     /* subcommands not discoverable from filenames */
-    fputs("cal add\tadd event\nhub add\tadd\nhub run\trun\nhub rm\trm\nhub log\tlog\n"
+    fputs("ui\tweb dashboard\nterm\tterminal (a ui /term)\n"
+    "cal add\tadd event\nhub add\tadd\nhub run\trun\nhub rm\trm\nhub log\tlog\n"
     "note l\tlist\nnote r\treview\nssh add\tadd host\nssh all\tall hosts\n"
     "task add\tadd\ntask l\tlist\ntask r\treview\ntask rank\trank\n",f);
     char sd[P]; snprintf(sd, P, "%s/ssh", SROOT);
