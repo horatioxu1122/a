@@ -284,7 +284,7 @@ static int cmd_cat(int c,char**v){perf_disarm();
             rewind(f);nf++;
             char hdr[600];size_t hl=(size_t)snprintf(hdr,600,"\n==> %s (%d lines) <==\n",p,tl);
             if(l+hl>=cap){cap=(l+hl+8192)*2;d=realloc(d,cap);}memcpy(d+l,hdr,hl);l+=hl;
-            int hd=strchr(p,'/')?10:100;
+            int hd=strchr(p,'/')?10:1000;
             int i=0;while(fgets(ln,512,f)){
                 size_t sl=strlen(ln);
                 if(i<hd||(tl>hd+5&&i>=tl-5)){if(l+sl>=cap){cap=(l+sl+8192)*2;d=realloc(d,cap);}memcpy(d+l,ln,sl);l+=sl;}
