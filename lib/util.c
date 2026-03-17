@@ -63,7 +63,7 @@ static int raw_line(const char*prompt,char*buf,int sz){
 
 
 static const char*clip_cmd(void){char c[B];
-    if(getenv("TMUX")&&!pcmd("tmux show -sv copy-command 2>/dev/null",c,B)&&c[0]){c[strcspn(c,"\n")]=0;static char cc[64];snprintf(cc,64,"%s",c);return cc;}
+    if(getenv("TMUX")&&!pcmd("tmux show -sv copy-command 2>/dev/null",c,B)&&c[0]){c[strcspn(c,"\n")]=0;static char cc[64];snprintf(cc,64,"%s 2>/dev/null",c);return cc;}
     return getenv("TMUX")?"tmux load-buffer -":NULL;}
 static int to_clip(const char*d){const char*c=clip_cmd();
     FILE*f=c?popen(c,"w"):NULL;if(!f)return 1;fputs(d,f);return pclose(f);}
