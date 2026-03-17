@@ -13,6 +13,7 @@ static const char *HELP_FULL =
     "GIT     a push [msg]  a pr [title]  a pull/diff/revert\n"
     "NOTES   a n \"text\"  a task\n"
     "REMOTE  a ssh [<#>]  a run <#> \"task\"\n"
+    "CODE    a cat [1|2|3]  (1=all 2=skip lab/ 3=first10+last5)\n"
     "SYSTEM  a ls/kill/attach  a hub  a config/sync/update/perf";
 
 static void list_all(int cache, int quiet) {

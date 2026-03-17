@@ -2,7 +2,7 @@
 # ── a.c — agent manager. sh a.c [build|install|analyze|shell|clean]
 # Polyglot: shell sees # as comments; C preprocessor skips #if 0..#endif.
 # Fixes: fewer tokens, same speed+. Features: cut until it breaks.
-# Read full codebase: a mono (1=all 2=core, copies to clipboard)
+# Read codebase: a cat (1=all 2=core 3=first10+last5, copies to clipboard)
 # TERMUX: set CLAUDE_CODE_TMPDIR=$HOME/.tmp; build with clang directly.
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
     set -e; A="$HOME/a"
@@ -265,26 +265,42 @@ static int cmd_sess(int, char**);
 #include "lib/perf.c"
 #include "lib/sess.c"
 
-static int cmd_cat(int c,char**v){if(c>2&&chdir(v[2]))return 1;perf_disarm();
-    const char*cc=clip_cmd();if(!cc){puts("x Needs tmux");return 1;}
-    char cm[B];snprintf(cm,B,"git ls-files -z|xargs -0 grep -lIZ ''|xargs -0 tail -n+1|%s&&echo >&2 '✓ copied'",cc);
-    return system(cm);}
-static int cmd_j(int,char**);
-static int cmd_job(int c,char**v){
-    if(c>2&&*v[2]>='0'&&*v[2]<='9')return cmd_jobs(c,v);
-    return cmd_j(c,v);}
-static int cmd_mono(int c,char**v){perf_disarm();
+static int cmd_cat(int c,char**v){perf_disarm();
     char m=0;int di=2;
-    if(c>2&&(v[2][0]=='1'||v[2][0]=='2')&&!v[2][1]){m=v[2][0];di=3;}
+    if(c>2&&v[2][0]>='1'&&v[2][0]<='3'&&!v[2][1]){m=v[2][0];di=3;}
     if(c>di&&chdir(v[di]))return 1;
-    if(!m){puts("1 all  2 core (no lab/)");printf("> ");fflush(stdout);
-        char ch[4];if(!fgets(ch,4,stdin))return 0;m=ch[0];}
-    char cm[B];snprintf(cm,B,"git ls-files -z%s|xargs -0 grep -lIZ ''|xargs -0 tail -n+1",m=='2'?" -- ':!lab/'":"");
+    if(!m){puts("1 all files, all lines\n2 all files, all lines (skip lab/)\n3 all files, first 10 lines + last 5 lines (skip lab/)");
+        printf("> ");fflush(stdout);char ch[4];if(!fgets(ch,4,stdin))return 0;m=ch[0];}
+    const char*ex=m!='1'?" -- ':!lab/'":"";
+    if(m=='3'){char cm[B];snprintf(cm,B,"git ls-files -z%s|xargs -0 grep -lIZ ''",ex);
+        size_t l=0,cap=0;char*d=NULL,b[8192];size_t n;int nf=0;
+        FILE*fl=popen(cm,"r");char fb[65536];size_t fl2=0;
+        if(fl){while((n=fread(b,1,8192,fl))>0){if(fl2+n<65536){memcpy(fb+fl2,b,n);fl2+=n;}}pclose(fl);}
+        fb[fl2]=0;
+        for(char*p=fb;p<fb+fl2;){char*e=memchr(p,0,(size_t)(fb+fl2-p));if(!e)break;
+            FILE*f=fopen(p,"r");if(!f){p=e+1;continue;}
+            int tl=0;char ln[512];while(fgets(ln,512,f))tl++;
+            rewind(f);nf++;
+            char hdr[600];size_t hl=(size_t)snprintf(hdr,600,"\n==> %s (%d lines) <==\n",p,tl);
+            if(l+hl>=cap){cap=(l+hl+8192)*2;d=realloc(d,cap);}memcpy(d+l,hdr,hl);l+=hl;
+            int i=0;while(fgets(ln,512,f)){
+                size_t sl=strlen(ln);
+                if(i<10||(tl>15&&i>=tl-5)){if(l+sl>=cap){cap=(l+sl+8192)*2;d=realloc(d,cap);}memcpy(d+l,ln,sl);l+=sl;}
+                if(i==10&&tl>15){const char*dots="  ...\n";size_t dl=6;if(l+dl>=cap){cap=(l+dl+8192)*2;d=realloc(d,cap);}memcpy(d+l,dots,dl);l+=dl;}
+                i++;}
+            fclose(f);p=e+1;}
+        if(!d)return 1;d[l]=0;
+        (void)!write(1,d,l);to_clip(d);fprintf(stderr,"✓ %d files %zub\n",nf,l);free(d);return 0;}
+    char cm[B];snprintf(cm,B,"git ls-files -z%s|xargs -0 grep -lIZ ''|xargs -0 tail -n+1",ex);
     size_t l=0;char*d=NULL,b[8192];size_t n,cap=0;int nf=0;
     FILE*f=popen(cm,"r");if(f){while((n=fread(b,1,8192,f))>0){
         if(l+n>=cap){cap=(l+n)*2;d=realloc(d,cap+1);}memcpy(d+l,b,n);l+=n;}pclose(f);}
     if(!d)return 1;d[l]=0;for(char*p=d;(p=strstr(p,"==> "));p+=4)nf++;
     (void)!write(1,d,l);to_clip(d);fprintf(stderr,"✓ %d files %zub\n",nf,l);free(d);return 0;}
+static int cmd_j(int,char**);
+static int cmd_job(int c,char**v){
+    if(c>2&&*v[2]>='0'&&*v[2]<='9')return cmd_jobs(c,v);
+    return cmd_j(c,v);}
 static int cmd_j(int c,char**v){
     if(c<3||!strcmp(v[2],"rm")||!strcmp(v[2],"watch")||!strcmp(v[2],"-r")||(c==3&&isdigit(*v[2])))return cmd_jobs(c,v);
     if(c>2&&v[2][1]=='q'){char ln[B];for(fputs("j> ",stdout);fgets(ln,B,stdin);fputs("j> ",stdout)){
@@ -380,7 +396,7 @@ static const cmd_t CMDS[] = {
     {"help",cmd_help_full},{"hi",cmd_hi},{"hub",cmd_hub},{"i",cmd_i},
     {"install",cmd_install},{"j",cmd_j},{"job",cmd_job},{"jobs",cmd_job},
     {"kill",cmd_kill},{"log",cmd_log},{"login",cmd_login},{"ls",cmd_ls},
-    {"mono",cmd_mono},{"monolith",cmd_mono},{"move",cmd_move},{"my",cmd_my},
+    {"mono",cmd_cat},{"monolith",cmd_cat},{"move",cmd_move},{"my",cmd_my},
     {"n",cmd_note},{"note",cmd_note},{"once",cmd_run_once},
     {"p",cmd_push},{"perf",cmd_perf},{"pr",cmd_pr},{"prompt",cmd_prompt},
     {"pull",cmd_pull},{"push",cmd_push},
@@ -402,7 +418,7 @@ __attribute__((noreturn)) static void perf_alarm(int sig){(void)sig;
 static void perf_arm(const char *cmd) {
     if (getenv("A_BENCH")) return;
     if (isdigit(*cmd)) return;
-    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|email|install|send|j|job|pr|hub|create|repo|e|revert|",sk))return;}
+    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|",sk))return;}
     unsigned secs = 1, limit_us = 1000000;
     char pf[P]; snprintf(pf, P, "%s/perf/%s.txt", SROOT, DEV);
     {char *data = readf(pf, NULL);
