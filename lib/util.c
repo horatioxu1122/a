@@ -43,7 +43,7 @@ static int ajoin(char*b,int sz,int argc,char**argv,int from){int l=0;for(int i=f
 static void rapid(const char *prompt, void (*fn)(const char*)) {
     if (!isatty(STDIN_FILENO)) return; perf_disarm();
     char line[512];
-    while ((void)printf("%s", prompt), (void)fflush(stdout), fgets(line, 512, stdin)) {
+    while (fputs(prompt,stdout),fflush(stdout), fgets(line, 512, stdin)) {
         line[strcspn(line, "\n")] = 0;
         if (!line[0]) break;
         fn(line);
@@ -62,8 +62,9 @@ static int raw_line(const char*prompt,char*buf,int sz){
     raw_enter();return ok&&buf[0];}
 
 
-static const char*clip_cmd(void){char c[B];
-    if(getenv("TMUX")&&!pcmd("tmux show -sv copy-command 2>/dev/null",c,B)&&c[0]){c[strcspn(c,"\n")]=0;static char cc[64];snprintf(cc,64,"%s 2>/dev/null",c);return cc;}
-    return getenv("TMUX")?"tmux load-buffer -":NULL;}
-static int to_clip(const char*d){const char*c=clip_cmd();
-    FILE*f=c?popen(c,"w"):NULL;if(!f)return 1;fputs(d,f);return pclose(f);}
+static const char*clip_cmd(void){static char c[64];if(!getenv("TMUX"))return NULL;
+    if(!pcmd("tmux show -sv copy-command 2>/dev/null",c,64)&&c[0]){c[strcspn(c,"\n")]=0;return c;}
+    return "tmux load-buffer -";}
+static int to_clip(const char*d){const char*c=clip_cmd();if(!c)return 1;
+    char cm[80];snprintf(cm,80,"%s 2>/dev/null",c);
+    FILE*f=popen(cm,"w");if(!f)return 1;fputs(d,f);return pclose(f);}
