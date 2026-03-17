@@ -12,36 +12,36 @@ static void note_save(const char *d, const char *t) {
 }
 static char rdir[P];
 static void rapid_note(const char*t){note_save(rdir,t);sync_bg();puts("\xe2\x9c\x93");}
-static char gnp[1024][P],gnt[1024][512];
-static int gn_archived;
+typedef struct{char p[P];char t[512];}GN;
+static GN*gn;static int gn_cap;
+static int gncmp(const void*a,const void*b){return strcmp(strrchr(((const GN*)a)->p,'_'),strrchr(((const GN*)b)->p,'_'));}
 static int load_notes(const char *dir, const char *f) {
-    DIR *d=opendir(dir); if(!d) return 0; struct dirent *e; int n=0; gn_archived=0;
+    DIR *d=opendir(dir); if(!d) return 0; struct dirent *e; int n=0;
     while((e=readdir(d))) { if(e->d_name[0]=='.'||!strstr(e->d_name,".txt")) continue;
         char fp[P]; snprintf(fp,P,"%s/%s",dir,e->d_name); kvs_t kv=kvfile(fp);
         const char *t=kvget(&kv,"Text"),*s=kvget(&kv,"Status");
         if(t&&(!s||!strcmp(s,"pending"))&&(!f||strcasestr(t,f))){
-            int dup=0;for(int i=0;i<n;i++)if(!strcmp(gnt[i],t)){dup=1;break;}
-            if(dup){do_archive(fp);gn_archived++;}
-            else if(n<1024){snprintf(gnp[n],P,"%s",fp);snprintf(gnt[n],512,"%s",t);n++;}}
+            if(n>=gn_cap){gn_cap=gn_cap?gn_cap*2:2048;gn=realloc(gn,(size_t)gn_cap*sizeof*gn);}
+            snprintf(gn[n].p,P,"%s",fp);snprintf(gn[n].t,512,"%s",t);n++;}
     } closedir(d); return n;
 }
 static int cmd_note(int argc, char **argv) {
     AB;
     char dir[P]; snprintf(dir,P,"%s/notes",SROOT); mkdirp(dir);
-    if(argc>2&&!strcmp(argv[2],"l")){int n;do n=load_notes(dir,NULL);while(gn_archived);
+    if(argc>2&&!strcmp(argv[2],"l")){int n=load_notes(dir,NULL);
         if(!n){puts("(none)");return 0;}
-        for(int a=0;a<n-1;a++)for(int b=a+1;b<n;b++){const char*ta=strrchr(gnp[a],'_'),*tb=strrchr(gnp[b],'_');if(ta&&tb&&strcmp(ta,tb)>0){char t[P];memcpy(t,gnp[a],P);memcpy(gnp[a],gnp[b],P);memcpy(gnp[b],t,P);char s[512];memcpy(s,gnt[a],512);memcpy(gnt[a],gnt[b],512);memcpy(gnt[b],s,512);}}
-        for(int i=0;i<n;i++)printf("%3d. %s\n",i+1,gnt[i]);return 0;}
-    if(argc<=2){int n=load_notes(dir,NULL);while(gn_archived)n=load_notes(dir,NULL);
+        qsort(gn,(size_t)n,sizeof(GN),gncmp);
+        for(int i=0;i<n;i++)printf("%3d. %s\n",i+1,gn[i].t);return 0;}
+    if(argc<=2){int n=load_notes(dir,NULL);
         printf("%d pending\n  a n <text>  add\n  a n l       list\n  a n r       review\n  a n ?<q>    search\n  a n m       AI manage\n",n);return 0;}
     if(argc>2&&(argv[2][0]=='?'||!strcmp(argv[2],"r")||!strcmp(argv[2],"review"))){
         const char *f=argv[2][0]=='?'?argv[2]+1:NULL;int n=load_notes(dir,f);
-        if(!n){puts("(none)");return 0;} if(!isatty(STDIN_FILENO)){for(int i=0;i<n&&i<10;i++)puts(gnt[i]);return 0;} perf_disarm();
+        if(!n){puts("(none)");return 0;} if(!isatty(STDIN_FILENO)){for(int i=0;i<n&&i<10;i++)puts(gn[i].t);return 0;} perf_disarm();
         int i=0,show=1; raw_enter();
-        while(i<n){if(show)printf("\n[%d/%d] %s\n",i+1,n,gnt[i]);show=1;
+        while(i<n){if(show)printf("\n[%d/%d] %s\n",i+1,n,gn[i].t);show=1;
             printf("  [d]el [a]dd [/]find [j/k/q]  ");fflush(stdout);
             int k=raw_key();putchar('\n');
-            if(k=='d'){do_archive(gnp[i]);sync_bg();puts("\xe2\x9c\x93");n=load_notes(dir,f);if(i>=n)i=n-1;if(i<0)break;}
+            if(k=='d'){do_archive(gn[i].p);sync_bg();puts("\xe2\x9c\x93");n=load_notes(dir,f);if(i>=n)i=n-1;if(i<0)break;}
             else if(k=='a'){char buf[B];if(raw_line("  Text: ",buf,B)){note_save(dir,buf);sync_bg();n=load_notes(dir,NULL);printf("\xe2\x9c\x93 [%d]\n",n);}show=0;}
             else if(k=='/'||k=='s'){char q[128];if(raw_line("  Search: ",q,128)){n=load_notes(dir,q);i=0;printf("%d results\n",n);}else show=0;}
             else if(k=='k'){if(i>0)i--;else show=0;}

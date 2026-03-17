@@ -293,7 +293,7 @@ static int cmd_j(int c,char**v){
         char cf[P],pr[B],cm[B],pid[64];snprintf(cf,P,"%s/job_context.txt",DDIR);
         {char nd[P];FILE*f=fopen(cf,"w");if(f){
             snprintf(nd,P,"%s/notes",SROOT);int nn=load_notes(nd,NULL);
-            for(int i=0;i<nn;i++)fprintf(f,"%d. %s\n",i+1,gnt[i]);
+            for(int i=0;i<nn;i++)fprintf(f,"%d. %s\n",i+1,gn[i].t);
             fputs("\n",f);snprintf(nd,P,"%s/tasks",SROOT);int nt=load_tasks(nd);
             for(int i=0;i<nt;i++)fprintf(f,"%d. P%s %s\n",i+1,T[i].p,T[i].t);fclose(f);}}
         snprintf(pr,B,"%s/common/prompts/job.txt",SROOT);
