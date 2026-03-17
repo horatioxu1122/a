@@ -6,66 +6,28 @@ static const char *HELP_SHORT =
     "a help          All commands";
 
 static const char *HELP_FULL =
-    "a - AI agent session manager\n\n"
-    "JOBS\n"
-    "  a j \"prompt\"        Worktree + agent (a j <#> for project)\n"
-    "  a job               Active jobs + review worktrees\n"
-    "  a done \"msg\"        PR + email from worktree\n\n"
-    "AGENTS        c=claude  co=codex  g=gemini  ai=aider\n"
-    "  a a                 Default agent (a config default_agent <key>)\n"
-    "  a <key>             Start in current dir (a <key> <#> for project)\n"
-    "  a <key>++           Start in new worktree\n"
-    "  a all               Multi-agent parallel runs\n"
-    "  a agent             Agent menu + autonomous subagent\n\n"
-    "PROJECTS\n"
-    "  a <#>               cd to project #\n"
-    "  a add / remove / move / scan\n"
-    "  a create <name>     New repo\n\n"
-    "GIT\n"
-    "  a push [msg]        Commit and push\n"
-    "  a pr [title]        Push branch + create PR\n"
-    "  a pull / diff / revert\n\n"
-    "NOTES & TASKS\n"
-    "  a n \"text\"          Quick note\n"
-    "  a task              Tasks (priority, review)\n\n"
-    "REMOTE\n"
-    "  a ssh [<#>]         List or connect to hosts\n"
-    "  a run <#> \"task\"    Run task on remote\n\n"
-    "SYSTEM\n"
-    "  a ls / kill / attach   Tmux sessions\n"
-    "  a hub               Scheduled jobs\n"
-    "  a config / sync / update / perf";
+    "a - agent manager  c=claude co=codex g=gemini ai=aider\n\n"
+    "JOBS    a j \"prompt\"  a job  a done \"msg\"\n"
+    "AGENTS  a c|co|g|ai  a <key>++  a all  a agent\n"
+    "PROJ    a <#>  a add/remove/move/scan  a create <name>\n"
+    "GIT     a push [msg]  a pr [title]  a pull/diff/revert\n"
+    "NOTES   a n \"text\"  a task\n"
+    "REMOTE  a ssh [<#>]  a run <#> \"task\"\n"
+    "SYSTEM  a ls/kill/attach  a hub  a config/sync/update/perf";
 
-/* list + cache */
 static void list_all(int cache, int quiet) {
     load_proj(); load_apps();
-    char pfile[P]; snprintf(pfile, P, "%s/projects.txt", DDIR);
-    /* Write projects.txt for shell function */
-    FILE *pf = fopen(pfile, "w");
-    {int i; if (pf) { for (i = 0; i < NPJ; i++) fprintf(pf, "%s\n", PJ[i].path); fclose(pf); }}
-    if (quiet && !cache) return;
-    char out[B*4] = ""; int o = 0;
-    if (NPJ) {
-        o += sprintf(out + o, "PROJECTS:\n");
-        int i; for (i = 0; i < NPJ; i++) {
-            char mk = dexists(PJ[i].path) ? '+' : (PJ[i].repo[0] ? '~' : 'x');
-            o += sprintf(out + o, "  %d. %c %s\n", i, mk, PJ[i].path);
-        }
-    }
-    if (NAP) {
-        o += sprintf(out + o, "COMMANDS:\n");
-        int i; for (i = 0; i < NAP; i++) {
-            char dc[64]; snprintf(dc, 64, "%s", AP[i].cmd);
-            o += sprintf(out + o, "  %d. %s -> %s\n", NPJ + i, AP[i].name, dc);
-        }
-    }
-    if (!quiet && out[0]) printf("%s", out);
-    if (cache) {
-        char cf[P]; snprintf(cf, P, "%s/help_cache.txt", DDIR);
-        FILE *f = fopen(cf, "w");
-        if (f) { fprintf(f, "%s\n%s", HELP_SHORT, out); fclose(f); }
-        snprintf(cf, P, "%s/i_cache.txt", DDIR); unlink(cf);
-    }
+    char pf[P];snprintf(pf,P,"%s/projects.txt",DDIR);
+    FILE*fp=fopen(pf,"w");if(fp){for(int i=0;i<NPJ;i++)fprintf(fp,"%s\n",PJ[i].path);fclose(fp);}
+    if(quiet&&!cache)return;
+    char out[B*4]="";int o=0;
+    for(int i=0;i<NPJ;i++){char mk=dexists(PJ[i].path)?'+':(PJ[i].repo[0]?'~':'x');
+        o+=sprintf(out+o,"%s%d. %c %s\n",i?"":"PROJECTS:\n",i,mk,PJ[i].path);}
+    for(int i=0;i<NAP;i++)o+=sprintf(out+o,"%s%d. %s -> %.60s\n",i?"":"COMMANDS:\n",NPJ+i,AP[i].name,AP[i].cmd);
+    if(!quiet&&out[0])printf("%s",out);
+    if(cache){char cf[P];snprintf(cf,P,"%s/help_cache.txt",DDIR);
+        FILE*f=fopen(cf,"w");if(f){fprintf(f,"%s\n%s",HELP_SHORT,out);fclose(f);}
+        snprintf(cf,P,"%s/i_cache.txt",DDIR);unlink(cf);}
 }
 
 static void gen_icache(void) {
@@ -111,61 +73,27 @@ static void gen_icache(void) {
     fclose(f);
 }
 
-static int cmd_help(int argc, char **argv) { (void)argc; (void)argv;
-    char p[P]; snprintf(p, P, "%s/help_cache.txt", DDIR);
-    if (catf(p) < 0) { init_db(); load_cfg(); printf("%s\n", HELP_SHORT); list_all(1, 0); }
-    return 0;
-}
+static int cmd_help(int c,char**v){(void)c;(void)v;
+    char p[P];snprintf(p,P,"%s/help_cache.txt",DDIR);
+    if(catf(p)<0){init_db();load_cfg();printf("%s\n",HELP_SHORT);list_all(1,0);}return 0;}
+static int cmd_help_full(int c,char**v){(void)c;(void)v;init_db();load_cfg();printf("%s\n",HELP_FULL);list_all(1,0);return 0;}
+static int cmd_hi(int c,char**v){(void)c;(void)v;for(int i=1;i<=10;i++)printf("%d\n",i);puts("hi");return 0;}
 
-static int cmd_help_full(int argc, char **argv) { (void)argc; (void)argv;
-    init_db(); load_cfg(); printf("%s\n", HELP_FULL); list_all(1, 0); return 0;
-}
-
-static int cmd_hi(int argc, char **argv) { (void)argc;(void)argv; for (int i = 1; i <= 10; i++) printf("%d\n", i); puts("hi"); return 0; }
-
-static int cmd_done(int argc, char **argv) { AB;
-    char p[P]; snprintf(p, P, "%s/.done", DDIR);
-    char msg[B]="";ajoin(msg,B,argc,argv,2);
-    FILE *f=fopen(p,"w");if(f){fputs(msg,f);fclose(f);}
-    /* auto-PR if in worktree */
-    char wd[P],gc[B],gd[P];if(!getcwd(wd,P))wd[0]=0;
-    snprintf(gc,B,"git -C '%s' rev-parse --git-dir 2>/dev/null",wd);
+static int cmd_done(int argc,char**argv){AB;
+    char p[P],msg[B]="",wd[P],gc[B],gd[P];snprintf(p,P,"%s/.done",DDIR);ajoin(msg,B,argc,argv,2);
+    {FILE*f=fopen(p,"w");if(f){fputs(msg,f);fclose(f);}}
+    if(!getcwd(wd,P))wd[0]=0;snprintf(gc,B,"git -C '%s' rev-parse --git-dir 2>/dev/null",wd);
     pcmd(gc,gd,P);gd[strcspn(gd,"\n")]=0;
-    if(strstr(gd,"worktrees")){perf_disarm();
-        char sm[B];snprintf(sm,B,"job: %.200s",msg[0]?msg:"done");
-        snprintf(gc,B,"cd '%s'&&git add -A&&git diff --cached --quiet 2>/dev/null||"
-            "(git commit -m '%s'&&git push -u origin HEAD 2>/dev/null&&"
-            "gh pr create --fill 2>/dev/null)",wd,sm);
-        int r=system(gc);
-        if(!r)puts("+ PR created");
-        /* email */
-        char ad[B]="";snprintf(gc,B,"cd '%s'&&a diff main 2>/dev/null",wd);
-        pcmd(gc,ad,B);
-        snprintf(gc,B,"a email '[a job] %s' '%s\n%s'",bname(wd),msg[0]?msg:"done",ad);
-        (void)!system(gc);
-    }
-    puts("\xe2\x9c\x93 done"); return 0;
-}
+    if(strstr(gd,"worktrees")){perf_disarm();char sm[B],ad[B]="";
+        snprintf(sm,B,"job: %.200s",msg[0]?msg:"done");
+        snprintf(gc,B,"cd '%s'&&git add -A&&git diff --cached --quiet 2>/dev/null||(git commit -m '%s'&&git push -u origin HEAD 2>/dev/null&&gh pr create --fill 2>/dev/null)",wd,sm);
+        if(!system(gc))puts("+ PR created");
+        snprintf(gc,B,"cd '%s'&&a diff main 2>/dev/null",wd);pcmd(gc,ad,B);
+        snprintf(gc,B,"a email '[a job] %s' '%s\n%s'",bname(wd),msg[0]?msg:"done",ad);(void)!system(gc);}
+    puts("\xe2\x9c\x93 done");return 0;}
 
-static int cmd_dir(int argc, char **argv) { (void)argc;(void)argv;
-    char cwd[P]; if (getcwd(cwd, P)) puts(cwd);
-    execlp("ls", "ls", (char*)NULL); return 1;
-}
-
-
-static int cmd_x(int argc, char **argv) { (void)argc;(void)argv;
-    (void)!system("tmux kill-server 2>/dev/null");
-    puts("\xe2\x9c\x93 All sessions killed"); return 0;
-}
-
-static int cmd_web(int argc, char **argv) { AB;
-    char url[B] = "https://google.com";
-    if (argc > 2) {
-        int l=snprintf(url,B,"https://google.com/search?q=");
-        for(int i=2;i<argc&&l<B-1;i++) l+=snprintf(url+l,(size_t)(B-l),"%s%s",i>2?"+":"",argv[i]);
-    }
-    char c[B]; snprintf(c, B, "xdg-open '%s' 2>/dev/null &", url); (void)!system(c);
-    return 0;
-}
-
-
+static int cmd_dir(int c,char**v){(void)c;(void)v;char w[P];if(getcwd(w,P))puts(w);execlp("ls","ls",(char*)0);return 1;}
+static int cmd_x(int c,char**v){(void)c;(void)v;(void)!system("tmux kill-server 2>/dev/null");puts("\xe2\x9c\x93 All sessions killed");return 0;}
+static int cmd_web(int c,char**v){AB;char u[B]="https://google.com";
+    if(c>2){int l=snprintf(u,B,"https://google.com/search?q=");for(int i=2;i<c&&l<B-1;i++)l+=snprintf(u+l,(size_t)(B-l),"%s%s",i>2?"+":"",v[i]);}
+    char cm[B];snprintf(cm,B,"xdg-open '%s' 2>/dev/null &",u);return system(cm);}

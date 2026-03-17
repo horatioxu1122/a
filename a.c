@@ -2,6 +2,7 @@
 # ── a.c — agent manager. sh a.c [build|install|analyze|shell|clean]
 # Polyglot: shell sees # as comments; C preprocessor skips #if 0..#endif.
 # Fixes: fewer tokens, same speed+. Features: cut until it breaks.
+# Read full codebase: a mono (1=all 2=core, copies to clipboard)
 # TERMUX: set CLAUDE_CODE_TMPDIR=$HOME/.tmp; build with clang directly.
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
     set -e; A="$HOME/a"
@@ -270,10 +271,13 @@ static int cmd_j(int,char**);
 static int cmd_job(int c,char**v){
     if(c>2&&*v[2]>='0'&&*v[2]<='9')return cmd_jobs(c,v);
     return cmd_j(c,v);}
-static int cmd_mono(int c,char**v){if(c>2&&chdir(v[2]))return 1;perf_disarm();
-    puts("1 all  2 core (no lab/)");printf("> ");fflush(stdout);
-    char ch[4];if(!fgets(ch,4,stdin))return 0;
-    char cm[B];snprintf(cm,B,"git ls-files -z%s|xargs -0 grep -lIZ ''|xargs -0 tail -n+1",ch[0]=='2'?" -- ':!lab/'":"");
+static int cmd_mono(int c,char**v){perf_disarm();
+    char m=0;int di=2;
+    if(c>2&&(v[2][0]=='1'||v[2][0]=='2')&&!v[2][1]){m=v[2][0];di=3;}
+    if(c>di&&chdir(v[di]))return 1;
+    if(!m){puts("1 all  2 core (no lab/)");printf("> ");fflush(stdout);
+        char ch[4];if(!fgets(ch,4,stdin))return 0;m=ch[0];}
+    char cm[B];snprintf(cm,B,"git ls-files -z%s|xargs -0 grep -lIZ ''|xargs -0 tail -n+1",m=='2'?" -- ':!lab/'":"");
     size_t l=0;char*d=NULL,b[8192];size_t n,cap=0;int nf=0;
     FILE*f=popen(cm,"r");if(f){while((n=fread(b,1,8192,f))>0){
         if(l+n>=cap){cap=(l+n)*2;d=realloc(d,cap+1);}memcpy(d+l,b,n);l+=n;}pclose(f);}
@@ -360,7 +364,9 @@ static int cmd_my(int c,char**v){(void)c;(void)v;char d[P];snprintf(d,P,"%s/my",
     execlp("ls","ls","--color",d,(char*)0);return 1;}
 typedef struct { const char *n; int (*fn)(int, char**); } cmd_t;
 static int cmd_cmp(const void*a,const void*b){return strcmp(((const cmd_t*)a)->n,((const cmd_t*)b)->n);}
-/* dispatch: C logic+aliases here; lib .py and my scripts auto-discovered */
+/* dispatch: C logic+aliases here; lib .py and my scripts auto-discovered.
+   TUI (a i) shows every command you can type — it must let you do anything
+   you can do without it. gen_icache() is the single source for TUI entries. */
 static const cmd_t CMDS[] = {
     {"--help",cmd_help_full},{"-h",cmd_help_full},
     {"a",cmd_a_default},{"adb",cmd_adb},{"add",cmd_add},{"agent",cmd_agent},{"ai",cmd_all},
