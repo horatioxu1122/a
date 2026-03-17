@@ -265,6 +265,30 @@ static int cmd_sess(int, char**);
 #include "lib/perf.c"
 #include "lib/sess.c"
 
+static int cmd_freq(int c,char**v){perf_disarm();
+    int verbose=0,n=25;
+    for(int i=2;i<c;i++){if(!strcmp(v[i],"-v"))verbose=1;else if(*v[i]>='0'&&*v[i]<='9')n=atoi(v[i]);}
+    char ad[P];snprintf(ad,P,"%s/git/activity",AROOT);
+    DIR*d=opendir(ad);if(!d){puts("x no activity log");return 1;}
+    struct{char n[64];int c;}ct[1024];int nc=0;
+    struct dirent*e;char fp[P],ln[256];
+    while((e=readdir(d))){if(e->d_name[0]=='.')continue;
+        snprintf(fp,P,"%s/%s",ad,e->d_name);
+        int fd=open(fp,O_RDONLY);if(fd<0)continue;
+        int r=(int)read(fd,ln,255);close(fd);if(r<=0)continue;ln[r]=0;
+        char*p=ln;for(int i=0;i<3&&*p;i++){while(*p&&*p!=' ')p++;while(*p==' ')p++;}
+        char*end=p;while(*end&&*end!='\n')end++;*end=0;
+        if(!*p)continue;
+        end=p;while(*end&&*end!=' ')end++;
+        if(verbose&&*end){end++;while(*end&&*end!=' '&&*end!='\n')end++;}
+        *end=0;
+        int j;for(j=0;j<nc;j++)if(!strcmp(ct[j].n,p)){ct[j].c++;break;}
+        if(j==nc&&nc<1024){snprintf(ct[nc].n,64,"%s",p);ct[nc].c=1;nc++;}}
+    closedir(d);
+    for(int i=0;i<nc-1;i++)for(int j=i+1;j<nc;j++)if(ct[j].c>ct[i].c){char tn[64];int tc=ct[i].c;memcpy(tn,ct[i].n,64);ct[i].c=ct[j].c;memcpy(ct[i].n,ct[j].n,64);ct[j].c=tc;memcpy(ct[j].n,tn,64);}
+    if(n>nc)n=nc;
+    for(int i=0;i<n;i++)printf("%6d %s\n",ct[i].c,ct[i].n);
+    return 0;}
 static int cmd_cat(int c,char**v){perf_disarm();
     char m=0;int di=2;
     if(c>2&&v[2][0]>='1'&&v[2][0]<='3'&&!v[2][1]){m=v[2][0];di=3;}
@@ -397,7 +421,7 @@ static const cmd_t CMDS[] = {
     {"cal",cmd_cal},{"cat",cmd_cat},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},{"dash",cmd_dash},{"deps",cmd_deps},
     {"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
-    {"e",cmd_e},{"email",cmd_email},  /* gdrive auto-discovered */
+    {"e",cmd_e},{"email",cmd_email},{"freq",cmd_freq},
     {"help",cmd_help_full},{"hi",cmd_hi},{"hub",cmd_hub},{"i",cmd_i},
     {"install",cmd_install},{"j",cmd_j},{"job",cmd_job},{"jobs",cmd_job},
     {"kill",cmd_kill},{"log",cmd_log},{"login",cmd_login},{"ls",cmd_ls},
