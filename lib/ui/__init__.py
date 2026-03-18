@@ -8,7 +8,7 @@ _UV = shutil.which('uv') or (_uv if os.access(_uv, os.X_OK) else None)
 _MAC = platform.system() == 'Darwin'
 _TERMUX = isdir('/data/data/com.termux')
 _r = lambda c: S.run(c, capture_output=True)
-_kill = lambda: _r(['pkill','-9','-f','ui.ui_'])
+_kill = lambda: _r(['pkill','-f','ui.ui_'])
 
 def _url(p): return f'http://localhost:{p}'
 

@@ -133,7 +133,8 @@ async def spa(r):
                 jo += '\n\n--- Job PRs ---\n'
                 for row in rows: jo += row['status']+(f' [{row["step"]}]' if row['step'] else '')+' '+row['name']+(f' ({row["session"]})' if row['session'] else '')+'\n'
     except: jo = 'No jobs'
-    ci=S.run([_A,'i'],capture_output=True,text=True,timeout=5);cmds=[[p[0].strip(),p[1].strip() if len(p)>1 else ''] for l in (ci.stdout or '').split('\n') if l.strip() for p in [l.split('\t',1)]]
+    try:cmds=[[(p:=l.partition('\t'))[0].strip(),p[2].strip()]for l in S.run([_A,'i'],capture_output=True,text=True,timeout=5).stdout.split('\n')if l.strip()]
+    except:cmds=[]
     h = HTML.replace('__PO__',po).replace('__DO__',do).replace('__NO__',no).replace('__JO__',E(jo)).replace('__MY__',my_divs).replace('__MV__',my_views).replace('__CMDS__',json.dumps(cmds))
     return web.Response(text=h, content_type='text/html', headers={'Cache-Control':'no-store'})
 
