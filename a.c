@@ -103,7 +103,7 @@ build)
             PYT=$(date +%s%N);python3 -c 'import subprocess;subprocess.run(["echo","hello world"],capture_output=True)';PYT=$(( $(date +%s%N)-PYT ))
             [[ $TCT -gt $PYT ]] && { echo "PERF KILL: tcc ${TCT}ns > python ${PYT}ns" >"$ABIN/.chk"; touch "$T/0.f"; }
         fi
-        _ensure_cc; _warn_flags
+        _ensure_cc; $CC $A -w -O0 -o "$ABIN/a" "$F" 2>/dev/null; _warn_flags
         _c(){ n=$1;shift;{ ! command -v "$1" &>/dev/null||"$@";}>"$T/$n" 2>&1||touch "$T/$n.f";}
         _rgcc(){ command -v gcc &>/dev/null&&! gcc --version 2>&1|grep -q clang;}
         _c 1 $CC $WARN $A -fsyntax-only "$F" &
