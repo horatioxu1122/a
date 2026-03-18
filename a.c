@@ -81,10 +81,19 @@ build)
     BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
     rm -f "$ABIN/.chk"
     printf '%s' $$ > "$ABIN/.bld"
+    _build_fix() {
+        warn "Build failed. Attempting agent fix..."
+        local E="$1" AG
+        for AG in claude codex gemini; do command -v $AG &>/dev/null && { cd "$D" && $AG -p "a.c failed to compile. Error: $E. Fix the build error, run 'sh a.c' to verify, then git add a.c && git commit -m 'fix: build' && gh pr create --fill"; return; }; done
+        echo -e "\n${R}Could not auto-fix. Contact Sean Patten for help:${R}"
+        echo "  email: spatten2@fordham.edu"
+        echo "  github: seanpattencode"
+        echo "  whatsapp: Sean Patten"
+    }
     if [[ -x "$(type -P tcc)" ]]; then
-        TCT=${EPOCHREALTIME/./};tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||exit 1;TCT=$(( ${EPOCHREALTIME/./} - TCT ))000
+        TCT=${EPOCHREALTIME/./};tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||{ _build_fix "$(tcc -DSRC="\"$D\"" -w -o /dev/null "$D/a.c" 2>&1)"; exit 1; };TCT=$(( ${EPOCHREALTIME/./} - TCT ))000
     else
-        _ensure_cc; $CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" || exit 1
+        _ensure_cc; E=$($CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { _build_fix "$E"; exit 1; }
     fi
     [[ "$D" != *"/adata/worktrees/"* ]] && ln -sf "$ABIN/a" "$BIN/a"
     (
