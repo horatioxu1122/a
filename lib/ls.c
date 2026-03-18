@@ -106,6 +106,10 @@ static int cmd_dash_tui(void) {
     snprintf(cm,B,"tmux split-window -vd -t %s -p 30 '%s/a dash --input'",me,DDIR);
     (void)!system(cm);
     snprintf(cm,B,"tmux select-pane -t %s",me);(void)!system(cm);
+    /* event-driven: tmux hooks signal us on session create/close */
+    signal(SIGUSR1,SIG_IGN);/* just interrupt select */
+    snprintf(cm,B,"tmux set-hook -g session-created 'run-shell -b \"kill -USR1 %d 2>/dev/null\"'",(int)getpid());(void)!system(cm);
+    snprintf(cm,B,"tmux set-hook -g session-closed 'run-shell -b \"kill -USR1 %d 2>/dev/null\"'",(int)getpid());(void)!system(cm);
     struct termios old,raw_t;tcgetattr(0,&old);raw_t=old;
     raw_t.c_lflag&=~(tcflag_t)(ICANON|ECHO|ISIG);raw_t.c_cc[VMIN]=1;raw_t.c_cc[VTIME]=0;
     tcsetattr(0,TCSANOW,&raw_t);
@@ -128,8 +132,9 @@ static int cmd_dash_tui(void) {
         fl+=snprintf(fb+fl,(size_t)(B*2-fl),"\033[%d;1H\033[7m j/k:nav x:kill q:quit\033[0m\033[K",rows);
         (void)!write(1,fb,(size_t)fl);}
         char ch;
-        fd_set fds;struct timeval tv={1,0};FD_ZERO(&fds);FD_SET(0,&fds);
-        if(!select(1,&fds,0,0,&tv)){dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;continue;}
+        fd_set fds;struct timeval tv={30,0};FD_ZERO(&fds);FD_SET(0,&fds);
+        {int sr=select(1,&fds,0,0,&tv);
+        if(sr<=0){dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;continue;}}
         if(read(0,&ch,1)!=1)break;
         int do_pick=0;
         if(ch=='\x1b'){int av;usleep(50000);ioctl(0,FIONREAD,&av);if(!av)break;
@@ -162,6 +167,8 @@ static int cmd_dash_tui(void) {
     #undef DASH_SWAP
     dash_restore(cm,tp,rp,ntp);
     for(int i=0;i<2;i++)if(rp[i][0]){snprintf(cm,B,"tmux kill-pane -t %s 2>/dev/null",rp[i]);(void)!system(cm);}
+    (void)!system("tmux set-hook -gu session-created 2>/dev/null");
+    (void)!system("tmux set-hook -gu session-closed 2>/dev/null");
     write(1,"\033[?1000l\033[?1006l",16);
     tcsetattr(0,TCSANOW,&old);printf("\033[2J\033[H\033[?25h");return 0;
 }
