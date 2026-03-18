@@ -21,8 +21,8 @@ Simplify the solution to triviality as much as possible which minimizes assumpti
 Run and debug it verifying it works.
 
 Fixes:
-Token counts and timing are auto-provided on every command run via stderr.
-Use "a diff" command to check token count is lower or equal to old code on a fix, longer fixes will not be accepted. This often will require simplification and integration of logic.
+Token counts and timing are auto-provided on every command run via stderr for immediate local signal.
+Use "a diff" to compare against main before pushing — token count must be lower or equal on a fix, longer fixes will not be accepted. This often will require simplification and integration of logic.
 Time all command runs the fix must be faster or same time.
 
 Feature additions:
