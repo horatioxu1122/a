@@ -51,9 +51,11 @@ static int cmd_copy(int c,char**v){(void)c;(void)v;char o[B];int ol=0;
 
 /* ── dash ── */
 static int cmd_dash_tui(void);
+static int cmd_dash_input(void);
 static int cmd_dash(int c, char **v) { (void)c;(void)v;
     perf_disarm();
     if(c>2&&!strcmp(v[2],"--tui"))return cmd_dash_tui();
+    if(c>2&&!strcmp(v[2],"--input"))return cmd_dash_input();
     char cm[B];
     if(!tm_has("dash")){CWD(wd);
         snprintf(cm,B,"tmux new-session -d -s dash -c '%s' '%s/a dash --tui'",wd,DDIR);
@@ -64,7 +66,6 @@ static void dash_refresh(char out[B],char**lines,int*n){
     *n=tm_list(out,lines,64);
     for(int i=0;i<*n;i++)if(!strcmp(lines[i],"dash")){for(int j=i;j<*n-1;j++)lines[j]=lines[j+1];(*n)--;i--;}
 }
-/* get all pane ids for a session's window 0 */
 static int dash_panes(const char *sess, char ids[][16], int max) {
     char cm[B],buf[256];
     snprintf(cm,B,"tmux list-panes -t '%s':0 -F '#{pane_id}' 2>/dev/null",sess);
@@ -73,27 +74,49 @@ static int dash_panes(const char *sess, char ids[][16], int max) {
         if(*p)snprintf(ids[n++],16,"%s",p);if(e)p=e+1;else break;}
     return n;
 }
+static void dash_restore(char cm[B],char tp[][16],char rp[][16],int ntp){
+    for(int i=0;i<ntp;i++){snprintf(cm,B,"tmux swap-pane -s %s -t %s 2>/dev/null",tp[i],rp[i]);(void)!system(cm);}
+}
+/* bottom-left: rapid job launcher, creates sessions */
+static int cmd_dash_input(void) {
+    init_db();load_cfg();load_proj();
+    char ln[B];CWD(wd);
+    for(fputs("j> ",stdout),fflush(stdout);fgets(ln,B,stdin);fputs("j> ",stdout),fflush(stdout)){
+        ln[strcspn(ln,"\n")]=0;if(!ln[0])continue;
+        char sn[64];time_t t=time(NULL);struct tm*tm=localtime(&t);
+        snprintf(sn,64,"j-%02d%02d%02d",tm->tm_hour,tm->tm_min,tm->tm_sec);
+        char jcmd[B];jcmd_fill(jcmd,0);
+        tm_new(sn,wd,jcmd);
+        sleep(1);/* let session + split settle */
+        send_prefix_bg(sn,"claude",wd,ln);
+        printf("+ %s\n",sn);
+    }
+    return 0;
+}
+/* top-left: session list + swap controller */
 static int cmd_dash_tui(void) {
     char out[B],*lines[64],cm[B];int n,sel=0;
-    /* me=selector pane, rp=right placeholders, tp=target panes */
     char me[16]="",rp[2][16]={"",""},tp[2][16]={"",""};int ntp=0;
     pcmd("tmux display -p '#{pane_id}'",me,16);me[strcspn(me,"\n")]=0;
-    snprintf(cm,B,"tmux split-window -hd -t dash:0 -p 80 -PF '#{pane_id}'");
+    /* create right panes from full-height left, then split left for input */
+    snprintf(cm,B,"tmux split-window -hd -t %s -p 80 -PF '#{pane_id}'",me);
     pcmd(cm,rp[0],16);rp[0][strcspn(rp[0],"\n")]=0;
     snprintf(cm,B,"tmux split-window -vd -t %s -p 40 -PF '#{pane_id}'",rp[0]);
     pcmd(cm,rp[1],16);rp[1][strcspn(rp[1],"\n")]=0;
+    snprintf(cm,B,"tmux split-window -vd -t %s -p 30 '%s/a dash --input'",me,DDIR);
+    (void)!system(cm);
+    snprintf(cm,B,"tmux select-pane -t %s",me);(void)!system(cm);
     struct termios old,raw_t;tcgetattr(0,&old);raw_t=old;
     raw_t.c_lflag&=~(tcflag_t)(ICANON|ECHO|ISIG);raw_t.c_cc[VMIN]=1;raw_t.c_cc[VTIME]=0;
     tcsetattr(0,TCSANOW,&raw_t);
     write(1,"\033[?1000h\033[?1006h",16);
     dash_refresh(out,lines,&n);
-    /* swap helper: restore old, swap in new */
     #define DASH_SWAP() do { \
-        for(int _i=0;_i<ntp;_i++){snprintf(cm,B,"tmux swap-pane -s %s -t %s 2>/dev/null",tp[_i],rp[_i]);(void)!system(cm);} \
+        dash_restore(cm,tp,rp,ntp); \
         char ids[8][16];int np=dash_panes(lines[sel],ids,8);if(np>2)np=2; \
         for(int _i=0;_i<np;_i++){snprintf(cm,B,"tmux swap-pane -s %s -t %s",rp[_i],ids[_i]);(void)!system(cm);snprintf(tp[_i],16,"%s",ids[_i]);} \
         ntp=np; \
-        if(me[0]){snprintf(cm,B,"tmux select-pane -t %s",me);(void)!system(cm);} \
+        snprintf(cm,B,"tmux select-pane -t %s",me);(void)!system(cm); \
     } while(0)
     if(n>0)DASH_SWAP();
     for(;;){
@@ -102,7 +125,7 @@ static int cmd_dash_tui(void) {
         fl+=snprintf(fb+fl,(size_t)(B*2-fl),"\033[2J\033[H\033[?25l");
         for(int i=0;i<rows-1&&i<n;i++)
             fl+=snprintf(fb+fl,(size_t)(B*2-fl),"%s  %s\033[0m\033[K\n",i==sel?"\033[7m":"",lines[i]);
-        fl+=snprintf(fb+fl,(size_t)(B*2-fl),"\033[%d;1H\033[7m ↑↓/click:nav  q:quit\033[0m\033[K",rows);
+        fl+=snprintf(fb+fl,(size_t)(B*2-fl),"\033[%d;1H\033[7m j/k:nav x:kill q:quit\033[0m\033[K",rows);
         (void)!write(1,fb,(size_t)fl);}
         char ch;
         fd_set fds;struct timeval tv={1,0};FD_ZERO(&fds);FD_SET(0,&fds);
@@ -127,12 +150,17 @@ static int cmd_dash_tui(void) {
         if(ch=='k'){sel=sel>0?sel-1:n-1;do_pick=1;}
         else if(ch=='j'){sel=sel<n-1?sel+1:0;do_pick=1;}
         else if(ch=='\r'||ch=='\n')do_pick=1;
+        else if(ch=='x'&&n>0){
+            dash_restore(cm,tp,rp,ntp);ntp=0;tp[0][0]=tp[1][0]=0;
+            char cm2[B];snprintf(cm2,B,"tmux kill-session -t '=%s' 2>/dev/null",lines[sel]);(void)!system(cm2);
+            dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;
+            if(n>0)DASH_SWAP();
+        }
         if(do_pick&&n>0)DASH_SWAP();
         dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;
     }
     #undef DASH_SWAP
-    /* restore all swapped panes */
-    for(int i=0;i<ntp;i++){snprintf(cm,B,"tmux swap-pane -s %s -t %s 2>/dev/null",tp[i],rp[i]);(void)!system(cm);}
+    dash_restore(cm,tp,rp,ntp);
     for(int i=0;i<2;i++)if(rp[i][0]){snprintf(cm,B,"tmux kill-pane -t %s 2>/dev/null",rp[i]);(void)!system(cm);}
     write(1,"\033[?1000l\033[?1006l",16);
     tcsetattr(0,TCSANOW,&old);printf("\033[2J\033[H\033[?25h");return 0;
