@@ -50,14 +50,86 @@ static int cmd_copy(int c,char**v){(void)c;(void)v;char o[B];int ol=0;
     if(ol<1){puts("x No output");return 0;}o[ol]=0;if(to_clip(o)){puts("x Needs tmux");return 1;}printf("\xe2\x9c\x93 %.50s\n",o);return 0;}
 
 /* ── dash ── */
-static int cmd_dash(int argc, char **argv) { (void)argc;(void)argv;
-    CWD(wd);
-    if (!tm_has("dash")) {
-        char c[B];
-        snprintf(c, B, "tmux new-session -d -s dash -c '%s'", wd); (void)!system(c);
-        snprintf(c, B, "tmux split-window -h -t dash -c '%s' 'sh -c \"a job; exec $SHELL\"'", wd); (void)!system(c);
+static int cmd_dash_tui(void);
+static int cmd_dash(int c, char **v) { (void)c;(void)v;
+    perf_disarm();
+    if(c>2&&!strcmp(v[2],"--tui"))return cmd_dash_tui();
+    char cm[B];
+    if(!tm_has("dash")){CWD(wd);
+        snprintf(cm,B,"tmux new-session -d -s dash -c '%s' '%s/a dash --tui'",wd,DDIR);
+        (void)!system(cm);}
+    tm_go("dash");return 0;
+}
+static void dash_refresh(char out[B],char**lines,int*n){
+    *n=tm_list(out,lines,64);
+    for(int i=0;i<*n;i++)if(!strcmp(lines[i],"dash")){for(int j=i;j<*n-1;j++)lines[j]=lines[j+1];(*n)--;i--;}
+}
+static int cmd_dash_tui(void) {
+    char out[B],*lines[64],cm[B];int n,sel=0;
+    char rpane[16]="",tpane[16]=""; /* right pane id, current target pane id */
+    /* create right pane */
+    snprintf(cm,B,"tmux split-window -hd -t dash:0 -p 80 -PF '#{pane_id}'");
+    pcmd(cm,rpane,16);rpane[strcspn(rpane,"\n")]=0;
+    struct termios old,raw_t;tcgetattr(0,&old);raw_t=old;
+    raw_t.c_lflag&=~(tcflag_t)(ICANON|ECHO|ISIG);raw_t.c_cc[VMIN]=1;raw_t.c_cc[VTIME]=0;
+    tcsetattr(0,TCSANOW,&raw_t);
+    write(1,"\033[?1000h\033[?1006h",16);
+    dash_refresh(out,lines,&n);
+    /* auto-pick first session */
+    if(n>0){
+        snprintf(cm,B,"tmux display -t '%s':0 -pF '#{pane_id}'",lines[0]);
+        pcmd(cm,tpane,16);tpane[strcspn(tpane,"\n")]=0;
+        if(tpane[0]&&rpane[0]){snprintf(cm,B,"tmux swap-pane -s %s -t %s",rpane,tpane);(void)!system(cm);}
     }
-    tm_go("dash"); return 0;
+    for(;;){
+        struct winsize ws;ioctl(0,TIOCGWINSZ,&ws);int rows=ws.ws_row;
+        {char fb[B*2];int fl=0;
+        fl+=snprintf(fb+fl,(size_t)(B*2-fl),"\033[2J\033[H\033[?25l");
+        for(int i=0;i<rows-1&&i<n;i++)
+            fl+=snprintf(fb+fl,(size_t)(B*2-fl),"%s  %s\033[0m\033[K\n",i==sel?"\033[7m":"",lines[i]);
+        fl+=snprintf(fb+fl,(size_t)(B*2-fl),"\033[%d;1H\033[7m ↑↓/click:nav  q:quit\033[0m\033[K",rows);
+        (void)!write(1,fb,(size_t)fl);}
+        char ch;
+        fd_set fds;struct timeval tv={1,0};FD_ZERO(&fds);FD_SET(0,&fds);
+        if(!select(1,&fds,0,0,&tv)){dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;continue;}
+        if(read(0,&ch,1)!=1)break;
+        int do_pick=0;
+        if(ch=='\x1b'){int av;usleep(50000);ioctl(0,FIONREAD,&av);if(!av)break;
+            char seq[2];if(read(0,seq,1)!=1)break;
+            if(seq[0]=='['){if(read(0,seq+1,1)!=1)break;
+                if(seq[1]=='A'&&sel>0){sel--;do_pick=1;}
+                else if(seq[1]=='B'&&sel<n-1){sel++;do_pick=1;}
+                else if(seq[1]=='<'){int mb=0,mx=0,my=0;char mc;
+                    while(read(0,&mc,1)==1&&mc!=';')mb=mb*10+mc-'0';
+                    while(read(0,&mc,1)==1&&mc!=';')mx=mx*10+mc-'0';
+                    while(read(0,&mc,1)==1&&mc!='M'&&mc!='m')my=my*10+mc-'0';
+                    (void)mx;
+                    if(mc=='M'&&mb==0&&my-1>=0&&my-1<n){sel=my-1;do_pick=1;}
+                    if(mc=='M'&&mb==64&&sel>0){sel--;do_pick=1;}
+                    if(mc=='M'&&mb==65&&sel<n-1){sel++;do_pick=1;}
+                }}continue;}
+        if(ch=='q'||ch==3)break;
+        if(ch=='k'&&sel>0){sel--;do_pick=1;}
+        else if(ch=='j'&&sel<n-1){sel++;do_pick=1;}
+        else if(ch=='\r'||ch=='\n')do_pick=1;
+        if(do_pick&&n>0&&rpane[0]){
+            /* restore previous swap */
+            if(tpane[0]){snprintf(cm,B,"tmux swap-pane -s %s -t %s 2>/dev/null",tpane,rpane);(void)!system(cm);}
+            /* swap in new target */
+            char np[16]="";
+            snprintf(cm,B,"tmux display -t '%s':0 -pF '#{pane_id}' 2>/dev/null",lines[sel]);
+            pcmd(cm,np,16);np[strcspn(np,"\n")]=0;
+            if(np[0]&&strcmp(np,rpane)){snprintf(cm,B,"tmux swap-pane -s %s -t %s",rpane,np);
+                if(!system(cm))snprintf(tpane,16,"%s",np);
+            }
+        }
+        dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;
+    }
+    /* restore on exit */
+    if(tpane[0]&&rpane[0]){snprintf(cm,B,"tmux swap-pane -s %s -t %s 2>/dev/null",tpane,rpane);(void)!system(cm);}
+    if(rpane[0]){snprintf(cm,B,"tmux kill-pane -t %s 2>/dev/null",rpane);(void)!system(cm);}
+    write(1,"\033[?1000l\033[?1006l",16);
+    tcsetattr(0,TCSANOW,&old);printf("\033[2J\033[H\033[?25h");return 0;
 }
 
 /* ── watch ── */

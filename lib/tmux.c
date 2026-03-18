@@ -27,7 +27,7 @@ static void tm_send(const char *s, const char *text) {
 }
 
 static int tm_read(const char *s, char *buf, int len) {
-    char c[B]; snprintf(c, B, "tmux capture-pane -t '%s' -p -S -50 2>/dev/null", s);
+    char c[B]; snprintf(c, B, "tmux capture-pane -t '%s' -p 2>/dev/null", s);
     return pcmd(c, buf, len);
 }
 
