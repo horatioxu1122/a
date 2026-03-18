@@ -297,12 +297,12 @@ static int cmd_cat(int c,char**v){perf_disarm();
     if(!m){puts("1 all files, all lines\n2 all files, all lines (skip lab/)\n3 all files, first 10 lines + last 5 lines (skip lab/)");
         printf("> ");fflush(stdout);char ch[4];if(!fgets(ch,4,stdin))return 0;m=ch[0];}
     const char*ex=m!='1'?" -- ':!lab/'":"";
-    if(m=='3'){char cm[B];snprintf(cm,B,"git ls-files -z%s|xargs -0 grep -lIZ ''",ex);
+    if(m=='3'){char cm[B];snprintf(cm,B,"git grep -lI ''%s",ex);
         size_t l=0,cap=0;char*d=NULL,b[8192];size_t n;int nf=0,skf=0;
         FILE*fl=popen(cm,"r");char fb[65536];size_t fl2=0;
         if(fl){while((n=fread(b,1,8192,fl))>0){if(fl2+n<65536){memcpy(fb+fl2,b,n);fl2+=n;}}pclose(fl);}
         fb[fl2]=0;
-        for(char*p=fb;p<fb+fl2;){char*e=memchr(p,0,(size_t)(fb+fl2-p));if(!e)break;
+        for(char*p=fb;p<fb+fl2;){char*e=memchr(p,'\n',(size_t)(fb+fl2-p));if(!e)break;*e=0;
             if(l>131072&&strchr(p,'/')){skf++;p=e+1;continue;}
             FILE*f=fopen(p,"r");if(!f){p=e+1;continue;}
             int tl=0;char ln[512];while(fgets(ln,512,f))tl++;
