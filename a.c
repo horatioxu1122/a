@@ -275,12 +275,14 @@ static int cmd_sess(int, char**);
 #include "lib/perf.c"
 #include "lib/sess.c"
 
+typedef struct{char n[64];int c;}FC;
+static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)a)->c;}
 static int cmd_freq(int c,char**v){perf_disarm();
     int verbose=0,n=25;
     for(int i=2;i<c;i++){if(!strcmp(v[i],"-v"))verbose=1;else if(*v[i]>='0'&&*v[i]<='9')n=atoi(v[i]);}
     char ad[P];snprintf(ad,P,"%s/git/activity",AROOT);
     DIR*d=opendir(ad);if(!d){puts("x no activity log");return 1;}
-    struct{char n[64];int c;}ct[1024];int nc=0;
+    FC ct[1024];int nc=0;
     struct dirent*e;char fp[P],ln[256];
     while((e=readdir(d))){if(e->d_name[0]=='.')continue;
         snprintf(fp,P,"%s/%s",ad,e->d_name);
@@ -295,7 +297,7 @@ static int cmd_freq(int c,char**v){perf_disarm();
         int j;for(j=0;j<nc;j++)if(!strcmp(ct[j].n,p)){ct[j].c++;break;}
         if(j==nc&&nc<1024){snprintf(ct[nc].n,64,"%s",p);ct[nc].c=1;nc++;}}
     closedir(d);
-    for(int i=0;i<nc-1;i++)for(int j=i+1;j<nc;j++)if(ct[j].c>ct[i].c){char tn[64];int tc=ct[i].c;memcpy(tn,ct[i].n,64);ct[i].c=ct[j].c;memcpy(ct[i].n,ct[j].n,64);ct[j].c=tc;memcpy(ct[j].n,tn,64);}
+    qsort(ct,(size_t)nc,sizeof(ct[0]),ctcmp);
     if(n>nc)n=nc;
     for(int i=0;i<n;i++)printf("%6d %s\n",ct[i].c,ct[i].n);
     puts("\033[33m! counts include bot/automated use\033[0m");
