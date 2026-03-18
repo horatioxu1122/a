@@ -64,23 +64,37 @@ static void dash_refresh(char out[B],char**lines,int*n){
     *n=tm_list(out,lines,64);
     for(int i=0;i<*n;i++)if(!strcmp(lines[i],"dash")){for(int j=i;j<*n-1;j++)lines[j]=lines[j+1];(*n)--;i--;}
 }
+/* get all pane ids for a session's window 0 */
+static int dash_panes(const char *sess, char ids[][16], int max) {
+    char cm[B],buf[256];
+    snprintf(cm,B,"tmux list-panes -t '%s':0 -F '#{pane_id}' 2>/dev/null",sess);
+    pcmd(cm,buf,256);int n=0;
+    for(char*p=buf;*p&&n<max;){char*e=strchr(p,'\n');if(e)*e=0;
+        if(*p)snprintf(ids[n++],16,"%s",p);if(e)p=e+1;else break;}
+    return n;
+}
 static int cmd_dash_tui(void) {
     char out[B],*lines[64],cm[B];int n,sel=0;
-    char rpane[16]="",tpane[16]=""; /* right pane id, current target pane id */
-    /* create right pane */
+    /* rp[0]=right-top, rp[1]=right-bottom placeholders; tp=target panes */
+    char rp[2][16]={"",""},tp[2][16]={"",""};int ntp=0;
+    /* create right panes: top + bottom */
     snprintf(cm,B,"tmux split-window -hd -t dash:0 -p 80 -PF '#{pane_id}'");
-    pcmd(cm,rpane,16);rpane[strcspn(rpane,"\n")]=0;
+    pcmd(cm,rp[0],16);rp[0][strcspn(rp[0],"\n")]=0;
+    snprintf(cm,B,"tmux split-window -vd -t %s -p 40 -PF '#{pane_id}'",rp[0]);
+    pcmd(cm,rp[1],16);rp[1][strcspn(rp[1],"\n")]=0;
     struct termios old,raw_t;tcgetattr(0,&old);raw_t=old;
     raw_t.c_lflag&=~(tcflag_t)(ICANON|ECHO|ISIG);raw_t.c_cc[VMIN]=1;raw_t.c_cc[VTIME]=0;
     tcsetattr(0,TCSANOW,&raw_t);
     write(1,"\033[?1000h\033[?1006h",16);
     dash_refresh(out,lines,&n);
-    /* auto-pick first session */
-    if(n>0){
-        snprintf(cm,B,"tmux display -t '%s':0 -pF '#{pane_id}'",lines[0]);
-        pcmd(cm,tpane,16);tpane[strcspn(tpane,"\n")]=0;
-        if(tpane[0]&&rpane[0]){snprintf(cm,B,"tmux swap-pane -s %s -t %s",rpane,tpane);(void)!system(cm);}
-    }
+    /* swap helper: restore old, swap in new */
+    #define DASH_SWAP() do { \
+        for(int _i=0;_i<ntp;_i++){snprintf(cm,B,"tmux swap-pane -s %s -t %s 2>/dev/null",tp[_i],rp[_i]);(void)!system(cm);} \
+        char ids[8][16];int np=dash_panes(lines[sel],ids,8);if(np>2)np=2; \
+        for(int _i=0;_i<np;_i++){snprintf(cm,B,"tmux swap-pane -s %s -t %s",rp[_i],ids[_i]);(void)!system(cm);snprintf(tp[_i],16,"%s",ids[_i]);} \
+        ntp=np; \
+    } while(0)
+    if(n>0)DASH_SWAP();
     for(;;){
         struct winsize ws;ioctl(0,TIOCGWINSZ,&ws);int rows=ws.ws_row;
         {char fb[B*2];int fl=0;
@@ -107,27 +121,18 @@ static int cmd_dash_tui(void) {
                     if(mc=='M'&&mb==0&&my-1>=0&&my-1<n){sel=my-1;do_pick=1;}
                     if(mc=='M'&&mb==64&&sel>0){sel--;do_pick=1;}
                     if(mc=='M'&&mb==65&&sel<n-1){sel++;do_pick=1;}
-                }}continue;}
+                }}}
         if(ch=='q'||ch==3)break;
         if(ch=='k'&&sel>0){sel--;do_pick=1;}
         else if(ch=='j'&&sel<n-1){sel++;do_pick=1;}
         else if(ch=='\r'||ch=='\n')do_pick=1;
-        if(do_pick&&n>0&&rpane[0]){
-            /* restore previous swap */
-            if(tpane[0]){snprintf(cm,B,"tmux swap-pane -s %s -t %s 2>/dev/null",tpane,rpane);(void)!system(cm);}
-            /* swap in new target */
-            char np[16]="";
-            snprintf(cm,B,"tmux display -t '%s':0 -pF '#{pane_id}' 2>/dev/null",lines[sel]);
-            pcmd(cm,np,16);np[strcspn(np,"\n")]=0;
-            if(np[0]&&strcmp(np,rpane)){snprintf(cm,B,"tmux swap-pane -s %s -t %s",rpane,np);
-                if(!system(cm))snprintf(tpane,16,"%s",np);
-            }
-        }
+        if(do_pick&&n>0)DASH_SWAP();
         dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;
     }
-    /* restore on exit */
-    if(tpane[0]&&rpane[0]){snprintf(cm,B,"tmux swap-pane -s %s -t %s 2>/dev/null",tpane,rpane);(void)!system(cm);}
-    if(rpane[0]){snprintf(cm,B,"tmux kill-pane -t %s 2>/dev/null",rpane);(void)!system(cm);}
+    #undef DASH_SWAP
+    /* restore all swapped panes */
+    for(int i=0;i<ntp;i++){snprintf(cm,B,"tmux swap-pane -s %s -t %s 2>/dev/null",tp[i],rp[i]);(void)!system(cm);}
+    for(int i=0;i<2;i++)if(rp[i][0]){snprintf(cm,B,"tmux kill-pane -t %s 2>/dev/null",rp[i]);(void)!system(cm);}
     write(1,"\033[?1000l\033[?1006l",16);
     tcsetattr(0,TCSANOW,&old);printf("\033[2J\033[H\033[?25h");return 0;
 }
