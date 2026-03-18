@@ -29,12 +29,10 @@ curl -fsSL raw.githubusercontent.com/seanpattencode/a/main/a.c | sh
 ## Simple start
 
 ```
-a a
+a tutorial
 ```
 
-Sign in, then ask:
-
-"Run a help and explore a.c and explain how to use it for the project I want to do. Ask me for my goals and dreams as well, and help me accomplish them within the project I want to complete."
+Guided walkthrough — tells you what `a` is, asks what you're working on, and teaches commands as you go.
 
 ## Core Commands
 
