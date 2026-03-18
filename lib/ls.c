@@ -75,9 +75,9 @@ static int dash_panes(const char *sess, char ids[][16], int max) {
 }
 static int cmd_dash_tui(void) {
     char out[B],*lines[64],cm[B];int n,sel=0;
-    /* rp[0]=right-top, rp[1]=right-bottom placeholders; tp=target panes */
-    char rp[2][16]={"",""},tp[2][16]={"",""};int ntp=0;
-    /* create right panes: top + bottom */
+    /* me=selector pane, rp=right placeholders, tp=target panes */
+    char me[16]="",rp[2][16]={"",""},tp[2][16]={"",""};int ntp=0;
+    pcmd("tmux display -p '#{pane_id}'",me,16);me[strcspn(me,"\n")]=0;
     snprintf(cm,B,"tmux split-window -hd -t dash:0 -p 80 -PF '#{pane_id}'");
     pcmd(cm,rp[0],16);rp[0][strcspn(rp[0],"\n")]=0;
     snprintf(cm,B,"tmux split-window -vd -t %s -p 40 -PF '#{pane_id}'",rp[0]);
@@ -93,6 +93,7 @@ static int cmd_dash_tui(void) {
         char ids[8][16];int np=dash_panes(lines[sel],ids,8);if(np>2)np=2; \
         for(int _i=0;_i<np;_i++){snprintf(cm,B,"tmux swap-pane -s %s -t %s",rp[_i],ids[_i]);(void)!system(cm);snprintf(tp[_i],16,"%s",ids[_i]);} \
         ntp=np; \
+        if(me[0]){snprintf(cm,B,"tmux select-pane -t %s",me);(void)!system(cm);} \
     } while(0)
     if(n>0)DASH_SWAP();
     for(;;){
@@ -111,8 +112,8 @@ static int cmd_dash_tui(void) {
         if(ch=='\x1b'){int av;usleep(50000);ioctl(0,FIONREAD,&av);if(!av)break;
             char seq[2];if(read(0,seq,1)!=1)break;
             if(seq[0]=='['){if(read(0,seq+1,1)!=1)break;
-                if(seq[1]=='A'&&sel>0){sel--;do_pick=1;}
-                else if(seq[1]=='B'&&sel<n-1){sel++;do_pick=1;}
+                if(seq[1]=='A'){sel=sel>0?sel-1:n-1;do_pick=1;}
+                else if(seq[1]=='B'){sel=sel<n-1?sel+1:0;do_pick=1;}
                 else if(seq[1]=='<'){int mb=0,mx=0,my=0;char mc;
                     while(read(0,&mc,1)==1&&mc!=';')mb=mb*10+mc-'0';
                     while(read(0,&mc,1)==1&&mc!=';')mx=mx*10+mc-'0';
@@ -123,8 +124,8 @@ static int cmd_dash_tui(void) {
                     if(mc=='M'&&mb==65&&sel<n-1){sel++;do_pick=1;}
                 }}}
         if(ch=='q'||ch==3)break;
-        if(ch=='k'&&sel>0){sel--;do_pick=1;}
-        else if(ch=='j'&&sel<n-1){sel++;do_pick=1;}
+        if(ch=='k'){sel=sel>0?sel-1:n-1;do_pick=1;}
+        else if(ch=='j'){sel=sel<n-1?sel+1:0;do_pick=1;}
         else if(ch=='\r'||ch=='\n')do_pick=1;
         if(do_pick&&n>0)DASH_SWAP();
         dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;
