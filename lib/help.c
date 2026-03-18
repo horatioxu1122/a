@@ -55,8 +55,8 @@ static void gen_icache(void) {
     for(int si=0;si<2;si++){char md[P];snprintf(md,P,"%s/%s",sd[si],sl[si]);DIR*d=opendir(md);struct dirent*e;
     if(d){while((e=readdir(d))){if(e->d_name[0]=='.'||e->d_name[0]=='_')continue;
         char nm[64];snprintf(nm,64,"%s",e->d_name);char*dot=strrchr(nm,'.');
-        if(si&&(!dot||(strcmp(dot,".py")&&strcmp(dot,".c")&&strcmp(dot,".sh")&&strcmp(dot,".html"))))continue;if(dot)*dot=0;
-        if(si)fprintf(f,"x.%s\tlab\n",nm);else fprintf(f,"%s\tmy\n",nm);}closedir(d);}}}
+        if(si&&(!dot||(strcmp(dot,".py")&&strcmp(dot,".c")&&strcmp(dot,".sh")&&strcmp(dot,".html"))))continue;if(!si&&dot)*dot=0;
+        fprintf(f,"%s\t%s\n",nm,sl[si]);}closedir(d);}}}
     /* subcommands not discoverable from filenames */
     fputs("ui\tweb dashboard\nterm\tterminal (a ui /term)\n"
     "cal add\tadd event\nhub add\tadd\nhub run\trun\nhub rm\trm\nhub log\tlog\n"

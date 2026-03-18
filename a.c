@@ -499,15 +499,21 @@ int main(int argc, char **argv) {
      if(fexists(pf))fallback_py(arg,argc,argv);
      snprintf(pf,P,"%s/lib/%s/__init__.py",SDIR,arg);
      if(fexists(pf)){char m[P];snprintf(m,P,"%s/__init__",arg);fallback_py(m,argc,argv);}
-     const char*la=(*arg=='x'&&arg[1]=='.')?arg+2:arg;
-     snprintf(pf,P,"%s/lab/%s.py",SDIR,la);
+     snprintf(pf,P,"%s/lab/%s",SDIR,arg);char*dx=strrchr(arg,'.');
+     if(dx&&fexists(pf)){perf_disarm();
+      if(!strcmp(dx,".py")){argv[1]=pf;argv[0]="python3";execvp("python3",argv);}
+      if(!strcmp(dx,".c")){char ob[P],cm[B];snprintf(ob,P,"%s/lab_%.*s",TMP,(int)(dx-arg),arg);
+       snprintf(cm,B,"cc -w -o '%s' '%s'&&'%s'",ob,pf,ob);return system(cm);}
+      if(!strcmp(dx,".sh")){argv[1]=pf;argv[0]="sh";execvp("sh",argv);}
+      if(!strcmp(dx,".html")){execlp("xdg-open","xdg-open",pf,(char*)0);}}
+     snprintf(pf,P,"%s/lab/%s.py",SDIR,arg);
      if(fexists(pf)){perf_disarm();argv[1]=pf;argv[0]="python3";execvp("python3",argv);}
-     snprintf(pf,P,"%s/lab/%s.c",SDIR,la);
-     if(fexists(pf)){perf_disarm();char ob[P],cm[B];snprintf(ob,P,"%s/lab_%s",TMP,la);
+     snprintf(pf,P,"%s/lab/%s.c",SDIR,arg);
+     if(fexists(pf)){perf_disarm();char ob[P],cm[B];snprintf(ob,P,"%s/lab_%s",TMP,arg);
       snprintf(cm,B,"cc -w -o '%s' '%s'&&'%s'",ob,pf,ob);return system(cm);}
-     snprintf(pf,P,"%s/lab/%s.sh",SDIR,la);
+     snprintf(pf,P,"%s/lab/%s.sh",SDIR,arg);
      if(fexists(pf)){perf_disarm();argv[1]=pf;argv[0]="sh";execvp("sh",argv);}
-     snprintf(pf,P,"%s/lab/%s.html",SDIR,la);
+     snprintf(pf,P,"%s/lab/%s.html",SDIR,arg);
      if(fexists(pf)){perf_disarm();execlp("xdg-open","xdg-open",pf,(char*)0);}}
     {size_t l=strlen(arg);if(l>=3&&arg[l-1]=='+'&&arg[l-2]=='+'&&*arg!='w')return cmd_wt_plus(argc,argv);}
     if(*arg=='w'&&arg[1]&&!fexists(arg))return cmd_wt(argc,argv);
