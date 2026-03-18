@@ -79,8 +79,8 @@ case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
 build)
     R="${D%%/adata/worktrees/*}"; if [[ "$D" == *"/adata/worktrees/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
-    BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
-    rm -f "$ABIN/.chk"
+    BIN="$HOME/.local/bin";[[ -d "$ABIN" ]] || mkdir -p "$ABIN";[[ -d "$BIN" ]] || mkdir -p "$BIN"
+    [[ -f "$ABIN/.chk" ]] && rm -f "$ABIN/.chk"
     printf '%s' $$ > "$ABIN/.bld"
     _build_fix() {
         warn "Build failed. Attempting agent fix..."
