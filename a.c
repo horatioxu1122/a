@@ -39,7 +39,7 @@ _warn_flags() {
 }
 _shell_funcs() {
     for RC in "$HOME/.bashrc" "$HOME/.zshrc"; do
-        # skip RC files we can't write (e.g. permission denied on some macOS setups)
+        # skip unwritable RC files
         touch "$RC" 2>/dev/null || { warn "can't write $RC (skip)"; continue; }
         grep -q '.local/bin' "$RC" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$RC"
         sed -i.bak '/^_ADD=/d;/^a() {/,/^}/d;/^aio() /d;/^ai() /d;/aios/d' "$RC";rm "$RC.bak"
@@ -92,7 +92,7 @@ build)
         echo "  whatsapp: Sean Patten"
     }
     if [[ -x "$(type -P tcc)" ]]; then
-        TCT=${EPOCHREALTIME/./};tcc -DSRC="\"$D\"" -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||{ _build_fix "$(tcc -DSRC="\"$D\"" -w -o /dev/null "$D/a.c" 2>&1)"; exit 1; };TCT=$(( ${EPOCHREALTIME/./} - TCT ))000
+        _Q=-DSRC="\"$D\"";TCT=${EPOCHREALTIME/./};tcc $_Q -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||{ _build_fix "$(tcc $_Q -w -o /dev/null "$D/a.c" 2>&1)"; exit 1; };TCT=$(( ${EPOCHREALTIME/./} - TCT ))000
     else
         _ensure_cc; E=$($CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { _build_fix "$E"; exit 1; }
     fi
@@ -514,7 +514,7 @@ int main(int argc, char **argv) {
      if(fexists(pf))fallback_py(arg,argc,argv);
      snprintf(pf,P,"%s/lib/%s/__init__.py",SDIR,arg);
      if(fexists(pf)){char m[P];snprintf(m,P,"%s/__init__",arg);fallback_py(m,argc,argv);}
-     snprintf(pf,P,"%s/lab/%s",SDIR,arg);char*dx=strrchr(arg,'.');
+     snprintf(pf,P,"%s/lab/%s",SDIR,arg);const char*dx=strrchr(arg,'.');
      if(dx&&fexists(pf)){perf_disarm();
       if(!strcmp(dx,".py")){argv[1]=pf;argv[0]="python3";execvp("python3",argv);}
       if(!strcmp(dx,".c")){char ob[P],cm[B];snprintf(ob,P,"%s/lab_%.*s",TMP,(int)(dx-arg),arg);
