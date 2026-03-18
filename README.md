@@ -32,7 +32,7 @@ curl -fsSL raw.githubusercontent.com/seanpattencode/a/main/a.c | sh
 a tutorial
 ```
 
-Guided walkthrough — tells you what `a` is, asks what you're working on, and teaches commands as you go.
+Guided walkthrough — tells you what `a` is, asks what you're working on, and teaches commands as you go. You'll accomplish real work on your project while learning.
 
 ## Core Commands
 
