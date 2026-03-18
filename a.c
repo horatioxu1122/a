@@ -461,11 +461,15 @@ static void perf_arm(const char *cmd) {
     alarm(secs);
 }
 static void perf_disarm(void) { alarm(0); signal(SIGALRM, SIG_DFL); }
+static struct timespec gt0;
+static void gt_print(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);
+    fprintf(stderr,"%ldms\n",(t.tv_sec-gt0.tv_sec)*1000L+(t.tv_nsec-gt0.tv_nsec)/1000000);}
 int main(int argc, char **argv) {
     init_paths();G_argc=argc;G_argv=argv;
 
     if (argc < 2) return (isatty(1)?cmd_i:cmd_help)(argc, argv);
 
+    clock_gettime(CLOCK_MONOTONIC,&gt0);atexit(gt_print);
     char acmd[B]="";ajoin(acmd,B,argc,argv,1);
     CWD(wd);
     alog(acmd, wd);

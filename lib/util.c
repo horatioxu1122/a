@@ -43,7 +43,7 @@ static int ajoin(char*b,int sz,int argc,char**argv,int from){int l=0;for(int i=f
 static void rapid(const char *prompt, void (*fn)(const char*)) {
     if (!isatty(STDIN_FILENO)) return; perf_disarm();
     char line[512];
-    while (fputs(prompt,stdout),fflush(stdout), fgets(line, 512, stdin)) {
+    while ((void)fputs(prompt,stdout),(void)fflush(stdout), fgets(line, 512, stdin)) {
         line[strcspn(line, "\n")] = 0;
         if (!line[0]) break;
         fn(line);
