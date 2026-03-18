@@ -39,7 +39,8 @@ _warn_flags() {
 }
 _shell_funcs() {
     for RC in "$HOME/.bashrc" "$HOME/.zshrc"; do
-        touch "$RC"
+        # skip RC files we can't write (e.g. permission denied on some macOS setups)
+        touch "$RC" 2>/dev/null || { warn "can't write $RC (skip)"; continue; }
         grep -q '.local/bin' "$RC" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$RC"
         sed -i.bak '/^_ADD=/d;/^a() {/,/^}/d;/^aio() /d;/^ai() /d;/aios/d' "$RC";rm "$RC.bak"
         echo "_ADD=\"${D%%/adata/worktrees/*}/adata/local\"" >> "$RC"
