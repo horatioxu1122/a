@@ -463,7 +463,14 @@ static void perf_arm(const char *cmd) {
 static void perf_disarm(void) { alarm(0); signal(SIGALRM, SIG_DFL); }
 static struct timespec gt0;
 static void gt_print(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);
-    fprintf(stderr,"%ldms\n",(t.tv_sec-gt0.tv_sec)*1000L+(t.tv_nsec-gt0.tv_nsec)/1000000);}
+    long ms=(t.tv_sec-gt0.tv_sec)*1000L+(t.tv_nsec-gt0.tv_nsec)/1000000;
+    struct stat st;char p[P];DIR*d;struct dirent*e;
+    snprintf(p,P,"%s/a.c",SDIR);long ac=!stat(p,&st)?st.st_size/4:0;
+    long dt[2]={0,0};const char*dn[]={"lib","lab"};
+    for(int i=0;i<2;i++){snprintf(p,P,"%s/%s",SDIR,dn[i]);d=opendir(p);if(d){
+        while((e=readdir(d))){if(e->d_name[0]=='.')continue;snprintf(p,P,"%s/%s/%s",SDIR,dn[i],e->d_name);
+            if(!stat(p,&st)&&S_ISREG(st.st_mode))dt[i]+=st.st_size;}closedir(d);}}
+    fprintf(stderr,"%ldms tokens a.c:%ld lib:%ld lab:%ld\n",ms,ac,dt[0]/4,dt[1]/4);}
 int main(int argc, char **argv) {
     init_paths();G_argc=argc;G_argv=argv;
 
