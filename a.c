@@ -410,6 +410,11 @@ static int cmd_run_once(int c,char**v){
     kill(ch,SIGKILL);waitpid(ch,NULL,0);return 124;}
 static int cmd_my(int c,char**v){(void)c;(void)v;char d[P];snprintf(d,P,"%s/my",SROOT);
     execlp("ls","ls","--color",d,(char*)0);return 1;}
+static int cmd_tutorial(int c,char**v){(void)c;
+    init_db();load_cfg();load_sess();const char*k=cfget("default_agent");
+    static char kb[16];snprintf(kb,16,"%s",k[0]?k:"c");
+    char*fv[]={v[0],kb,"You are a friendly guide for 'a', an AI agent manager that helps you accomplish your projects and goals faster. Introduce it in one sentence, say you can ask me anything about commands or how things work, then ask: what project are you working on or want to start? Recommend they pick a real one so you can walk them through it hands-on. Run 'a help' and read README.md IDEAS.md as reference but teach naturally as the user needs it, don't dump. Note: 'scream' in the workcycle just means focus on what's most essential.",NULL};
+    return cmd_sess(3,fv);}
 typedef struct { const char *n; int (*fn)(int, char**); } cmd_t;
 static int cmd_cmp(const void*a,const void*b){return strcmp(((const cmd_t*)a)->n,((const cmd_t*)b)->n);}
 /* dispatch: C logic+aliases here; lib .py and my scripts auto-discovered.
@@ -436,7 +441,7 @@ static const cmd_t CMDS[] = {
     {"ssh",cmd_ssh},{"ssh add",cmd_ssh},{"ssh all",cmd_ssh},{"ssh rm",cmd_ssh},
     {"ssh self",cmd_ssh},{"ssh setup",cmd_ssh},{"ssh start",cmd_ssh},{"ssh stop",cmd_ssh},
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
-    {"tree",cmd_tree},{"u",cmd_update},  /* ui auto-discovered */
+    {"tree",cmd_tree},{"tutorial",cmd_tutorial},{"u",cmd_update},  /* ui auto-discovered */
     {"uninstall",cmd_uninstall},{"update",cmd_update},{"watch",cmd_watch},{"web",cmd_web},
     /* work auto-discovered */
     {"x",cmd_x},
