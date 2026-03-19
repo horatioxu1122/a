@@ -120,6 +120,27 @@ build)
         fi
     ) >&- 2>&- &
     ;;
+# sh a.c check — build + run all checkers foreground, exit 0 on pass.
+# Use 'sh a.c' for fast iteration, 'sh a.c check' before presenting to user.
+check)
+    R="${D%%/adata/worktrees/*}"; if [[ "$D" == *"/adata/worktrees/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
+    BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
+    _ensure_cc; E=$($CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { echo "$E"; exit 1; }
+    [[ "$D" != *"/adata/worktrees/"* ]] && ln -sf "$ABIN/a" "$BIN/a"
+    T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\"";_warn_flags
+    _c(){ n=$1;shift;{ ! command -v "$1" &>/dev/null||"$@";}>"$T/$n" 2>&1||touch "$T/$n.f";}
+    _rgcc(){ command -v gcc &>/dev/null&&! gcc --version 2>&1|grep -q clang;}
+    _c 1 $CC $WARN $A -fsyntax-only "$F" &
+    _c 3 clang-tidy --checks='-*,bugprone-branch-clone,bugprone-infinite-loop,bugprone-sizeof-*' -warnings-as-errors='*' "$F" -- $A -std=c17 -w &
+    { ! _rgcc||gcc -std=c17 -Werror -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wtrampolines $A -fsyntax-only "$F";}>"$T/4" 2>&1||touch "$T/4.f" &
+    { ! _rgcc||{ gcc -fanalyzer $A -fsyntax-only "$F" >"$T/5" 2>&1;! grep -q '\-Wanalyzer' "$T/5";};}||touch "$T/5.f" &
+    _c 6 cppcheck --error-exitcode=1 --quiet --suppress=syntaxError $A "$F" & _c 7 frama-c -eva -eva-no-print -no-unicode -cpp-extra-args="$A" "$F" &
+    { ! command -v cbmc &>/dev/null||timeout 15 cbmc --function main "$F" $A||[ $? -eq 124 ];}>"$T/8" 2>&1||touch "$T/8.f" &
+    { $CC $A -fsanitize=undefined,address -fno-omit-frame-pointer -w -o "$T/a.san" "$F"&&A_BENCH=1 "$T/a.san" help >"$T/9" 2>&1;! grep -q 'runtime error\|SUMMARY:.*Sanitizer' "$T/9";}||touch "$T/9.f" &
+    wait
+    if ls "$T"/[0-9].f &>/dev/null;then cat "$T"/[0-9]; exit 1
+    else ok "all checkers passed"; $CC $A -O3 -march=native -flto -w -o "$ABIN/a.opt" "$F"&&mv "$ABIN/a.opt" "$ABIN/a" 2>&-;rm -f "$ABIN/a.opt" & fi
+    ;;
 analyze) _ensure_cc;_warn_flags
     $CC $WARN -DSRC="\"$D\"" --analyze -Xanalyzer -analyzer-output=text -Xanalyzer -analyzer-checker=security,unix,nullability,optin.portability.UnixAPI -Xanalyzer -analyzer-disable-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling "$D/a.c"
     find "$D" -maxdepth 1 -name '*.plist' -delete;;

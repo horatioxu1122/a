@@ -29,6 +29,11 @@ Time all command runs the fix must be faster or same time.
 Feature additions:
 For feature additions, once code works, cut it aggressively, verify cuts are shorter with "a diff", and output is correct, until it cannot be cut more. Lab is exempt from cuts.
 
+Build workflow:
+Use "sh a.c" for fast iteration (instant O0 build, checkers run async in background).
+Use "sh a.c check" before presenting work to the user (runs all checkers foreground, exits 0 on pass, O3 in background).
+Never present code to the user that hasn't passed "sh a.c check".
+
 Human in loop:
 Output copy pastable commands for human to run to verify changes are both correct and valuable. Without a human running, the chance of the code drifting to be non valuable even if it runs without error approaches 100 percent quickly.
 Iterate on human feedback in accordance with the above.
