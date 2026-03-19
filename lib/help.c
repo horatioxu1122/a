@@ -69,6 +69,20 @@ static void gen_icache(void) {
         const char *nm = kvget(&kv,"Name"); if (!nm) continue;  fprintf(f, "ssh %s\thost\n", nm);
     }
     fclose(f);
+    /* background: generate freq cache from activity logs */
+    if(!fork()){char ad[P];snprintf(ad,P,"%s/git/activity",AROOT);
+        DIR*d=opendir(ad);if(!d)_exit(0);FC ct[1024];int nc=0;struct dirent*e;char fp2[P],ln[256];
+        while((e=readdir(d))){if(e->d_name[0]=='.')continue;
+            snprintf(fp2,P,"%s/%s",ad,e->d_name);int fd=open(fp2,O_RDONLY);if(fd<0)continue;
+            int r=(int)read(fd,ln,255);close(fd);if(r<=0)continue;ln[r]=0;
+            char*p=ln;for(int j=0;j<3&&*p;j++){while(*p&&*p!=' ')p++;while(*p==' ')p++;}
+            char*end=p;while(*end&&*end!=' '&&*end!='\n')end++;*end=0;if(!*p)continue;
+            int j;for(j=0;j<nc;j++)if(!strcmp(ct[j].n,p)){ct[j].c++;break;}
+            if(j==nc&&nc<1024){snprintf(ct[nc].n,64,"%s",p);ct[nc].c=1;nc++;}}
+        closedir(d);qsort(ct,(size_t)nc,sizeof(ct[0]),ctcmp);
+        char fc[P];snprintf(fc,P,"%s/freq_cache.txt",DDIR);
+        FILE*ff=fopen(fc,"w");if(ff){for(int j=0;j<nc&&j<256;j++)fprintf(ff,"%s:%d\n",ct[j].n,ct[j].c);fclose(ff);}
+        _exit(0);}
 }
 
 static int cmd_help(int c,char**v){(void)c;(void)v;

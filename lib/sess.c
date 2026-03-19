@@ -94,10 +94,20 @@ static int cmd_dir_file(int argc, char **argv) { (void)argc;
 }
 
 /* ── interactive picker ── */
+typedef struct{char*p;int sc;}fqm_t;
+static FC fq[256]; int nfq;
+static int fq_get(const char*s){int sl=(int)strlen(s);
+    for(int i=0;i<nfq;i++){int fl=(int)strlen(fq[i].n);if(fl<=sl&&!strncasecmp(s,fq[i].n,(size_t)fl))return fq[i].c;}return 0;}
+static int fqm_cmp(const void*a,const void*b){return((const fqm_t*)b)->sc-((const fqm_t*)a)->sc;}
 static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
     perf_disarm(); init_db();
     char cache[P]; snprintf(cache, P, "%s/i_cache.txt", DDIR);
     gen_icache();
+    /* load freq cache */
+    {char fp[P];snprintf(fp,P,"%s/freq_cache.txt",DDIR);
+    FILE*ff=fopen(fp,"r");if(ff){char ln[128];nfq=0;
+        while(nfq<256&&fgets(ln,128,ff)){char*c=strchr(ln,':');if(!c)continue;*c=0;
+            snprintf(fq[nfq].n,64,"%s",ln);fq[nfq].c=atoi(c+1);nfq++;}fclose(ff);}}
     size_t len; char *raw = readf(cache, &len);
     if (!raw) { puts("No cache"); return 1; }
     /* Parse lines */
@@ -124,21 +134,22 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
     printf("Filter (↑↓/Tab=cycle, Enter=run, Esc=quit)\n");
     while (1) {
         /* Search */
-        char *matches[512]; int nm = 0; int plen = (int)strlen(prefix);
+        fqm_t fm[512]; int nm = 0; int plen = (int)strlen(prefix);
         for (int i=0;i<n&&nm<512;i++) {
             if (plen && strncmp(lines[i], prefix, (size_t)plen)) continue;
             if(blen){char*s=lines[i]+plen,b2[256],*w;snprintf(b2,256,"%s",buf);int ok=1;
                 for(w=strtok(b2," ");w&&ok;w=strtok(0," "))if(!strcasestr(s,w))ok=0;if(!ok)continue;}
-            matches[nm++] = lines[i];
+            fm[nm].p=lines[i];fm[nm].sc=blen?fq_get(lines[i]):0;nm++;
         }
+        if(blen&&nfq)qsort(fm,(size_t)nm,sizeof(fqm_t),fqm_cmp);
         if (sel >= nm) sel = nm ? nm-1 : 0;
         /* Scroll window around sel */
         int top=sel>=maxshow?sel-maxshow+1:0, show=nm-top<maxshow?nm-top:maxshow;
         /* Render — single write to avoid flicker */
         {char fb[B*4];int fl=0;
         fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[H\033[?25l%s> %s\033[K\n",prefix,buf);
-        for(int i=0;i<show;i++){int j=top+i,W=ws.ws_col;char*t=strchr(matches[j],'\t');int ml=t?(int)(t-matches[j]):(int)strlen(matches[j]);
-            if(ml>W-5)ml=W-5;fl+=snprintf(fb+fl,(size_t)(B*4-fl),"%s a %.*s\033[K",j==sel?" >":"  ",ml,matches[j]);
+        for(int i=0;i<show;i++){int j=top+i,W=ws.ws_col;char*t=strchr(fm[j].p,'\t');int ml=t?(int)(t-fm[j].p):(int)strlen(fm[j].p);
+            if(ml>W-5)ml=W-5;fl+=snprintf(fb+fl,(size_t)(B*4-fl),"%s a %.*s\033[K",j==sel?" >":"  ",ml,fm[j].p);
             if(t&&ml+5+(int)strlen(t+1)<W)fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[%dG\033[90m%s\033[0m",W-(int)strlen(t+1),t+1);
             fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\n");}
         fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[J\033[1;%dH\033[?25h",plen+blen+3);
@@ -163,7 +174,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
         else if (ch == '\x03' || ch == '\x04') break;
         else if ((ch>='a'&&ch<='z')||(ch>='A'&&ch<='Z')||(ch>='0'&&ch<='9')||ch=='-'||ch=='_'||ch==' ') { if(blen<254){buf[blen++]=ch;buf[blen]=0;sel=0;} }
         if (do_pick && nm) {
-            char *m = matches[sel]; char cmd[256];
+            char *m = fm[sel].p; char cmd[256];
             char *tab=strchr(m,'\t'),*colon=strchr(m,':');
             if(colon&&(!tab||colon<tab)){int cl=(int)(colon-m);snprintf(cmd,256,"%.*s",cl,m);while(cmd[0]==' ')memmove(cmd,cmd+1,strlen(cmd));}
             else{int cl=tab?(int)(tab-m):(int)strlen(m);snprintf(cmd,256,"%.*s",cl,m);}

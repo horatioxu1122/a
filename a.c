@@ -273,6 +273,8 @@ static void mkdirp(const char *p);
 static void alog(const char *cmd, const char *cwd);
 static void perf_disarm(void);
 static int cmd_sess(int, char**);
+typedef struct{char n[64];int c;}FC;
+static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)a)->c;}
 
 #include "lib/globals.c"
 #include "lib/init.c"
@@ -297,8 +299,6 @@ static int cmd_sess(int, char**);
 #include "lib/perf.c"
 #include "lib/sess.c"
 
-typedef struct{char n[64];int c;}FC;
-static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)a)->c;}
 static int cmd_freq(int c,char**v){perf_disarm();
     int verbose=0,n=25;
     for(int i=2;i<c;i++){if(!strcmp(v[i],"-v"))verbose=1;else if(*v[i]>='0'&&*v[i]<='9')n=atoi(v[i]);}
