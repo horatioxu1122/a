@@ -93,7 +93,7 @@ static int cmd_dash_input(void) {
     }
     return 0;
 }
-/* top-left: session list + swap controller */
+static void dash_sig(int s){(void)s;}
 static int cmd_dash_tui(void) {
     char out[B],*lines[64],cm[B];int n,sel=0;
     char me[16]="",rp[2][16]={"",""},tp[2][16]={"",""};int ntp=0;
@@ -107,7 +107,7 @@ static int cmd_dash_tui(void) {
     (void)!system(cm);
     snprintf(cm,B,"tmux select-pane -t %s",me);(void)!system(cm);
     /* event-driven: tmux hooks signal us on session create/close */
-    signal(SIGUSR1,SIG_IGN);/* just interrupt select */
+    signal(SIGUSR1,dash_sig);/* interrupt select */
     snprintf(cm,B,"tmux set-hook -g session-created 'run-shell -b \"kill -USR1 %d 2>/dev/null\"'",(int)getpid());(void)!system(cm);
     snprintf(cm,B,"tmux set-hook -g session-closed 'run-shell -b \"kill -USR1 %d 2>/dev/null\"'",(int)getpid());(void)!system(cm);
     struct termios old,raw_t;tcgetattr(0,&old);raw_t=old;
