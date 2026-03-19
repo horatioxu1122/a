@@ -79,18 +79,27 @@ static void dash_restore(char cm[B],char tp[][16],char rp[][16],int ntp){
 }
 /* bottom-left: rapid job launcher. 'a' commands pass through (a 3 = switch project) */
 static int cmd_dash_input(void) {
-    init_db();load_cfg();load_proj();
+    init_db();load_cfg();load_proj();load_sess();
     char ln[B];CWD(wd);
-    puts("'a' to browse projects, 'a #' to switch");
+    puts("'a' to browse projects, 'a #' to switch, 'a c' to create session");
     for(printf("[%s] j> ",bname(wd)),fflush(stdout);fgets(ln,B,stdin);printf("[%s] j> ",bname(wd)),fflush(stdout)){
         ln[strcspn(ln,"\n")]=0;if(!ln[0])continue;
-        /* 'a' commands: run and check for cd_target */
         if(ln[0]=='a'&&(ln[1]==0||ln[1]==' ')){
+            /* session-creating: a c, a g etc. — create detached, no tm_go */
+            if(ln[1]==' '&&ln[2]>='a'&&ln[2]<='z'&&(ln[3]==0||ln[3]==' ')){
+                char key[4]={ln[2],0};sess_t*s=find_sess(key);
+                if(s){char sn[256];snprintf(sn,256,"%s-%s",s->name,bname(wd));
+                    if(tm_has(sn))printf("exists: %s\n",sn);
+                    else{tm_ensure_conf();create_sess(sn,wd,s->cmd);
+                        send_prefix_bg(sn,s->name,wd,ln[3]==' '?ln+4:NULL);
+                        printf("+ %s\n",sn);}
+                    goto next;}
+            }
             (void)!system(ln);
             char tf[P],nb[P];snprintf(tf,P,"%s/cd_target",DDIR);
             FILE*f=fopen(tf,"r");if(f){if(fgets(nb,P,f))snprintf(wd,P,"%s",nb);fclose(f);unlink(tf);
                 wd[strcspn(wd,"\n")]=0;}
-            continue;}
+            next:continue;}
         char sn[64];time_t t=time(NULL);struct tm*tm=localtime(&t);
         snprintf(sn,64,"j-%02d%02d%02d",tm->tm_hour,tm->tm_min,tm->tm_sec);
         char jcmd[B];jcmd_fill(jcmd,0);
