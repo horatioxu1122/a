@@ -101,37 +101,22 @@ static int fq_get(const char*s){int sl=(int)strlen(s);
 static int fqm_cmp(const void*a,const void*b){return((const fqm_t*)b)->sc-((const fqm_t*)a)->sc;}
 static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
     perf_disarm(); init_db();
-    char cache[P]; snprintf(cache, P, "%s/i_cache.txt", DDIR);
-    gen_icache();
-    /* load freq cache */
-    {char fp[P];snprintf(fp,P,"%s/freq_cache.txt",DDIR);
-    FILE*ff=fopen(fp,"r");if(ff){char ln[128];nfq=0;
+    char cache[P];snprintf(cache,P,"%s/i_cache.txt",DDIR);gen_icache();
+    {char fp[P];snprintf(fp,P,"%s/freq_cache.txt",DDIR);FILE*ff=fopen(fp,"r");if(ff){char ln[128];nfq=0;
         while(nfq<256&&fgets(ln,128,ff)){char*c=strchr(ln,':');if(!c)continue;*c=0;
             snprintf(fq[nfq].n,64,"%s",ln);fq[nfq].c=atoi(c+1);nfq++;}fclose(ff);}}
-    size_t len; char *raw = readf(cache, &len);
-    if (!raw) { puts("No cache"); return 1; }
-    /* Parse lines */
-    char *lines[512]; int n = 0;
-    for (char *p = raw, *end = raw + len; p < end && n < 512;) {
-        char *nl = memchr(p, '\n', (size_t)(end - p));
-        if (!nl) nl = end;
-        if (nl > p && p[0] != '<' && p[0] != '=' && p[0] != '>' && p[0] != '#') { *nl = 0; lines[n++] = p; }
-        p = nl + 1;
-    }
-    if (!n) { puts("Empty cache"); free(raw); return 1; }
-    if (!isatty(STDIN_FILENO)) { for (int i=0;i<n;i++) puts(lines[i]); free(raw); return 0; }
-    /* Terminal size */
-    struct winsize ws; ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
-    int maxshow = ws.ws_row > 6 ? ws.ws_row - 3 : 10;
-    /* Raw mode */
-    struct termios old, raw_t;
-    tcgetattr(STDIN_FILENO, &old); raw_t = old;
-    raw_t.c_lflag &= ~(tcflag_t)(ICANON | ECHO | ISIG);
-    raw_t.c_cc[VMIN] = 1; raw_t.c_cc[VTIME] = 0;
-    tcsetattr(STDIN_FILENO, TCSANOW, &raw_t);
-    write(STDOUT_FILENO,"\033[?1000h\033[?1006h",16);
-    char buf[256] = ""; int blen = 0, sel = 0; char prefix[256] = "";
-    printf("Filter (↑↓/Tab=cycle, Enter=run, Esc=quit)\n");
+    size_t len;char*raw=readf(cache,&len);if(!raw){puts("No cache");return 1;}
+    char*lines[512];int n=0;
+    for(char*p=raw,*end=raw+len;p<end&&n<512;){char*nl=memchr(p,'\n',(size_t)(end-p));
+        if(!nl)nl=end;if(nl>p&&p[0]!='<'&&p[0]!='='&&p[0]!='>'&&p[0]!='#'){*nl=0;lines[n++]=p;}p=nl+1;}
+    if(!n){puts("Empty cache");free(raw);return 1;}
+    if(!isatty(STDIN_FILENO)){for(int i=0;i<n;i++)puts(lines[i]);free(raw);return 0;}
+    struct winsize ws;ioctl(STDOUT_FILENO,TIOCGWINSZ,&ws);int maxshow=ws.ws_row>6?ws.ws_row-3:10;
+    struct termios old,raw_t;tcgetattr(STDIN_FILENO,&old);raw_t=old;
+    raw_t.c_lflag&=~(tcflag_t)(ICANON|ECHO|ISIG);raw_t.c_cc[VMIN]=1;raw_t.c_cc[VTIME]=0;
+    tcsetattr(STDIN_FILENO,TCSANOW,&raw_t);write(STDOUT_FILENO,"\033[?1000h\033[?1006h",16);
+    char buf[256]="";int blen=0,sel=0;char prefix[256]="";
+    printf("Filter (↑↓/Tab, Enter=run, Esc=quit)\n");
     while (1) {
         /* Search */
         fqm_t fm[512]; int nm = 0; int plen = (int)strlen(prefix);
@@ -147,12 +132,13 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
         int top=sel>=maxshow?sel-maxshow+1:0, show=nm-top<maxshow?nm-top:maxshow;
         /* Render — single write to avoid flicker */
         {char fb[B*4];int fl=0;
-        fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[H\033[?25l%s> %s\033[K\n",prefix,buf);
+        #define FP(f,...) fl+=snprintf(fb+fl,(size_t)(B*4-fl),f,##__VA_ARGS__)
+        FP("\033[H\033[?25l%s> %s\033[K\n",prefix,buf);
         for(int i=0;i<show;i++){int j=top+i,W=ws.ws_col;char*t=strchr(fm[j].p,'\t');int ml=t?(int)(t-fm[j].p):(int)strlen(fm[j].p);
-            if(ml>W-5)ml=W-5;fl+=snprintf(fb+fl,(size_t)(B*4-fl),"%s a %.*s\033[K",j==sel?" >":"  ",ml,fm[j].p);
-            if(t&&ml+5+(int)strlen(t+1)<W)fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[%dG\033[90m%s\033[0m",W-(int)strlen(t+1),t+1);
-            fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\n");}
-        fl+=snprintf(fb+fl,(size_t)(B*4-fl),"\033[J\033[1;%dH\033[?25h",plen+blen+3);
+            if(ml>W-5)ml=W-5;FP("%s a %.*s\033[K",j==sel?" >":"  ",ml,fm[j].p);
+            if(t&&ml+5+(int)strlen(t+1)<W)FP("\033[%dG\033[90m%s\033[0m",W-(int)strlen(t+1),t+1);FP("\n");}
+        FP("\033[J\033[1;%dH\033[?25h",plen+blen+3);
+        #undef FP
         (void)!write(STDOUT_FILENO,fb,(size_t)fl);}
         char ch; if(read(0,&ch,1)!=1) break;
         int do_pick=0;
@@ -168,30 +154,24 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
                     (void)mx;if(mc=='M'&&mb==0){int ci=my-2+top;if(ci>=0&&ci<nm){sel=ci;do_pick=1;}}
                     else if(mc=='M'&&(mb==64||mb==65)){if(mb==64&&sel>0)sel--;if(mb==65&&sel<nm-1)sel++;}}
             } else if(prefix[0]){prefix[0]=0;buf[0]=0;blen=0;sel=0;} else break;
-        } else if (ch == '\t') { if(sel<nm-1)sel++; }
-        else if (ch == '\x7f' || ch == '\b') { if (blen) buf[--blen]=0; sel=0; }
-        else if (ch == '\r' || ch == '\n') { do_pick=1; }
-        else if (ch == '\x03' || ch == '\x04') break;
-        else if ((ch>='a'&&ch<='z')||(ch>='A'&&ch<='Z')||(ch>='0'&&ch<='9')||ch=='-'||ch=='_'||ch==' ') { if(blen<254){buf[blen++]=ch;buf[blen]=0;sel=0;} }
-        if (do_pick && nm) {
-            char *m = fm[sel].p; char cmd[256];
-            char *tab=strchr(m,'\t'),*colon=strchr(m,':');
-            if(colon&&(!tab||colon<tab)){int cl=(int)(colon-m);snprintf(cmd,256,"%.*s",cl,m);while(cmd[0]==' ')memmove(cmd,cmd+1,strlen(cmd));}
+        } else if(ch=='\t'){if(sel<nm-1)sel++;}
+        else if(ch=='\x7f'||ch=='\b'){if(blen)buf[--blen]=0;sel=0;}
+        else if(ch=='\r'||ch=='\n')do_pick=1;
+        else if(ch==3||ch==4)break;
+        else if(isalnum(ch)||ch=='-'||ch=='_'||ch==' '){if(blen<254){buf[blen++]=ch;buf[blen]=0;sel=0;}}
+        if(do_pick&&nm){char*m=fm[sel].p,cmd[256];
+            char*tab=strchr(m,'\t'),*colon=strchr(m,':');
+            if(colon&&(!tab||colon<tab)){snprintf(cmd,256,"%.*s",(int)(colon-m),m);char*s=cmd;while(*s==' ')s++;memmove(cmd,s,strlen(s)+1);}
             else{int cl=tab?(int)(tab-m):(int)strlen(m);snprintf(cmd,256,"%.*s",cl,m);}
-            char *e = cmd+strlen(cmd)-1; while(e>cmd&&*e==' ')*e--=0;
-            int has_sub=0,cl=(int)strlen(cmd);
-            for(int i=0;i<n;i++) if(!strncmp(lines[i],cmd,(size_t)cl)&&lines[i][cl]==' '){has_sub=1;break;}
-            if(has_sub){snprintf(prefix,256,"%s ",cmd);buf[0]=0;blen=0;sel=0;printf("\033[J");continue;}
-            tcsetattr(STDIN_FILENO, TCSANOW, &old);
-            write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
-            (void)!system("clear");
-            printf("Running: a %s\n", cmd);
-            char *args[32]; int ac=0; args[ac++]="a";
-            char *p=cmd; while(*p&&ac<31) { while(*p==' ')p++; if(!*p)break; args[ac++]=p; while(*p&&*p!=' ')p++; if(*p)*p++=0; }
-            args[ac]=NULL;
-            free(raw); execvp("a", args);
-            return 0;
-        }
+            {char*e=cmd+strlen(cmd)-1;while(e>cmd&&*e==' ')*e--=0;}
+            int hs=0,cl=(int)strlen(cmd);
+            for(int i=0;i<n;i++)if(!strncmp(lines[i],cmd,(size_t)cl)&&lines[i][cl]==' '){hs=1;break;}
+            if(hs){snprintf(prefix,256,"%s ",cmd);buf[0]=0;blen=0;sel=0;printf("\033[J");continue;}
+            tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
+            (void)!system("clear");printf("Running: a %s\n",cmd);
+            char*args[32];int ac=0;args[ac++]="a";
+            for(char*p=cmd;*p&&ac<31;){while(*p==' ')p++;if(!*p)break;args[ac++]=p;while(*p&&*p!=' ')p++;if(*p)*p++=0;}
+            args[ac]=NULL;free(raw);execvp("a",args);return 0;}
     }
     write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
     tcsetattr(STDIN_FILENO, TCSANOW, &old);
