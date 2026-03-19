@@ -63,28 +63,27 @@ static int cmd_dash(int c, char **v) { (void)c;(void)v;
         (void)!system("tmux set-option -t =dash destroy-unattached on 2>/dev/null");}
     tm_go("dash");return 0;
 }
-static char rbuf[B*4];
+static char rbuf[B*4];static char *dpaths[64];
 static void ssh_parse(const char*,char*,char*);
 static int ssh_pre(char*,int,const char*,const char*,const char*,const char*);
 static void dash_refresh(char out[B],char**lines,int*n){
-    *n=tm_list(out,lines,64);
-    for(int i=0;i<*n;i++)if(!strcmp(lines[i],"dash")){for(int j=i;j<*n-1;j++)lines[j]=lines[j+1];(*n)--;i--;}
-    /* read cached remote sessions, filter dash, sort by device */
+    pcmd("tmux list-sessions -F '#{session_name}\t#{pane_current_path}' 2>/dev/null",out,B);
+    *n=0;char*p=out;while(*p&&*n<64){lines[*n]=p;char*t=strchr(p,'\t'),*e=t?strchr(t+1,'\n'):strchr(p,'\n');
+        if(t){*t=0;dpaths[*n]=t+1;}else dpaths[*n]="";if(e){*e=0;p=e+1;}else break;(*n)++;}
+    for(int i=0;i<*n;i++)if(!strcmp(lines[i],"dash")){for(int j=i;j<*n-1;j++){lines[j]=lines[j+1];dpaths[j]=dpaths[j+1];}(*n)--;i--;}
     char rf[P];snprintf(rf,P,"%s/dash_remote.txt",DDIR);
     FILE*f=fopen(rf,"r");if(!f)return;
     int ro=0;char ln[256];
     while(fgets(ln,256,f)&&*n<62){ln[strcspn(ln,"\n")]=0;if(!ln[0])continue;
         char*at=strchr(ln,'@');if(at&&!strncmp(ln,"dash@",(size_t)(at-ln+1)))continue;
         int rl=snprintf(rbuf+ro,(size_t)(B*4-ro),"%s",ln);
-        lines[*n]=rbuf+ro;(*n)++;ro+=rl+1;}
+        lines[*n]=rbuf+ro;dpaths[*n]="";(*n)++;ro+=rl+1;}
     fclose(f);
-    /* sort remote entries (after local) by device suffix */
     {int loc=0;for(int i=0;i<*n;i++)if(!strchr(lines[i],'@'))loc++;
     for(int i=loc;i<*n-1;i++)for(int j=i+1;j<*n;j++){
         char*a=strchr(lines[i],'@'),*b=strchr(lines[j],'@');
         if(a&&b&&strcmp(a,b)>0){char*t=lines[i];lines[i]=lines[j];lines[j]=t;}}}
 }
-/* background: one ssh per device, persistent stream, writes cache + signals TUI */
 __attribute__((noreturn)) static void dash_poller(pid_t tui){
     setsid();signal(SIGTERM,SIG_DFL);
     char dir[P];snprintf(dir,P,"%s/ssh",SROOT);
@@ -106,18 +105,6 @@ __attribute__((noreturn)) static void dash_poller(pid_t tui){
         fclose(out);kill(tui,SIGUSR1);sleep(10);
     }
 }
-static int dash_panes(const char *sess, char ids[][16], int max) {
-    char cm[B],buf[256];
-    snprintf(cm,B,"tmux list-panes -t '%s':0 -F '#{pane_id}' 2>/dev/null",sess);
-    pcmd(cm,buf,256);int n=0;
-    for(char*p=buf;*p&&n<max;){char*e=strchr(p,'\n');if(e)*e=0;
-        if(*p)snprintf(ids[n++],16,"%s",p);if(e)p=e+1;else break;}
-    return n;
-}
-static void dash_restore(char cm[B],char tp[][16],char rp[][16],int ntp){
-    for(int i=0;i<ntp;i++){snprintf(cm,B,"tmux swap-pane -s %s -t %s 2>/dev/null",tp[i],rp[i]);(void)!system(cm);}
-}
-/* bottom-left: rapid job launcher. 'a' commands pass through (a 3 = switch project) */
 static int cmd_dash_input(void) {
     init_db();load_cfg();load_proj();load_sess();
     char ln[B];CWD(wd);
@@ -152,9 +139,8 @@ static int cmd_dash_input(void) {
 static void dash_sig(int s){(void)s;}
 static int cmd_dash_tui(void) {
     char out[B],*lines[64],cm[B];int n,sel=0;
-    char me[16]="",rp[2][16]={"",""},tp[2][16]={"",""};int ntp=0;
+    char me[16]="",rp[2][16]={"",""};
     pcmd("tmux display -p '#{pane_id}'",me,16);me[strcspn(me,"\n")]=0;
-    /* create right panes from full-height left, then split left for input */
     snprintf(cm,B,"tmux split-window -hd -t %s -p 70 -PF '#{pane_id}'",me);
     pcmd(cm,rp[0],16);rp[0][strcspn(rp[0],"\n")]=0;
     snprintf(cm,B,"tmux split-window -vd -t %s -p 40 -PF '#{pane_id}'",rp[0]);
@@ -167,19 +153,14 @@ static int cmd_dash_tui(void) {
         int fd=open("/dev/null",O_WRONLY);if(fd>=0){dup2(fd,0);dup2(fd,1);dup2(fd,2);close(fd);}
         dash_poller(getppid());_exit(0);}
 
-    snprintf(cm,B,"tmux set-hook -g session-created 'run-shell -b \"kill -USR1 %d 2>/dev/null\"'",(int)getpid());(void)!system(cm);
-    snprintf(cm,B,"tmux set-hook -g session-closed 'run-shell -b \"kill -USR1 %d 2>/dev/null\"'",(int)getpid());(void)!system(cm);
     struct termios old,raw_t;tcgetattr(0,&old);raw_t=old;
     raw_t.c_lflag&=~(tcflag_t)(ICANON|ECHO|ISIG);raw_t.c_cc[VMIN]=1;raw_t.c_cc[VTIME]=0;
     tcsetattr(0,TCSANOW,&raw_t);
     write(1,"\033[?1000h\033[?1006h",16);
     dash_refresh(out,lines,&n);
-    /* build ssh cmd for remote session: parse name@device, look up creds */
-    int rsel=-1;/* tracks if right panes show remote ssh */
     #define DASH_SWAP() do { \
         char*at=strchr(lines[sel],'@'); \
-        if(at){ /* remote: respawn right pane with ssh attach */ \
-            dash_restore(cm,tp,rp,ntp);ntp=0; \
+        if(at){ \
             char sn[128],dev[128];snprintf(sn,128,"%.*s",(int)(at-lines[sel]),lines[sel]);snprintf(dev,128,"%s",at+1); \
             char dir2[P];snprintf(dir2,P,"%s/ssh",SROOT); \
             char pp[32][P];int np2=listdir(dir2,pp,32); \
@@ -188,18 +169,13 @@ static int cmd_dash_tui(void) {
                 char hp2[256],po2[8],sc2[B];ssh_parse(h2,hp2,po2); \
                 int sl2=ssh_pre(sc2,B,pw2?pw2:"","-tt -oStrictHostKeyChecking=no",po2,hp2); \
                 snprintf(sc2+sl2,(size_t)(B-sl2)," 'tmux attach -t \"%s\"'",sn); \
-                snprintf(cm,B,"tmux respawn-pane -k -t %s '%s'",rp[0],sc2);(void)!system(cm); \
+                snprintf(cm,B,"tmux respawn-pane -k -t %s %s",rp[0],sc2);(void)!system(cm); \
                 snprintf(cm,B,"tmux respawn-pane -k -t %s 'echo remote: %s@%s; cat'",rp[1],sn,dev);(void)!system(cm); \
-                rsel=sel;break;} \
-            snprintf(cm,B,"tmux select-pane -t %s",me);(void)!system(cm); \
-        } else { /* local: swap panes */ \
-            if(rsel>=0){snprintf(cm,B,"tmux respawn-pane -k -t %s ''",rp[0]);(void)!system(cm); \
-                snprintf(cm,B,"tmux respawn-pane -k -t %s ''",rp[1]);(void)!system(cm);rsel=-1;} \
-            dash_restore(cm,tp,rp,ntp); \
-            char ids[8][16];int np=dash_panes(lines[sel],ids,8);if(np>2)np=2; \
-            for(int _i=0;_i<np;_i++){snprintf(cm,B,"tmux swap-pane -s %s -t %s",rp[_i],ids[_i]);(void)!system(cm);snprintf(tp[_i],16,"%s",ids[_i]);} \
-            ntp=np; \
-            snprintf(cm,B,"tmux select-pane -t %s",me);(void)!system(cm);} \
+                break;} \
+        } else { \
+            snprintf(cm,B,"tmux respawn-pane -k -t %s 'TMUX= tmux attach -t \"%s\"'",rp[0],lines[sel]);(void)!system(cm); \
+        } \
+        snprintf(cm,B,"tmux select-pane -t %s",me);(void)!system(cm); \
     } while(0)
     if(n>0)DASH_SWAP();
     for(;;){
@@ -216,8 +192,9 @@ static int cmd_dash_tui(void) {
                 fl+=snprintf(fb+fl,(size_t)(B*2-fl),"\033[90m─ %.*s\033[0m\033[K\n",cols-2,dev);
                 snprintf(lastdev,128,"%s",dev);row++;}
             if(row>=rows-1)break;
-            char*name=lines[i];int nlen=at?(int)(at-name):(int)strlen(name);
-            fl+=snprintf(fb+fl,(size_t)(B*2-fl),"%s  %.*s\033[0m\033[K\n",i==sel?"\033[7m":"",cols<nlen?cols:nlen,name);
+            char*name=lines[i];int nlen=at?(int)(at-name):(int)strlen(name);char lbl[256];const char*dp=(!at&&dpaths[i][0])?bname(dpaths[i]):NULL;
+            if(dp)snprintf(lbl,256,"%s: %s",name,dp);else snprintf(lbl,256,"%.*s",nlen,name);
+            fl+=snprintf(fb+fl,(size_t)(B*2-fl),"%s  %.*s\033[0m\033[K\n",i==sel?"\033[7m":"",cols,lbl);
             row2idx[row]=i;row++;}
         fl+=snprintf(fb+fl,(size_t)(B*2-fl),"\033[%d;1H\033[7m j/k:nav x:kill q:quit\033[0m\033[K",rows);
         (void)!write(1,fb,(size_t)fl);}
@@ -246,7 +223,6 @@ static int cmd_dash_tui(void) {
         else if(ch=='j'){sel=sel<n-1?sel+1:0;do_pick=1;}
         else if(ch=='\r'||ch=='\n')do_pick=1;
         else if(ch=='x'&&n>0){
-            dash_restore(cm,tp,rp,ntp);ntp=0;tp[0][0]=tp[1][0]=0;
             char cm2[B];snprintf(cm2,B,"tmux kill-session -t '=%s' 2>/dev/null",lines[sel]);(void)!system(cm2);
             dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;
             if(n>0)DASH_SWAP();
@@ -255,11 +231,8 @@ static int cmd_dash_tui(void) {
         dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;
     }
     #undef DASH_SWAP
-    dash_restore(cm,tp,rp,ntp);
     if(poller>0){kill(poller,SIGKILL);waitpid(poller,NULL,WNOHANG);}
     {char rf[P];snprintf(rf,P,"%s/dash_remote.txt",DDIR);unlink(rf);}
-    (void)!system("tmux set-hook -gu session-created 2>/dev/null");
-    (void)!system("tmux set-hook -gu session-closed 2>/dev/null");
     write(1,"\033[?1000l\033[?1006l",16);
     tcsetattr(0,TCSANOW,&old);printf("\033[2J\033[H\033[?25h");
     /* switch to first non-dash session; destroy-unattached cleans up dash */
