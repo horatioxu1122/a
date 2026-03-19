@@ -104,19 +104,20 @@ build)
         echo "  github: seanpattencode"
         echo "  whatsapp: Sean Patten"
     }
-    if [[ -x "$(type -P tcc)" ]]; then
-        _Q=-DSRC="\"$D\"";TCT=${EPOCHREALTIME/./};tcc $_Q -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||{ _build_fix "$(tcc $_Q -w -o /dev/null "$D/a.c" 2>&1)"; exit 1; };TCT=$(( ${EPOCHREALTIME/./} - TCT ))000
+    _Q=-DSRC="\"$D\""
+    if command -v tcc &>/dev/null; then
+        TCT=${EPOCHREALTIME/./};tcc $_Q -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||{ _build_fix "$(tcc $_Q -w -o /dev/null "$D/a.c" 2>&1)"; exit 1; };TCT=$(( ${EPOCHREALTIME/./} - TCT ))000
     else
-        _ensure_cc; E=$($CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { _build_fix "$E"; exit 1; }
+        _ensure_cc; E=$($CC $_Q -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { _build_fix "$E"; exit 1; }
     fi
     [[ "$D" != *"/adata/worktrees/"* ]] && ln -sf "$ABIN/a" "$BIN/a"
     (
         T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\""
-        if command -v tcc >/dev/null && [[ -n "$TCT" ]]; then
+        if [[ -n "$TCT" ]]; then
             PYT=$(date +%s%N);python3 -c 'import subprocess;subprocess.run(["echo","hello world"],capture_output=True)';PYT=$(( $(date +%s%N)-PYT ))
             [[ $TCT -gt $PYT ]] && { echo "PERF KILL: tcc ${TCT}ns > python ${PYT}ns" >"$ABIN/.chk"; touch "$T/0.f"; }
         fi
-        _ensure_cc; $CC $A -w -O0 -o "$ABIN/a" "$F" 2>/dev/null; _warn_flags
+        _ensure_cc; _warn_flags
         _checkers
         if ls "$T"/[0-9].f "$T"/1[0-9].f &>/dev/null 2>&1;then cat "$T"/[0-9] "$T"/1[0-9] >"$ABIN/.chk" 2>/dev/null
             [ "$(cat "$ABIN/.bld" 2>&-)" = "$$" ]&&printf '#!/bin/sh\nhead -80 %s/.chk;exit 1' "$ABIN">"$ABIN/a"&&chmod +x "$ABIN/a"
