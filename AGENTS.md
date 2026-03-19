@@ -10,6 +10,7 @@ Experiments in lab folder.
 All persistent data lives in adata folder.
 Don't push without approval. 
 The optimal program is maximally short fast and valuable. Edits should converge towards this.
+Issues with environment, ex dependency is not working, should be fixed by modifying a.c to systemically fix issue in code for all users not one off single device fixes.
 
 Contribution rules:
 Initiation:
