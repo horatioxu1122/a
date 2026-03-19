@@ -166,11 +166,14 @@ static int cmd_dash_tui(void) {
     }
     #undef DASH_SWAP
     dash_restore(cm,tp,rp,ntp);
-    for(int i=0;i<2;i++)if(rp[i][0]){snprintf(cm,B,"tmux kill-pane -t %s 2>/dev/null",rp[i]);(void)!system(cm);}
     (void)!system("tmux set-hook -gu session-created 2>/dev/null");
     (void)!system("tmux set-hook -gu session-closed 2>/dev/null");
     write(1,"\033[?1000l\033[?1006l",16);
-    tcsetattr(0,TCSANOW,&old);printf("\033[2J\033[H\033[?25h");return 0;
+    tcsetattr(0,TCSANOW,&old);printf("\033[2J\033[H\033[?25h");
+    /* switch back then kill dash so it's fresh next time */
+    (void)!system("tmux switch-client -l 2>/dev/null");
+    (void)!system("tmux kill-session -t dash 2>/dev/null");
+    return 0;
 }
 
 /* ── watch ── */
