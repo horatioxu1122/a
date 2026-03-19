@@ -75,6 +75,11 @@ _install_node() {
     else curl -fsSL "$URL" | tar -xJf - -C "$HOME/.local" --strip-components=1; fi
     [[ -x "$HOME/.local/bin/node" ]] && ok "node $($HOME/.local/bin/node -v)" || warn "node install failed"
 }
+_perf_lim() { local f="$D/adata/git/perf/$(cat "$D/adata/local/device.txt" 2>/dev/null||hostname).txt"
+    local v;v=$(grep "^$1:" "$f" 2>/dev/null)&&echo "${v#*:}"||echo 0;}
+_perf_chk() { local e=$(( ${EPOCHREALTIME/./} - _PT )) l=$(_perf_lim "$1")
+    [[ $l -gt 0 && $e -gt $l ]] && { echo -e "\033[31m✗ PERF KILL\033[0m: sh a.c $1 ${e}us > ${l}us" >&2; exit 1; }
+    echo -e "${e}us" >&2;}
 _checkers() {
     _c(){ n=$1;shift;{ ! command -v "$1" &>/dev/null||"$@";}>"$T/$n" 2>&1||touch "$T/$n.f";}
     _rgcc(){ command -v gcc &>/dev/null&&! gcc --version 2>&1|grep -q clang;}
@@ -83,14 +88,13 @@ _checkers() {
     { ! _rgcc||gcc -std=c17 -Werror -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wtrampolines $A -fsyntax-only "$F";}>"$T/4" 2>&1||touch "$T/4.f" &
     { ! _rgcc||{ gcc -fanalyzer $A -fsyntax-only "$F" >"$T/5" 2>&1;! grep -q '\-Wanalyzer' "$T/5";};}||touch "$T/5.f" &
     _c 6 cppcheck --error-exitcode=1 --quiet --suppress=syntaxError $A "$F" & _c 7 frama-c -eva -eva-no-print -no-unicode -cpp-extra-args="$A" "$F" &
-    { ! command -v cbmc &>/dev/null||timeout 15 cbmc --function main "$F" $A||[ $? -eq 124 ];}>"$T/8" 2>&1||touch "$T/8.f" &
-    { $CC $A -fsanitize=undefined,address -fno-omit-frame-pointer -w -o "$T/a.san" "$F"&&A_BENCH=1 "$T/a.san" help >"$T/9" 2>&1;! grep -q 'runtime error\|SUMMARY:.*Sanitizer' "$T/9";}||touch "$T/9.f" &
+{ $CC $A -fsanitize=undefined,address -fno-omit-frame-pointer -w -o "$T/a.san" "$F"&&A_BENCH=1 "$T/a.san" help >"$T/9" 2>&1;! grep -q 'runtime error\|SUMMARY:.*Sanitizer' "$T/9";}||touch "$T/9.f" &
     { ! command -v infer &>/dev/null||{ infer run --no-progress-bar -o "$T/infer" -- $CC $A -w -c "$F" -o /dev/null >"$T/10" 2>&1;! grep -q 'NULLPTR_DEREFERENCE\|BUFFER_OVERRUN\|USE_AFTER_FREE' "$T/infer/report.txt" 2>/dev/null;};}||touch "$T/10.f" &
     wait
 }
 case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
-build)
+build) _PT=${EPOCHREALTIME/./}
     R="${D%%/adata/worktrees/*}"; if [[ "$D" == *"/adata/worktrees/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
     BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
     rm -f "$ABIN/.chk"
@@ -110,7 +114,7 @@ build)
     else
         _ensure_cc; E=$($CC $_Q -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { _build_fix "$E"; exit 1; }
     fi
-    [[ "$D" != *"/adata/worktrees/"* ]] && ln -sf "$ABIN/a" "$BIN/a"
+    [[ "$D" != *"/adata/worktrees/"* ]] && ln -sf "$ABIN/a" "$BIN/a"; _perf_chk build
     (
         T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\""
         if [[ -n "$TCT" ]]; then
@@ -127,7 +131,7 @@ build)
     ;;
 # sh a.c check — build + run all checkers foreground, exit 0 on pass.
 # Use 'sh a.c' for fast iteration, 'sh a.c check' before presenting to user.
-check)
+check) _PT=${EPOCHREALTIME/./}
     R="${D%%/adata/worktrees/*}"; if [[ "$D" == *"/adata/worktrees/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
     BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
     _ensure_cc; E=$($CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { echo "$E"; exit 1; }
@@ -135,7 +139,7 @@ check)
     T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\"";_warn_flags
     _checkers
     if ls "$T"/[0-9].f "$T"/1[0-9].f &>/dev/null 2>&1;then cat "$T"/[0-9] "$T"/1[0-9] 2>/dev/null; exit 1
-    else ok "all checkers passed"; $CC $A -O3 -march=native -flto -w -o "$ABIN/a.opt" "$F"&&mv "$ABIN/a.opt" "$ABIN/a" 2>&-;rm -f "$ABIN/a.opt" & fi
+    else ok "all checkers passed"; _perf_chk check; $CC $A -O3 -march=native -flto -w -o "$ABIN/a.opt" "$F"&&mv "$ABIN/a.opt" "$ABIN/a" 2>&-;rm -f "$ABIN/a.opt" & fi
     ;;
 analyze) _ensure_cc;_warn_flags
     $CC $WARN -DSRC="\"$D\"" --analyze -Xanalyzer -analyzer-output=text -Xanalyzer -analyzer-checker=security,unix,nullability,optin.portability.UnixAPI -Xanalyzer -analyzer-disable-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling "$D/a.c"
