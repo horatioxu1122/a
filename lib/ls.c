@@ -77,19 +77,26 @@ static int dash_panes(const char *sess, char ids[][16], int max) {
 static void dash_restore(char cm[B],char tp[][16],char rp[][16],int ntp){
     for(int i=0;i<ntp;i++){snprintf(cm,B,"tmux swap-pane -s %s -t %s 2>/dev/null",tp[i],rp[i]);(void)!system(cm);}
 }
-/* bottom-left: rapid job launcher, creates sessions */
+/* bottom-left: rapid job launcher. 'a' commands pass through (a 3 = switch project) */
 static int cmd_dash_input(void) {
     init_db();load_cfg();load_proj();
     char ln[B];CWD(wd);
-    for(fputs("j> ",stdout),fflush(stdout);fgets(ln,B,stdin);fputs("j> ",stdout),fflush(stdout)){
+    puts("'a' to browse projects, 'a #' to switch");
+    for(printf("[%s] j> ",bname(wd)),fflush(stdout);fgets(ln,B,stdin);printf("[%s] j> ",bname(wd)),fflush(stdout)){
         ln[strcspn(ln,"\n")]=0;if(!ln[0])continue;
+        /* 'a' commands: run and check for cd_target */
+        if(ln[0]=='a'&&(ln[1]==0||ln[1]==' ')){
+            (void)!system(ln);
+            char tf[P],nb[P];snprintf(tf,P,"%s/cd_target",DDIR);
+            FILE*f=fopen(tf,"r");if(f){if(fgets(nb,P,f))snprintf(wd,P,"%s",nb);fclose(f);unlink(tf);
+                wd[strcspn(wd,"\n")]=0;}
+            continue;}
         char sn[64];time_t t=time(NULL);struct tm*tm=localtime(&t);
         snprintf(sn,64,"j-%02d%02d%02d",tm->tm_hour,tm->tm_min,tm->tm_sec);
         char jcmd[B];jcmd_fill(jcmd,0);
-        tm_new(sn,wd,jcmd);
-        sleep(1);/* let session + split settle */
+        tm_new(sn,wd,jcmd);sleep(1);
         send_prefix_bg(sn,"claude",wd,ln);
-        printf("+ %s\n",sn);
+        printf("+ %s (%s)\n",sn,bname(wd));
     }
     return 0;
 }
@@ -170,9 +177,9 @@ static int cmd_dash_tui(void) {
     (void)!system("tmux set-hook -gu session-closed 2>/dev/null");
     write(1,"\033[?1000l\033[?1006l",16);
     tcsetattr(0,TCSANOW,&old);printf("\033[2J\033[H\033[?25h");
-    /* switch back then kill dash so it's fresh next time */
+    /* switch back then kill dash (exact match) so it's fresh next time */
     (void)!system("tmux switch-client -l 2>/dev/null");
-    (void)!system("tmux kill-session -t dash 2>/dev/null");
+    (void)!system("tmux kill-session -t =dash 2>/dev/null");
     return 0;
 }
 
