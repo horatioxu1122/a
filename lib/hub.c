@@ -26,13 +26,15 @@ static void hub_save(hub_t *j) {
     writef(fn,buf);
 }
 
-static unsigned hub_jid(const char*s){unsigned h=5381;for(;*s;s++)h=h*33+(*s&0xffu);return(h%90000)+10000;}
+#ifdef __ANDROID__
+static unsigned hub_jid(const char*s){unsigned h=5381;for(;*s;s++)h=h*33+((unsigned)(unsigned char)*s);return(h%90000)+10000;}
 static long hub_period(const char*s){
     if(!s||!*s)return 86400000L;
     if(!strcmp(s,"daily"))return 86400000L;
     if(strchr(s,'/')){int m=0;const char*p=strchr(s,'/');if(p)m=atoi(p+1);return m>0?(long)m*60000L:1800000L;}
     return 86400000L;/* H:MM = daily */
 }
+#endif
 static void hub_timer(hub_t *j, int on) {
     char buf[B];
 #ifdef __ANDROID__
