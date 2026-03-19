@@ -26,14 +26,27 @@ static void hub_save(hub_t *j) {
     writef(fn,buf);
 }
 
+static unsigned hub_jid(const char*s){unsigned h=5381;for(;*s;s++)h=h*33+(*s&0xffu);return(h%90000)+10000;}
+static long hub_period(const char*s){
+    if(!s||!*s)return 86400000L;
+    if(!strcmp(s,"daily"))return 86400000L;
+    if(strchr(s,'/')){int m=0;const char*p=strchr(s,'/');if(p)m=atoi(p+1);return m>0?(long)m*60000L:1800000L;}
+    return 86400000L;/* H:MM = daily */
+}
 static void hub_timer(hub_t *j, int on) {
     char buf[B];
 #ifdef __ANDROID__
-    /* Termux: use cron (no systemd) */
-    int h=0,m=0; sscanf(j->s,"%d:%d",&h,&m);
-    if(on) snprintf(buf,B,"(crontab -l 2>/dev/null|grep -v 'a:%s';echo '%d %d * * * %s/.local/bin/a hub run %s # a:%s')|crontab -",j->n,m,h,HOME,j->n,j->n);
-    else snprintf(buf,B,"(crontab -l 2>/dev/null|grep -v 'a:%s')|crontab -",j->n);
-    (void)!system("pgrep crond>/dev/null||crond");
+    unsigned jid=hub_jid(j->n);
+    char sd[P],sf[P];snprintf(sd,P,"%s/.local/share/a/jobs",HOME);mkdirp(sd);
+    snprintf(sf,P,"%s/%s.sh",sd,j->n);
+    if(on){
+        snprintf(buf,B,"#!/data/data/com.termux/files/usr/bin/sh\nexec %s/.local/bin/a hub run %s\n",HOME,j->n);
+        writef(sf,buf);chmod(sf,0700);
+        long ms=hub_period(j->s);
+        snprintf(buf,B,"termux-job-scheduler --script '%s' --job-id %u --period-ms %ld --persisted true 2>/dev/null",sf,jid,ms);
+    } else {
+        snprintf(buf,B,"termux-job-scheduler --cancel --job-id %u 2>/dev/null;rm -f '%s'",jid,sf);
+    }
 #else
     char sd[P]; snprintf(sd,P,"%s/.config/systemd/user",HOME); mkdirp(sd);
     if(on) {
@@ -57,14 +70,14 @@ static void hub_sort(void){qsort(HJ,(size_t)NJ,sizeof(hub_t),hub_cmp);}
 static char HUB_TL[B*4];
 static void hub_timers(void){
 #ifdef __ANDROID__
-    pcmd("crontab -l 2>/dev/null",HUB_TL,sizeof(HUB_TL));
+    pcmd("termux-job-scheduler -p 2>/dev/null",HUB_TL,sizeof(HUB_TL));
 #else
     pcmd("systemctl --user list-timers 2>/dev/null",HUB_TL,sizeof(HUB_TL));
 #endif
 }
 static int hub_on(hub_t*j){char p[96];
 #ifdef __ANDROID__
-    snprintf(p,96,"a:%s",j->n);
+    snprintf(p,96,"Job %u:",hub_jid(j->n));
 #else
     snprintf(p,96,"a-%s.timer",j->n);
 #endif
@@ -138,8 +151,13 @@ static int cmd_hub(int argc, char **argv) {
     }
 
     if(!strcmp(sub,"sync")) {
+#ifdef __ANDROID__
+        (void)!system("termux-job-scheduler --cancel-all 2>/dev/null");
+        {char c[B];snprintf(c,B,"(crontab -l 2>/dev/null|grep -v '# a:\\|# aio:')|crontab - 2>/dev/null");(void)!system(c);}
+#else
         {char c[B];snprintf(c,B,"systemctl --user disable --now aio-*.timer 2>/dev/null;rm -f %s/.config/systemd/user/aio-*.{timer,service} 2>/dev/null",HOME);(void)!system(c);}
         for(int i=0;i<NJ;i++) hub_timer(&HJ[i],0);
+#endif
         int m=0; for(int i=0;i<NJ;i++) if(!strcmp(HJ[i].d,DEV)&&HJ[i].en) { hub_timer(&HJ[i],1); m++; }
         printf("\xe2\x9c\x93 synced %d jobs\n",m); return 0;
     }
