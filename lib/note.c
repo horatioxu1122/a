@@ -54,6 +54,7 @@ static int cmd_note(int argc, char **argv) {
         snprintf(rdir,P,"%s",dir);rapid("n> ",rapid_note);return 0;}
 }
 /* ── task ── */
+static int is5d(const char*s){return strspn(s,"0123456789")==5&&!s[5];}
 typedef struct{char d[P],t[256],p[8];}Tk;
 static Tk T[256];
 static int tcmp(const void*a,const void*b){int c=strcmp(((const Tk*)a)->p,((const Tk*)b)->p);return c?c:strcmp(strrchr(((const Tk*)a)->d,'_'),strrchr(((const Tk*)b)->d,'_'));}
@@ -62,7 +63,7 @@ static int load_tasks(const char*dir){
     while((e=readdir(d))&&n<256){
         if(e->d_name[0]=='.'||!strcmp(e->d_name,"README.md"))continue;
         const char*nm=e->d_name;snprintf(T[n].d,P,"%s/%s",dir,nm);
-        int hp=strlen(nm)>5&&nm[5]=='-'&&isdigit(nm[0])&&isdigit(nm[1])&&isdigit(nm[2])&&isdigit(nm[3])&&isdigit(nm[4]);
+        int hp=nm[5]=='-'&&strspn(nm,"0123456789")==5;
         if(hp){memcpy(T[n].p,nm,5);T[n].p[5]=0;}else strcpy(T[n].p,"50000");
         {char c[P*2],r[B];snprintf(c,P*2,"d=%s;head -qn1 $d/task/*.txt $d/*.txt $d 2>/dev/null|sed 's/^Text: //;q'",T[n].d);
             pcmd(c,r,B);r[strcspn(r,"\n")]=0;
@@ -82,6 +83,10 @@ static void task_add(const char*dir,const char*t,int pri){
     snprintf(buf,B,"Text: %s\nDevice: %s\nCreated: %s\n",t,DEV,ts);writef(fn,buf);
 }
 static void rapid_task(const char*t){task_add(rdir,t,50000);sync_bg();printf("\xe2\x9c\x93 P50000 %s\n",t);}
+static int task_add_p(const char*dir,int argc,char**argv,int si){
+    int pri=50000;if(si<argc&&is5d(argv[si])){pri=atoi(argv[si]);si++;if(si>=argc){puts("a task [PPPPP] <text>");return 1;}}
+    char t[B]="";ajoin(t,B,argc,argv,si);task_add(dir,t,pri);printf("\xe2\x9c\x93 P%05d %s\n",pri,t);sync_bg();
+    snprintf(rdir,P,"%s",dir);rapid("t> ",rapid_task);return 0;}
 static void task_printbody(const char*path){
     size_t l;char*r=readf(path,&l);if(!r)return;if(!strncmp(r,"Text: ",6))r+=6;
     for(char*p=r;;){char*nl=strchr(p,'\n');if(nl)*nl=0;
@@ -147,7 +152,8 @@ static int load_sessions(const char*td,Sess*ss,int max){
     qsort(ss,(size_t)ns,sizeof(Sess),sess_ts_cmp);
     return ns;
 }
-static void task_todir(char*p){char tmp[P];snprintf(tmp,P,"%s.tmp",p);rename(p,tmp);mkdir(p,0755);
+static void task_todir(char*p){struct stat st;if(!stat(p,&st)&&S_ISDIR(st.st_mode))return;
+    char tmp[P];snprintf(tmp,P,"%s.tmp",p);rename(p,tmp);mkdir(p,0755);
     char dst[P];snprintf(dst,P,"%s/task.txt",p);rename(tmp,dst);}
 static void task_show(int i,int n){
     Sess ss[32];int ns=load_sessions(T[i].d,ss,32);
@@ -262,7 +268,7 @@ static int cmd_task(int argc,char**argv){
             if(k=='e'){do_archive(T[i].d);printf("\xe2\x9c\x93 Archived: %.40s\n",T[i].t);
                 sync_bg();n=load_tasks(dir);if(i>=n)i=n-1;if(i<0)break;}
             else if(k=='a'){
-                {struct stat st;if(!stat(T[i].d,&st)&&!S_ISDIR(st.st_mode))task_todir(T[i].d);}
+                task_todir(T[i].d);
                 char sd[P];snprintf(sd,P,"%s/task",T[i].d);
                 char buf[B];if(raw_line("  Text: ",buf,B)){
                     mkdir(sd,0755);
@@ -273,7 +279,7 @@ static int cmd_task(int argc,char**argv){
                     printf("\xe2\x9c\x93 Added\n");sync_bg();}
                 task_show(i,n);show=0;}
             else if(k=='c'){docreate:
-                {struct stat st;if(!stat(T[i].d,&st)&&!S_ISDIR(st.st_mode))task_todir(T[i].d);}
+                task_todir(T[i].d);
                 char nm[64];if(!raw_line("  Name: ",nm,64)){show=0;continue;}
                 char pt[B];if(!raw_line("  Prompt text: ",pt,B)){show=0;continue;}
                 char fd[P];if(!raw_line("  Folder [cwd]: ",fd,P))(void)!getcwd(fd,P);
@@ -351,7 +357,7 @@ static int cmd_task(int argc,char**argv){
                     raw_enter();show=0;}}
             else if(k=='p'){char buf[16];if(raw_line("  Priority (1-99999): ",buf,16)){task_repri(i,atoi(buf));sync_bg();n=load_tasks(dir);}}
             else if(k=='d'){
-                {struct stat st;if(!stat(T[i].d,&st)&&!S_ISDIR(st.st_mode))task_todir(T[i].d);}
+                task_todir(T[i].d);
                 char db[32];if(raw_line("  Deadline (MM-DD [HH:MM]): ",db,32)){
                     char dn[32];dl_norm(db,dn,32);
                     char df[P];snprintf(df,P,"%s/deadline.txt",T[i].d);writef(df,dn);printf("\xe2\x9c\x93 %s\n",dn);sync_bg();}
@@ -377,12 +383,7 @@ static int cmd_task(int argc,char**argv){
         int n=load_tasks(dir),x=atoi(argv[3])-1;if(x<0||x>=n){puts("x Invalid");return 1;}
         task_repri(x,atoi(argv[4]));sync_bg();return 0;}
     if(!strcmp(sub,"add")||!strcmp(sub,"a")){if(argc<4){puts("a task add [PPPPP] <text>");return 1;}
-        int pri=50000,si=3;
-        if(strlen(argv[3])==5&&isdigit(argv[3][0])&&isdigit(argv[3][1])&&isdigit(argv[3][2])&&isdigit(argv[3][3])&&isdigit(argv[3][4])){
-            pri=atoi(argv[3]);si=4;if(si>=argc){puts("a task add [PPPPP] <text>");return 1;}}
-        char t[B]="";ajoin(t,B,argc,argv,si);
-        task_add(dir,t,pri);printf("\xe2\x9c\x93 P%05d %s\n",pri,t);sync_bg();
-        snprintf(rdir,P,"%s",dir);rapid("t> ",rapid_task);return 0;}
+        return task_add_p(dir,argc,argv,3);}
     if(*sub=='d'&&!sub[1]){if(argc<4){puts("a task d <#|name>...");return 1;}int n=load_tasks(dir);
         for(int j=3;j<argc;j++){int x=-1,v=atoi(argv[j]);if(v>0&&v<=n)x=v-1;
             else{for(int i=0;i<n;i++){char*b=strrchr(T[i].d,'/');if(b&&!strcmp(b+1,argv[j])){x=i;break;}}}
@@ -440,17 +441,12 @@ static int cmd_task(int argc,char**argv){
     if(argc>4&&isdigit(argv[3][0])){
         int n=load_tasks(dir),x=atoi(argv[3])-1;
         if(x>=0&&x<n){
-        {struct stat st;if(!stat(T[x].d,&st)&&!S_ISDIR(st.st_mode))task_todir(T[x].d);}
+        task_todir(T[x].d);
         char sd[P];snprintf(sd,P,"%s/%s",T[x].d,sub);mkdirp(sd);
         struct timespec tp;clock_gettime(CLOCK_REALTIME,&tp);
         char ts[32],fn[P];strftime(ts,32,"%Y%m%dT%H%M%S",localtime(&tp.tv_sec));
         char t[B]="";ajoin(t,B,argc,argv,4);
         snprintf(fn,P,"%s/%s.%09ld_%s.txt",sd,ts,tp.tv_nsec,DEV);writef(fn,t);
         printf("\xe2\x9c\x93 %s: %.40s\n",sub,t);sync_bg();return 0;}}
-    {int pri=50000,si=2;
-    if(argc>2&&strlen(argv[2])==5&&isdigit(argv[2][0])&&isdigit(argv[2][1])&&isdigit(argv[2][2])&&isdigit(argv[2][3])&&isdigit(argv[2][4])){
-        pri=atoi(argv[2]);si=3;if(si>=argc){puts("a task [PPPPP] <text>");return 1;}}
-    char t[B]="";ajoin(t,B,argc,argv,si);
-    task_add(dir,t,pri);printf("\xe2\x9c\x93 P%05d %s\n",pri,t);sync_bg();
-    snprintf(rdir,P,"%s",dir);rapid("t> ",rapid_task);return 0;}
+    return task_add_p(dir,argc,argv,2);
 }

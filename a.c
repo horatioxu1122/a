@@ -326,6 +326,7 @@ static int cmd_cat(int c,char**v){perf_disarm();
     if(!m){puts("1 all files, all lines\n2 all files, all lines (skip lab/)\n3 all files, first 10 lines + last 5 lines (skip lab/)");
         printf("> ");fflush(stdout);char ch[4];if(!fgets(ch,4,stdin))return 0;m=ch[0];}
     const char*ex=m!='1'?" -- ':!lab/'":"";
+    #define GA(p,n) if(l+(n)>=cap){cap=(l+(n)+8192)*2;d=realloc(d,cap);}memcpy(d+l,p,n);l+=(n)
     if(m=='3'){char cm[B];snprintf(cm,B,"git grep -lI ''%s",ex);
         size_t l=0,cap=0;char*d=NULL,b[8192];size_t n;int nf=0,skf=0;
         FILE*fl=popen(cm,"r");char fb[65536];size_t fl2=0;
@@ -337,12 +338,12 @@ static int cmd_cat(int c,char**v){perf_disarm();
             int tl=0;char ln[512];while(fgets(ln,512,f))tl++;
             rewind(f);nf++;
             char hdr[600];size_t hl=(size_t)snprintf(hdr,600,"\n==> %s (%d lines) <==\n",p,tl);
-            if(l+hl>=cap){cap=(l+hl+8192)*2;d=realloc(d,cap);}memcpy(d+l,hdr,hl);l+=hl;
+            GA(hdr,hl);
             int hd=strchr(p,'/')?10:1000;
             int i=0;while(fgets(ln,512,f)){
                 size_t sl=strlen(ln);
-                if(i<hd||(tl>hd+5&&i>=tl-5)){if(l+sl>=cap){cap=(l+sl+8192)*2;d=realloc(d,cap);}memcpy(d+l,ln,sl);l+=sl;}
-                if(i==hd&&tl>hd+5){const char*dots="  ...\n";size_t dl=6;if(l+dl>=cap){cap=(l+dl+8192)*2;d=realloc(d,cap);}memcpy(d+l,dots,dl);l+=dl;}
+                if(i<hd||(tl>hd+5&&i>=tl-5)){GA(ln,sl);}
+                if(i==hd&&tl>hd+5){const char*dots="  ...\n";size_t dl=6;GA(dots,dl);}
                 i++;}
             fclose(f);p=e+1;}
         if(!d)return 1;d[l]=0;
@@ -350,6 +351,7 @@ static int cmd_cat(int c,char**v){perf_disarm();
         if(skf)fprintf(stderr,"✓ %d files %zub (%d skipped)\n",nf,l,skf);
         else fprintf(stderr,"✓ %d files %zub\n",nf,l);
         free(d);return 0;}
+    #undef GA
     char cm[B];snprintf(cm,B,"git ls-files -z%s|xargs -0 grep -lIZ ''|xargs -0 tail -n+1",ex);
     size_t l=0;char*d=NULL,b[8192];size_t n,cap=0;int nf=0;
     FILE*f=popen(cm,"r");if(f){while((n=fread(b,1,8192,f))>0){
