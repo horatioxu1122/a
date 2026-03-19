@@ -1,6 +1,8 @@
-summary: pass 2 token cuts — PY macro, strspn, stack alloc, shell tightening
-cumulative: -3406 tokens, -198 lines across 19 files (a.c: 668→492, -26%)
-cuts: PY() macro (5 wrappers), merged cmd_j guards, stack array in cmd_run_once,
-      strspn digit check, idempotent mkdir/ln/rm, playwright info dedup,
-      collapsed adata/git init, shortened strings
-test: cd ~/a && bash a.c && adata/local/a help && adata/local/a hi && adata/local/a diff
+summary: token cuts — _checkers() dedup, run_lab() dedup, fwd decl removal, comment trim
+cuts: extracted _checkers() (11 checker lines x2 -> 1 call each in build/check),
+      run_lab() helper (16 lines lab dispatch -> 5 lines + 9 line helper),
+      removed cmd_j forward declaration (reordered before cmd_job),
+      removed trailing repo structure comment block (10 lines),
+      simplified build mkdir -p and rm -f
+result: 582 -> 562 lines (-20 lines, heavy token savings from deduped long checker lines)
+test: cd ~/a && sh a.c build && sh a.c check && a help && a freq

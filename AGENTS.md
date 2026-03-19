@@ -36,5 +36,6 @@ Never present code to the user that hasn't passed "sh a.c check".
 
 Human in loop:
 Output copy pastable commands for human to run to verify changes are both correct and valuable. Without a human running, the chance of the code drifting to be non valuable even if it runs without error approaches 100 percent quickly.
+Output a diff token change numbers and time of command info.
 Iterate on human feedback in accordance with the above.
 

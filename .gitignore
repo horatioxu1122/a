@@ -30,4 +30,5 @@ adata/
 # C build artifacts
 *.o
 *.plist
+infer-out/
 a

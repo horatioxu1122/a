@@ -75,12 +75,25 @@ _install_node() {
     else curl -fsSL "$URL" | tar -xJf - -C "$HOME/.local" --strip-components=1; fi
     [[ -x "$HOME/.local/bin/node" ]] && ok "node $($HOME/.local/bin/node -v)" || warn "node install failed"
 }
+_checkers() {
+    _c(){ n=$1;shift;{ ! command -v "$1" &>/dev/null||"$@";}>"$T/$n" 2>&1||touch "$T/$n.f";}
+    _rgcc(){ command -v gcc &>/dev/null&&! gcc --version 2>&1|grep -q clang;}
+    _c 1 $CC $WARN $A -fsyntax-only "$F" &
+    _c 3 clang-tidy --checks='-*,bugprone-branch-clone,bugprone-infinite-loop,bugprone-sizeof-*' -warnings-as-errors='*' "$F" -- $A -std=c17 -w &
+    { ! _rgcc||gcc -std=c17 -Werror -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wtrampolines $A -fsyntax-only "$F";}>"$T/4" 2>&1||touch "$T/4.f" &
+    { ! _rgcc||{ gcc -fanalyzer $A -fsyntax-only "$F" >"$T/5" 2>&1;! grep -q '\-Wanalyzer' "$T/5";};}||touch "$T/5.f" &
+    _c 6 cppcheck --error-exitcode=1 --quiet --suppress=syntaxError $A "$F" & _c 7 frama-c -eva -eva-no-print -no-unicode -cpp-extra-args="$A" "$F" &
+    { ! command -v cbmc &>/dev/null||timeout 15 cbmc --function main "$F" $A||[ $? -eq 124 ];}>"$T/8" 2>&1||touch "$T/8.f" &
+    { $CC $A -fsanitize=undefined,address -fno-omit-frame-pointer -w -o "$T/a.san" "$F"&&A_BENCH=1 "$T/a.san" help >"$T/9" 2>&1;! grep -q 'runtime error\|SUMMARY:.*Sanitizer' "$T/9";}||touch "$T/9.f" &
+    { ! command -v infer &>/dev/null||{ infer run --no-progress-bar -o "$T/infer" -- $CC $A -w -c "$F" -o /dev/null >"$T/10" 2>&1;! grep -q 'NULLPTR_DEREFERENCE\|BUFFER_OVERRUN\|USE_AFTER_FREE' "$T/infer/report.txt" 2>/dev/null;};}||touch "$T/10.f" &
+    wait
+}
 case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
 build)
     R="${D%%/adata/worktrees/*}"; if [[ "$D" == *"/adata/worktrees/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
-    BIN="$HOME/.local/bin";[[ -d "$ABIN" ]] || mkdir -p "$ABIN";[[ -d "$BIN" ]] || mkdir -p "$BIN"
-    [[ -f "$ABIN/.chk" ]] && rm -f "$ABIN/.chk"
+    BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
+    rm -f "$ABIN/.chk"
     printf '%s' $$ > "$ABIN/.bld"
     _build_fix() {
         warn "Build failed. Attempting agent fix..."
@@ -104,17 +117,7 @@ build)
             [[ $TCT -gt $PYT ]] && { echo "PERF KILL: tcc ${TCT}ns > python ${PYT}ns" >"$ABIN/.chk"; touch "$T/0.f"; }
         fi
         _ensure_cc; $CC $A -w -O0 -o "$ABIN/a" "$F" 2>/dev/null; _warn_flags
-        _c(){ n=$1;shift;{ ! command -v "$1" &>/dev/null||"$@";}>"$T/$n" 2>&1||touch "$T/$n.f";}
-        _rgcc(){ command -v gcc &>/dev/null&&! gcc --version 2>&1|grep -q clang;}
-        _c 1 $CC $WARN $A -fsyntax-only "$F" &
-        _c 3 clang-tidy --checks='-*,bugprone-branch-clone,bugprone-infinite-loop,bugprone-sizeof-*' -warnings-as-errors='*' "$F" -- $A -std=c17 -w &
-        { ! _rgcc||gcc -std=c17 -Werror -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wtrampolines $A -fsyntax-only "$F";}>"$T/4" 2>&1||touch "$T/4.f" &
-        { ! _rgcc||{ gcc -fanalyzer $A -fsyntax-only "$F" >"$T/5" 2>&1;! grep -q '\-Wanalyzer' "$T/5";};}||touch "$T/5.f" &
-        _c 6 cppcheck --error-exitcode=1 --quiet --suppress=syntaxError $A "$F" & _c 7 frama-c -eva -eva-no-print -no-unicode -cpp-extra-args="$A" "$F" &
-        { ! command -v cbmc &>/dev/null||timeout 15 cbmc --function main "$F" $A||[ $? -eq 124 ];}>"$T/8" 2>&1||touch "$T/8.f" &
-        { $CC $A -fsanitize=undefined,address -fno-omit-frame-pointer -w -o "$T/a.san" "$F"&&A_BENCH=1 "$T/a.san" help >"$T/9" 2>&1;! grep -q 'runtime error\|SUMMARY:.*Sanitizer' "$T/9";}||touch "$T/9.f" &
-        { ! command -v infer &>/dev/null||{ infer run --no-progress-bar -o "$T/infer" -- $CC $A -w -c "$F" -o /dev/null >"$T/10" 2>&1;! grep -q 'NULLPTR_DEREFERENCE\|BUFFER_OVERRUN\|USE_AFTER_FREE' "$T/infer/report.txt" 2>/dev/null;};}||touch "$T/10.f" &
-        wait
+        _checkers
         if ls "$T"/[0-9].f "$T"/1[0-9].f &>/dev/null 2>&1;then cat "$T"/[0-9] "$T"/1[0-9] >"$ABIN/.chk" 2>/dev/null
             [ "$(cat "$ABIN/.bld" 2>&-)" = "$$" ]&&printf '#!/bin/sh\nhead -80 %s/.chk;exit 1' "$ABIN">"$ABIN/a"&&chmod +x "$ABIN/a"
         else $CC $A -O3 -march=native -flto -w -o "$ABIN/a.opt" "$F"&&[ "$(cat "$ABIN/.bld" 2>&-)" = "$$" ]&&mv "$ABIN/a.opt" "$ABIN/a" 2>&-;rm -f "$ABIN/a.opt"
@@ -129,17 +132,7 @@ check)
     _ensure_cc; E=$($CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { echo "$E"; exit 1; }
     [[ "$D" != *"/adata/worktrees/"* ]] && ln -sf "$ABIN/a" "$BIN/a"
     T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\"";_warn_flags
-    _c(){ n=$1;shift;{ ! command -v "$1" &>/dev/null||"$@";}>"$T/$n" 2>&1||touch "$T/$n.f";}
-    _rgcc(){ command -v gcc &>/dev/null&&! gcc --version 2>&1|grep -q clang;}
-    _c 1 $CC $WARN $A -fsyntax-only "$F" &
-    _c 3 clang-tidy --checks='-*,bugprone-branch-clone,bugprone-infinite-loop,bugprone-sizeof-*' -warnings-as-errors='*' "$F" -- $A -std=c17 -w &
-    { ! _rgcc||gcc -std=c17 -Werror -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wtrampolines $A -fsyntax-only "$F";}>"$T/4" 2>&1||touch "$T/4.f" &
-    { ! _rgcc||{ gcc -fanalyzer $A -fsyntax-only "$F" >"$T/5" 2>&1;! grep -q '\-Wanalyzer' "$T/5";};}||touch "$T/5.f" &
-    _c 6 cppcheck --error-exitcode=1 --quiet --suppress=syntaxError $A "$F" & _c 7 frama-c -eva -eva-no-print -no-unicode -cpp-extra-args="$A" "$F" &
-    { ! command -v cbmc &>/dev/null||timeout 15 cbmc --function main "$F" $A||[ $? -eq 124 ];}>"$T/8" 2>&1||touch "$T/8.f" &
-    { $CC $A -fsanitize=undefined,address -fno-omit-frame-pointer -w -o "$T/a.san" "$F"&&A_BENCH=1 "$T/a.san" help >"$T/9" 2>&1;! grep -q 'runtime error\|SUMMARY:.*Sanitizer' "$T/9";}||touch "$T/9.f" &
-    { ! command -v infer &>/dev/null||{ infer run --no-progress-bar -o "$T/infer" -- $CC $A -w -c "$F" -o /dev/null >"$T/10" 2>&1;! grep -q 'NULLPTR_DEREFERENCE\|BUFFER_OVERRUN\|USE_AFTER_FREE' "$T/infer/report.txt" 2>/dev/null;};}||touch "$T/10.f" &
-    wait
+    _checkers
     if ls "$T"/[0-9].f "$T"/1[0-9].f &>/dev/null 2>&1;then cat "$T"/[0-9] "$T"/1[0-9] 2>/dev/null; exit 1
     else ok "all checkers passed"; $CC $A -O3 -march=native -flto -w -o "$ABIN/a.opt" "$F"&&mv "$ABIN/a.opt" "$ABIN/a" 2>&-;rm -f "$ABIN/a.opt" & fi
     ;;
@@ -363,10 +356,6 @@ static int cmd_cat(int c,char**v){perf_disarm();
         if(l+n>=cap){cap=(l+n)*2;d=realloc(d,cap+1);}memcpy(d+l,b,n);l+=n;}pclose(f);}
     if(!d)return 1;d[l]=0;for(char*p=d;(p=strstr(p,"==> "));p+=4)nf++;
     (void)!write(1,d,l);to_clip(d);fprintf(stderr,"✓ %d files %zub\n",nf,l);free(d);return 0;}
-static int cmd_j(int,char**);
-static int cmd_job(int c,char**v){
-    if(c>2&&*v[2]>='0'&&*v[2]<='9')return cmd_jobs(c,v);
-    return cmd_j(c,v);}
 static int cmd_j(int c,char**v){
     if(c<3||!strcmp(v[2],"rm")||!strcmp(v[2],"watch")||!strcmp(v[2],"-r")||(c==3&&isdigit(*v[2])))return cmd_jobs(c,v);
     if(c>2&&v[2][1]=='q'){char ln[B];for(fputs("j> ",stdout);fgets(ln,B,stdin);fputs("j> ",stdout)){
@@ -417,6 +406,9 @@ static int cmd_j(int c,char**v){
     snprintf(cm,B,"tmux new-window -d -n '%s' -P -F '#{pane_id}' -c '%s' '%s'",bname(wd),wd,jcmd);
     pcmd(cm,pid,64);pid[strcspn(pid,"\n")]=0;if(pid[0])send_prefix_bg(pid,"claude",wd,pr);
     return 0;}
+static int cmd_job(int c,char**v){
+    if(c>2&&*v[2]>='0'&&*v[2]<='9')return cmd_jobs(c,v);
+    return cmd_j(c,v);}
 static int cmd_adb(int c,char**v){
     if(c>2&&!strcmp(v[2],"ssh"))return system("for s in $(adb devices|awk '/\\tdevice$/{print$1}');do printf '\\033[36m→ %s\\033[0m ' \"$s\";adb -s \"$s\" shell 'am broadcast -n com.termux/.app.TermuxOpenReceiver -a com.termux.RUN_COMMAND --es com.termux.RUN_COMMAND_PATH /data/data/com.termux/files/usr/bin/sshd --ez com.termux.RUN_COMMAND_BACKGROUND true' 2>&1|tail -1;done");
     execlp("adb","adb","devices","-l",(char*)0);return 1;
@@ -451,6 +443,15 @@ static int cmd_tutorial(int c,char**v){(void)c;
     static char kb[16];snprintf(kb,16,"%s",k[0]?k:"c");
     char*fv[]={v[0],kb,"You are a friendly guide for 'a', an AI agent manager that helps you accomplish your projects and goals faster. Introduce it in one sentence, say you can ask me anything about commands or how things work, then ask: what project are you working on or want to start? Recommend they pick a real one so you can walk them through it hands-on. Run 'a help' and read README.md IDEAS.md as reference but teach naturally as the user needs it, don't dump. Note: 'scream' in the workcycle just means focus on what's most essential.",NULL};
     return cmd_sess(3,fv);}
+static int run_lab(const char*pf,int argc,char**argv){
+    const char*dx=strrchr(pf,'.');perf_disarm();
+    if(dx&&!strcmp(dx,".py")){argv[1]=(char*)pf;argv[0]="python3";execvp("python3",argv);}
+    if(dx&&!strcmp(dx,".c")){char ob[P],cm[B];const char*sl=strrchr(pf,'/');const char*bn=sl?sl+1:pf;
+     snprintf(ob,P,"%s/lab_%.*s",TMP,(int)(dx-bn),bn);
+     snprintf(cm,B,"cc -w -o '%s' '%s'&&'%s'",ob,pf,ob);return system(cm);}
+    if(dx&&!strcmp(dx,".sh")){argv[1]=(char*)pf;argv[0]="sh";execvp("sh",argv);}
+    if(dx&&!strcmp(dx,".html"))execlp("xdg-open","xdg-open",pf,(char*)0);
+    return -1;}
 typedef struct { const char *n; int (*fn)(int, char**); } cmd_t;
 static int cmd_cmp(const void*a,const void*b){return strcmp(((const cmd_t*)a)->n,((const cmd_t*)b)->n);}
 /* dispatch: C logic+aliases here; lib .py and my scripts auto-discovered.
@@ -540,22 +541,11 @@ int main(int argc, char **argv) {
      if(fexists(pf))fallback_py(arg,argc,argv);
      snprintf(pf,P,"%s/lib/%s/__init__.py",SDIR,arg);
      if(fexists(pf)){char m[P];snprintf(m,P,"%s/__init__",arg);fallback_py(m,argc,argv);}
-     snprintf(pf,P,"%s/lab/%s",SDIR,arg);const char*dx=strrchr(arg,'.');
-     if(dx&&fexists(pf)){perf_disarm();
-      if(!strcmp(dx,".py")){argv[1]=pf;argv[0]="python3";execvp("python3",argv);}
-      if(!strcmp(dx,".c")){char ob[P],cm[B];snprintf(ob,P,"%s/lab_%.*s",TMP,(int)(dx-arg),arg);
-       snprintf(cm,B,"cc -w -o '%s' '%s'&&'%s'",ob,pf,ob);return system(cm);}
-      if(!strcmp(dx,".sh")){argv[1]=pf;argv[0]="sh";execvp("sh",argv);}
-      if(!strcmp(dx,".html")){execlp("xdg-open","xdg-open",pf,(char*)0);}}
-     snprintf(pf,P,"%s/lab/%s.py",SDIR,arg);
-     if(fexists(pf)){perf_disarm();argv[1]=pf;argv[0]="python3";execvp("python3",argv);}
-     snprintf(pf,P,"%s/lab/%s.c",SDIR,arg);
-     if(fexists(pf)){perf_disarm();char ob[P],cm[B];snprintf(ob,P,"%s/lab_%s",TMP,arg);
-      snprintf(cm,B,"cc -w -o '%s' '%s'&&'%s'",ob,pf,ob);return system(cm);}
-     snprintf(pf,P,"%s/lab/%s.sh",SDIR,arg);
-     if(fexists(pf)){perf_disarm();argv[1]=pf;argv[0]="sh";execvp("sh",argv);}
-     snprintf(pf,P,"%s/lab/%s.html",SDIR,arg);
-     if(fexists(pf)){perf_disarm();execlp("xdg-open","xdg-open",pf,(char*)0);}}
+     snprintf(pf,P,"%s/lab/%s",SDIR,arg);
+     if(strrchr(arg,'.')&&fexists(pf)){int r=run_lab(pf,argc,argv);if(r>=0)return r;}
+     {static const char*X[]={".py",".c",".sh",".html",0};
+      for(int i=0;X[i];i++){snprintf(pf,P,"%s/lab/%s%s",SDIR,arg,X[i]);
+       if(fexists(pf)){int r=run_lab(pf,argc,argv);if(r>=0)return r;}}}}
     {size_t l=strlen(arg);if(l>=3&&arg[l-1]=='+'&&arg[l-2]=='+'&&*arg!='w')return cmd_wt_plus(argc,argv);}
     if(*arg=='w'&&arg[1]&&!fexists(arg))return cmd_wt(argc,argv);
     {init_db();load_cfg();load_sess();if(find_sess(arg))return cmd_sess(argc,argv);}
@@ -569,7 +559,7 @@ int main(int argc, char **argv) {
     fprintf(stderr,"a: unknown '%s'\n",arg);
     return 1;
 }
-/* Repo struture: 
+/* Repo struture:
 adata: all persistent data
 lab: experimental work
 lib: flat program files
