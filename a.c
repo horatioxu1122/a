@@ -366,8 +366,10 @@ static int cmd_cat(int c,char**v){perf_disarm();
             i++;}
         fclose(f);p=e+1;}
     if(!d)return 1;d[l]=0;
-    (void)!write(1,d,l);to_clip(d);
     char tf[P];snprintf(tf,P,"%s/local/a_cat.txt",AROOT);writef(tf,d);
+    {int lc=0;for(size_t i=0;i<l;i++)if(d[i]=='\n')lc++;
+    dprintf(1,"AI Agent: Please read the file located at %s (%d lines) section by section fully if your tool doesn't support one shot read\n\n",tf,lc);}
+    (void)!write(1,d,l);to_clip(d);
     fprintf(stderr,"✓ %d files %zub%s cat %s\n",nf,l,skf?" (skipped)":"",tf);
     free(d);}
     #undef GA
