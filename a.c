@@ -305,7 +305,7 @@ static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)
 #include "lib/sess.c"
 
 static int cmd_freq(int c,char**v){perf_disarm();
-    int verbose=0,n=25;
+    int verbose=0,n=0;
     for(int i=2;i<c;i++){if(!strcmp(v[i],"-v"))verbose=1;else if(*v[i]>='0'&&*v[i]<='9')n=atoi(v[i]);}
     char ad[P];snprintf(ad,P,"%s/git/activity",AROOT);
     DIR*d=opendir(ad);if(!d){puts("x no activity log");return 1;}
@@ -325,8 +325,18 @@ static int cmd_freq(int c,char**v){perf_disarm();
         if(j==nc&&nc<1024){snprintf(ct[nc].n,64,"%s",p);ct[nc].c=1;nc++;}}
     closedir(d);
     qsort(ct,(size_t)nc,sizeof(ct[0]),ctcmp);
-    if(n>nc)n=nc;
-    for(int i=0;i<n;i++)printf("%6d %s\n",ct[i].c,ct[i].n);
+    if(!n||n>nc)n=nc;
+    long total_uses=0,total_kb=0;
+    printf("%6s %5s %5s %s\n","USES","FILE","USE/K","CMD");
+    for(int i=0;i<n;i++){struct stat st;char sf[P];long kb=0;
+        const char*cn=ct[i].n;static const struct{const char*a,*f;}AL[]={{"task","note"},{"t","note"},{"n","note"},{"i","ls"},{"dash","ls"},{"diff","push"},{"d","push"},{"kill","ls"},{"j","sess"},{"jobs","sess"},{0,0}};
+        for(int a=0;AL[a].a;a++)if(!strcmp(cn,AL[a].a)){cn=AL[a].f;break;}
+        static const char*X[]={".c",".py",NULL};
+        for(int x=0;X[x];x++){snprintf(sf,P,"%s/lib/%s%s",SDIR,cn,X[x]);if(!stat(sf,&st)){kb=(st.st_size+512)/1024;break;}}
+        total_uses+=ct[i].c;if(kb)total_kb+=kb;
+        if(kb)printf("%6d %4ldK %5ld %s\n",ct[i].c,kb,ct[i].c/kb,ct[i].n);
+        else printf("%6d             %s\n",ct[i].c,ct[i].n);}
+    if(total_kb)printf("\n%ld uses, %ldK code, %ld u/K overall\n",total_uses,total_kb,total_kb?total_uses/total_kb:0);
     puts("\033[33m! counts include bot/automated use\033[0m");
     return 0;}
 static int cmd_cat(int c,char**v){perf_disarm();

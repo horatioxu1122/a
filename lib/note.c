@@ -65,8 +65,10 @@ static int load_tasks(const char*dir){
         const char*nm=e->d_name;snprintf(T[n].d,P,"%s/%s",dir,nm);
         int hp=nm[5]=='-'&&strspn(nm,"0123456789")==5;
         if(hp){memcpy(T[n].p,nm,5);T[n].p[5]=0;}else strcpy(T[n].p,"50000");
-        {char c[P*2],r[B];snprintf(c,P*2,"d=%s;head -qn1 $d/task/*.txt $d/*.txt $d 2>/dev/null|sed 's/^Text: //;q'",T[n].d);
-            pcmd(c,r,B);r[strcspn(r,"\n")]=0;
+        {char r[B]="",tp[P];FILE*f=NULL;snprintf(tp,P,"%s/task",T[n].d);
+            DIR*td=opendir(tp);struct dirent*te;
+            if(td){while((te=readdir(td)))if(te->d_type==DT_REG&&strstr(te->d_name,".txt")){snprintf(tp,P,"%s/task/%s",T[n].d,te->d_name);f=fopen(tp,"r");break;}closedir(td);}
+            if(!f)f=fopen(T[n].d,"r");if(f){(void)!fgets(r,B,f);fclose(f);r[strcspn(r,"\n")]=0;if(!strncmp(r,"Text: ",6))memmove(r,r+6,strlen(r+6)+1);}
             if(!*r){const char*s=hp?nm+6:nm;const char*u=strchr(s,'_');int tl=u?(int)(u-s):(int)strlen(s);
                 if(tl>255)tl=255;for(int i=0;i<tl;i++)r[i]=s[i]=='-'?' ':s[i];r[tl]=0;}
             snprintf(T[n].t,256,"%s",r);}
@@ -119,16 +121,11 @@ static int task_dl(const char*td){char df[P];snprintf(df,P,"%s/deadline.txt",td)
 typedef struct{char n[256];char ts[32];}Ent;
 static int entcmp(const void*a,const void*b){return strcmp(((const Ent*)a)->ts,((const Ent*)b)->ts);}
 static void ts_human(const char*ts,char*out,size_t sz){
-    /* "20260207T033024" → "Feb 7 3:30am" */
-    if(!ts||strlen(ts)<15||ts[8]!='T'){snprintf(out,sz,"(original)");return;}
-    struct tm t={0};
-    t.tm_year=(ts[0]-'0')*1000+(ts[1]-'0')*100+(ts[2]-'0')*10+(ts[3]-'0')-1900;
-    t.tm_mon=(ts[4]-'0')*10+(ts[5]-'0')-1;t.tm_mday=(ts[6]-'0')*10+(ts[7]-'0');
-    t.tm_hour=(ts[9]-'0')*10+(ts[10]-'0');t.tm_min=(ts[11]-'0')*10+(ts[12]-'0');
-    int h=t.tm_hour;const char*ap=h>=12?"pm":"am";h=h%12;if(!h)h=12;
-    mktime(&t);strftime(out,sz,"%b %-d",&t);
-    char tmp[32];snprintf(tmp,32," %d:%02d%s",h,t.tm_min,ap);
-    strncat(out,tmp,sz-strlen(out)-1);
+    struct tm t={0};int y,mo,d,h,mi,s;
+    if(!ts||sscanf(ts,"%4d%2d%2dT%2d%2d%2d",&y,&mo,&d,&h,&mi,&s)<5){snprintf(out,sz,"(original)");return;}
+    t.tm_year=y-1900;t.tm_mon=mo-1;t.tm_mday=d;t.tm_hour=h;t.tm_min=mi;mktime(&t);
+    int l=(int)strftime(out,sz,"%b %-d",&t);int h12=h%12;if(!h12)h12=12;
+    snprintf(out+l,sz-(size_t)l," %d:%02d%s",h12,mi,h>=12?"pm":"am");
 }
 typedef struct{char sid[128];char tmx[128];char ts[32];char wd[P];int st;}Sess;
 static int sess_ts_cmp(const void*a,const void*b){return strcmp(((const Sess*)a)->ts,((const Sess*)b)->ts);}
@@ -136,21 +133,15 @@ static int load_sessions(const char*td,Sess*ss,int max){
     DIR*d=opendir(td);if(!d)return 0;struct dirent*e;int ns=0;
     while((e=readdir(d))&&ns<max){
         if(strncmp(e->d_name,"session_",8)||!strstr(e->d_name,".txt"))continue;
-        char fp[P];snprintf(fp,P,"%s/%s",td,e->d_name);
-        size_t l;char*r=readf(fp,&l);if(!r)continue;
-        ss[ns].sid[0]=ss[ns].tmx[0]=ss[ns].ts[0]=ss[ns].wd[0]=0;
-        for(char*p=r;;){char*nl=strchr(p,'\n');if(nl)*nl=0;
-            if(!strncmp(p,"SessionID: ",11))snprintf(ss[ns].sid,128,"%s",p+11);
-            if(!strncmp(p,"TmuxSession: ",13))snprintf(ss[ns].tmx,128,"%s",p+13);
-            if(!strncmp(p,"Started: ",9))snprintf(ss[ns].ts,32,"%s",p+9);
-            if(!strncmp(p,"Cwd: ",5))snprintf(ss[ns].wd,P,"%s",p+5);
-            if(!nl)break;p=nl+1;}
-        free(r);
-        ss[ns].st=2;
-        ns++;}
-    closedir(d);
-    qsort(ss,(size_t)ns,sizeof(Sess),sess_ts_cmp);
-    return ns;
+        char fp[P];snprintf(fp,P,"%s/%s",td,e->d_name);FILE*f=fopen(fp,"r");if(!f)continue;
+        memset(&ss[ns],0,sizeof(Sess));ss[ns].st=2;char ln[P];
+        while(fgets(ln,P,f)){ln[strcspn(ln,"\n")]=0;
+            if(!strncmp(ln,"SessionID: ",11))snprintf(ss[ns].sid,128,"%s",ln+11);
+            else if(!strncmp(ln,"TmuxSession: ",13))snprintf(ss[ns].tmx,128,"%s",ln+13);
+            else if(!strncmp(ln,"Started: ",9))snprintf(ss[ns].ts,32,"%s",ln+9);
+            else if(!strncmp(ln,"Cwd: ",5))snprintf(ss[ns].wd,P,"%s",ln+5);}
+        fclose(f);ns++;}
+    closedir(d);qsort(ss,(size_t)ns,sizeof(Sess),sess_ts_cmp);return ns;
 }
 static void task_todir(char*p){struct stat st;if(!stat(p,&st)&&S_ISDIR(st.st_mode))return;
     char tmp[P];snprintf(tmp,P,"%s.tmp",p);rename(p,tmp);mkdir(p,0755);
@@ -196,8 +187,8 @@ static void task_show(int i,int n){
         strncat(ht,tmp,48-strlen(ht)-1);
         if(S_ISDIR(ps.st_mode)){
             char fv[P]="",mv[64]="",cfp[P];
-            snprintf(cfp,P,"%s/folder.txt",pp);{size_t l;char*c=readf(cfp,&l);if(c){snprintf(fv,P,"%s",c);fv[strcspn(fv,"\n")]=0;free(c);}}
-            snprintf(cfp,P,"%s/model.txt",pp);{size_t l;char*c=readf(cfp,&l);if(c){snprintf(mv,64,"%s",c);mv[strcspn(mv,"\n")]=0;free(c);}}
+            snprintf(cfp,P,"%s/folder.txt",pp);{FILE*f=fopen(cfp,"r");if(f){(void)!fgets(fv,P,f);fclose(f);fv[strcspn(fv,"\n")]=0;}}
+            snprintf(cfp,P,"%s/model.txt",pp);{FILE*f=fopen(cfp,"r");if(f){(void)!fgets(mv,64,f);fclose(f);mv[strcspn(mv,"\n")]=0;}}
             snprintf(cfp,P,"%s/prompt.txt",pp);
             printf("\n  \033[90m%s\033[0m  \033[35mprompt #%d\033[0m  \033[90m%s  %s\033[0m\n",ht,pc,mv,fv);
             task_printbody(cfp);
