@@ -1,6 +1,6 @@
 /* ── session (c, l, g, co, cp, etc.) ── */
 static int cmd_sess(int argc, char **argv) {
-    init_db(); load_cfg(); load_proj(); load_apps(); load_sess(); tm_ensure_conf();
+    perf_disarm();init_db(); load_cfg(); load_proj(); load_apps(); load_sess();
     const char *key = argv[1];
     sess_t *s = find_sess(key);
     if (!s) return -1;  /* not a session key */
@@ -36,7 +36,6 @@ static int cmd_sess(int argc, char **argv) {
         tm_go(sn);return 0;}free(gh);}}
     /* Inside tmux = split pane mode (user wants agent HERE, not session switch) */
     if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
-        perf_disarm();
         char ww[16],nc[16]; pcmd("tmux display-message -p '#{window_width}'",ww,16);
         pcmd("tmux list-panes -F '#{pane_left}'|sort -un|wc -l",nc,16);
         int nw=atoi(nc)>0?atoi(ww)/(atoi(nc)+1):atoi(ww)/2;
@@ -96,8 +95,8 @@ static int cmd_dir_file(int argc, char **argv) { (void)argc;
 /* ── interactive picker ── */
 typedef struct{char*p;int sc;}fqm_t;
 static FC fq[256]; int nfq;
-static int fq_get(const char*s){int sl=(int)strlen(s);
-    for(int i=0;i<nfq;i++){int fl=(int)strlen(fq[i].n);if(fl<=sl&&!strncasecmp(s,fq[i].n,(size_t)fl))return fq[i].c;}return 0;}
+static int fq_get(const char*s){int sl=(int)strlen(s),best=0,bl=0;
+    for(int i=0;i<nfq;i++){int fl=(int)strlen(fq[i].n);if(fl<=sl&&fl>bl&&!strncasecmp(s,fq[i].n,(size_t)fl)){best=fq[i].c;bl=fl;}}return best;}
 static int fqm_cmp(const void*a,const void*b){return((const fqm_t*)b)->sc-((const fqm_t*)a)->sc;}
 static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
     perf_disarm(); init_db();

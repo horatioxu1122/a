@@ -58,7 +58,9 @@ static void gen_icache(void) {
         if(si&&(!dot||(strcmp(dot,".py")&&strcmp(dot,".c")&&strcmp(dot,".sh")&&strcmp(dot,".html"))))continue;if(!si&&dot)*dot=0;
         fprintf(f,"%s\t%s\n",nm,sl[si]);}closedir(d);}}}
     /* subcommands not discoverable from filenames */
-    fputs("ui\tweb dashboard\nterm\tterminal (a ui /term)\n"
+    fputs("diff\tgit diff\ncat\tcodebase dump\nfreq\tusage frequency\n"
+    "jobs\tlist jobs\ndash\tdashboard\nperf\tperformance\n"
+    "ui\tweb dashboard\nterm\tterminal (a ui /term)\n"
     "cal add\tadd event\nhub add\tadd\nhub run\trun\nhub rm\trm\nhub log\tlog\n"
     "note l\tlist\nnote r\treview\nssh add\tadd host\nssh all\tall hosts\n"
     "task add\tadd\ntask l\tlist\ntask r\treview\ntask rank\trank\n",f);
@@ -75,7 +77,9 @@ static void gen_icache(void) {
             snprintf(fp2,P,"%s/%s",ad,e->d_name);int fd=open(fp2,O_RDONLY);if(fd<0)continue;
             int r=(int)read(fd,ln,255);close(fd);if(r<=0)continue;ln[r]=0;
             char*p=ln;for(int j=0;j<3&&*p;j++){while(*p&&*p!=' ')p++;while(*p==' ')p++;}
-            char*end=p;while(*end&&*end!=' '&&*end!='\n')end++;*end=0;if(!*p)continue;
+            char*end=p;while(*end&&*end!=' '&&*end!='\n')end++;
+            if(*end==' '&&end[1]!='/'&&end[1]!='-'&&!memchr(p,':',(size_t)(end-p))){end++;while(*end&&*end!=' '&&*end!='\n')end++;}
+            *end=0;if(!*p)continue;
             int j;for(j=0;j<nc;j++)if(!strcmp(ct[j].n,p)){ct[j].c++;break;}
             if(j==nc&&nc<1024){snprintf(ct[nc].n,64,"%s",p);ct[nc].c=1;nc++;}}
         closedir(d);qsort(ct,(size_t)nc,sizeof(ct[0]),ctcmp);
