@@ -353,8 +353,8 @@ static int cmd_cat(int c,char**v){perf_disarm();
         fclose(f);p=e+1;}
     if(!d)return 1;d[l]=0;
     (void)!write(1,d,l);to_clip(d);
-    if(skf)fprintf(stderr,"✓ %d files %zub (%d skipped)\n",nf,l,skf);
-    else fprintf(stderr,"✓ %d files %zub\n",nf,l);
+    char tf[P];snprintf(tf,P,"%s/a_cat.txt",TMP);writef(tf,d);
+    fprintf(stderr,"✓ %d files %zub%s cat %s\n",nf,l,skf?" (skipped)":"",tf);
     free(d);}
     #undef GA
     return 0;}
