@@ -1,6 +1,6 @@
 /* tmux */
 static int tm_has(const char *s) {
-    char c[256];snprintf(c,256,"timeout 1 tmux has-session -t '=%s' 2>/dev/null",s);
+    char c[256];snprintf(c,256,"tmux has-session -t '=%s' 2>/dev/null",s);
     return !system(c);
 }
 
