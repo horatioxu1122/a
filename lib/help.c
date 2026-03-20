@@ -86,7 +86,8 @@ static void gen_icache(void) {
     {const char*ad[]={"/Applications","/System/Applications"};
     for(int di=0;di<2;di++){DIR*d=opendir(ad[di]);if(!d)continue;struct dirent*e;
         while((e=readdir(d))){char*p=strstr(e->d_name,".app");
-            if(p&&!p[4])fprintf(f,"open %.*s\tapp\n",(int)(p-e->d_name),e->d_name);}closedir(d);}}
+            if(p&&!p[4])fprintf(f,"open %.*s\tapp\n",(int)(p-e->d_name),e->d_name);}closedir(d);}
+    fputs("open Finder\tapp\n",f);}
 #else
     {char hp[P];snprintf(hp,P,"%s/.local/share/applications",HOME);
     const char*ad[]={"/usr/share/applications","/usr/local/share/applications",
