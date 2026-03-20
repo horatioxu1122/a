@@ -134,13 +134,16 @@ static int cmd_hub(int argc, char **argv) {
             else snprintf(cmd,B,"%s",j->p);
             printf("Running %s...\n",j->n);fflush(stdout);
             char lf[P];snprintf(lf,P,"%s/hub.log",DDIR);
-            FILE *fp=popen(cmd,"r"); char out[B*4]=""; int ol=0;
-            if(fp) { char b[B]; while(fgets(b,B,fp)&&ol<(int)sizeof(out)-B) { fputs(b,stdout); ol+=sprintf(out+ol,"%s",b); } pclose(fp); }
+            FILE *fp=popen(cmd,"r"); char out[B*4]=""; int ol=0; int rc=-1;
+            if(fp) { char b[B]; while(fgets(b,B,fp)&&ol<(int)sizeof(out)-B) { fputs(b,stdout); ol+=sprintf(out+ol,"%s",b); } rc=pclose(fp); }
+            int fail=(!fp||rc!=0);
             time_t now=time(NULL); struct tm *t=localtime(&now); char ts[32];
             strftime(ts,32,"%Y-%m-%d %I:%M:%S%p",t); strftime(j->lr,24,"%Y-%m-%d %H:%M",t);
             hub_save(j); sync_bg();
-            FILE *lp=fopen(lf,"a"); if(lp) { fprintf(lp,"\n[%s] %s\n%s",ts,j->n,out); fclose(lp); }
+            FILE *lp=fopen(lf,"a"); if(lp) { fprintf(lp,"\n[%s] %s%s\n%s",ts,j->n,fail?" FAILED":"",out); fclose(lp); }
             char sn[128]; snprintf(sn,128,"hub:%s",j->n); alog(sn,"");
+            if(fail&&j->s[0]) { char ec[B];snprintf(ec,B,"%s email 'hub: %s failed' '%s failed on %s — see hub.log'",G_argv[0],j->n,j->n,DEV);(void)!system(ec); }
+            if(fail) { printf("\xe2\x9c\x97 %s failed\n",j->n); return 1; }
             printf("\xe2\x9c\x93\n"); return 0;
         }
         if(!strcmp(sub,"on")||!strcmp(sub,"off")) {
