@@ -101,6 +101,21 @@ static void gen_icache(void) {
         closedir(d);qsort(ct,(size_t)nc,sizeof(ct[0]),ctcmp);
         snprintf(fp2,P,"%s/freq_cache.txt",DDIR);
         FILE*ff=fopen(fp2,"w");if(ff){for(int j=0;j<nc;j++)fprintf(ff,"%s:%d\n",ct[j].n,ct[j].c);fclose(ff);}
+        {snprintf(fp2,P,"%s/web_cache.txt",DDIR);
+        char cm[P*2];snprintf(cm,P*2,"T=/tmp/.a_h$$;"
+            "for b in google-chrome google-chrome-unstable google-chrome-beta google-chrome-canary "
+            "BraveSoftware/Brave-Browser-Beta chromium;do "
+            "cp '%s/.config/'$b'/Default/History' $T 2>/dev/null&&"
+            "sqlite3 $T \"SELECT url,title FROM urls WHERE title<>'' ORDER BY visit_count DESC LIMIT 50\" 2>/dev/null;"
+            "done;rm -f $T",HOME);
+        FILE*sp=popen(cm,"r");if(sp){FILE*wf=fopen(fp2,"w");if(wf){
+            unsigned char uh[4096]={0};char sl[1024];
+            while(fgets(sl,1024,sp)){sl[strcspn(sl,"\n")]=0;
+                char*u=sl,*t=strchr(sl,'|');if(!t)continue;*t++=0;
+                unsigned h=5381;for(char*p=u;*p;p++)h=h*33+*p;h%=32768;
+                if(uh[h/8]&(1<<(h%8)))continue;uh[h/8]|=1<<(h%8);
+                if(t[0])fprintf(wf,"web %s\t%s · web\n",u,t);}
+            fclose(wf);}pclose(sp);}}
         _exit(0);}
 }
 

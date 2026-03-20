@@ -105,9 +105,13 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
         while(nfq<1024&&fgets(ln,128,ff)){char*c=strchr(ln,':');if(!c)continue;*c=0;
             snprintf(fq[nfq].n,64,"%s",ln);fq[nfq].c=atoi(c+1);nfq++;}fclose(ff);}}
     size_t len;char*raw=readf(cache,&len);if(!raw){puts("No cache");return 1;}
-    char*lines[512];int n=0;
+    char*lines[1024];int n=0;
     for(char*p=raw,*end=raw+len;p<end&&n<512;){char*nl=memchr(p,'\n',(size_t)(end-p));
         if(!nl)nl=end;if(nl>p&&p[0]!='<'&&p[0]!='='&&p[0]!='>'&&p[0]!='#'){*nl=0;lines[n++]=p;}p=nl+1;}
+    /* append web cache */
+    size_t wl;char wp[P];snprintf(wp,P,"%s/web_cache.txt",DDIR);char*wraw=readf(wp,&wl);
+    if(wraw){for(char*p=wraw,*end=wraw+wl;p<end&&n<1024;){char*nl=memchr(p,'\n',(size_t)(end-p));
+        if(!nl)nl=end;if(nl>p){*nl=0;lines[n++]=p;}p=nl+1;}}
     if(!n){puts("Empty cache");free(raw);return 1;}
     if(!isatty(STDIN_FILENO)){for(int i=0;i<n;i++)puts(lines[i]);free(raw);return 0;}
     struct winsize ws;ioctl(STDOUT_FILENO,TIOCGWINSZ,&ws);int maxshow=ws.ws_row>6?ws.ws_row-3:10;
@@ -118,8 +122,8 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
     printf("Filter (↑↓/Tab, Enter=run, Esc=quit)\n");
     while (1) {
         /* Search */
-        fqm_t fm[512]; int nm = 0; int plen = (int)strlen(prefix);
-        for (int i=0;i<n&&nm<512;i++) {
+        fqm_t fm[1024]; int nm = 0; int plen = (int)strlen(prefix);
+        for (int i=0;i<n&&nm<1024;i++) {
             if (plen && strncmp(lines[i], prefix, (size_t)plen)) continue;
             if(blen){char*s=lines[i]+plen,b2[256],*w;snprintf(b2,256,"%s",buf);int ok=1;
                 for(w=strtok(b2," ");w&&ok;w=strtok(0," "))if(!strcasestr(s,w))ok=0;if(!ok)continue;}
@@ -157,10 +161,10 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
         else if(ch=='\x7f'||ch=='\b'){if(blen)buf[--blen]=0;sel=0;}
         else if(ch=='\r'||ch=='\n')do_pick=1;
         else if(ch==3||ch==4)break;
-        else if(isalnum(ch)||ch=='-'||ch=='_'||ch==' '){if(blen<254){buf[blen++]=ch;buf[blen]=0;sel=0;}}
+        else if(isalnum(ch)||ch=='-'||ch=='_'||ch==' '||ch=='.'){if(blen<254){buf[blen++]=ch;buf[blen]=0;sel=0;}}
         if(do_pick&&nm){char*m=fm[sel].p,cmd[256];
             char*tab=strchr(m,'\t'),*colon=strchr(m,':');
-            if(colon&&(!tab||colon<tab)){snprintf(cmd,256,"%.*s",(int)(colon-m),m);char*s=cmd;while(*s==' ')s++;memmove(cmd,s,strlen(s)+1);}
+            if(colon&&(!tab||colon<tab)&&strncmp(m,"web ",4)){snprintf(cmd,256,"%.*s",(int)(colon-m),m);char*s=cmd;while(*s==' ')s++;memmove(cmd,s,strlen(s)+1);}
             else{int cl=tab?(int)(tab-m):(int)strlen(m);snprintf(cmd,256,"%.*s",cl,m);}
             {char*e=cmd+strlen(cmd)-1;while(e>cmd&&*e==' ')*e--=0;}
             int hs=0,cl=(int)strlen(cmd);
@@ -168,15 +172,17 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             if(hs){snprintf(prefix,256,"%s ",cmd);buf[0]=0;blen=0;sel=0;printf("\033[J");continue;}
             tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
             (void)!system("clear");
-            if(!strncmp(cmd,"open ",5)){alog(cmd,"");
-                if(!fork()){setsid();execlp("gtk-launch","gtk-launch",cmd+5,(char*)NULL);_exit(1);}free(raw);return 0;}
+            {int wo=!strncmp(cmd,"open ",5)?5:!strncmp(cmd,"web ",4)?4:0;
+            if(wo){alog(cmd,"");if(!fork()){setsid();
+                if(wo==5)execlp("gtk-launch","gtk-launch",cmd+5,(char*)NULL);
+                else execlp("xdg-open","xdg-open",cmd+4,(char*)NULL);_exit(1);}free(raw);free(wraw);return 0;}}
             printf("Running: a %s\n",cmd);
             char*args[32];int ac=0;args[ac++]="a";
             for(char*p=cmd;*p&&ac<31;){while(*p==' ')p++;if(!*p)break;args[ac++]=p;while(*p&&*p!=' ')p++;if(*p)*p++=0;}
-            args[ac]=NULL;free(raw);execvp("a",args);return 0;}
+            args[ac]=NULL;free(raw);free(wraw);execvp("a",args);return 0;}
     }
     write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
     tcsetattr(STDIN_FILENO, TCSANOW, &old);
-    printf("\033[2J\033[H"); free(raw);
+    printf("\033[2J\033[H"); free(raw);free(wraw);
     return 0;
 }
