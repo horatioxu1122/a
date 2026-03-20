@@ -70,26 +70,21 @@ static void gen_icache(void) {
         kvs_t kv = kvfile(sp[i]);
         const char *nm = kvget(&kv,"Name"); if (!nm) continue;  fprintf(f, "ssh %s\thost\n", nm);
     }
-    {const char*ad[]={"/usr/share/applications","/usr/local/share/applications",
-        "/var/lib/flatpak/exports/share/applications",NULL};
-    char hp[P];snprintf(hp,P,"%s/.local/share/applications",HOME);
-    char seen[256][64];int ns=0;
-    for(int di=0;di<4;di++){const char*dp=di<3?ad[di]:hp;
+    {char hp[P];snprintf(hp,P,"%s/.local/share/applications",HOME);
+    const char*ad[]={"/usr/share/applications","/usr/local/share/applications",
+        "/var/lib/flatpak/exports/share/applications",hp};
+    for(int di=0;di<4;di++){const char*dp=ad[di];
         DIR*d=opendir(dp);if(!d)continue;struct dirent*e;
-        while((e=readdir(d))){char*dot=strrchr(e->d_name,'.');
-            if(!dot||strcmp(dot,".desktop"))continue;
-            char fp[P],nm[128]="",ex[256]="";int hide=0,isapp=0;
+        while((e=readdir(d))){if(!strstr(e->d_name,".desktop"))continue;
+            char fp[P],nm[128]="",ln[256];int ok=0;
             snprintf(fp,P,"%s/%s",dp,e->d_name);FILE*df=fopen(fp,"r");if(!df)continue;
-            char ln[512];while(fgets(ln,512,df)){ln[strcspn(ln,"\n")]=0;
+            while(fgets(ln,256,df)){ln[strcspn(ln,"\n")]=0;
                 if(!strncmp(ln,"Name=",5)&&!nm[0])snprintf(nm,128,"%s",ln+5);
-                else if(!strncmp(ln,"Exec=",5)&&!ex[0]){snprintf(ex,256,"%s",ln+5);
-                    char*p=ex;while(*p&&*p!=' '&&*p!='%')p++;*p=0;}
-                else if(!strcmp(ln,"Type=Application"))isapp=1;
-                else if(!strcmp(ln,"NoDisplay=true"))hide=1;}
-            fclose(df);if(isapp&&!hide&&nm[0]){char dn[64];snprintf(dn,64,"%s",e->d_name);
+                else if(!strcmp(ln,"Type=Application"))ok=1;
+                else if(!strcmp(ln,"NoDisplay=true"))ok=0;}
+            fclose(df);if(ok&&nm[0]){char dn[64];snprintf(dn,64,"%s",e->d_name);
                 char*dd=strrchr(dn,'.');if(dd)*dd=0;
-                int dup=0;for(int j=0;j<ns;j++)if(!strcmp(seen[j],dn)){dup=1;break;}
-                if(!dup&&ns<256){snprintf(seen[ns++],64,"%s",dn);fprintf(f,"open %s\t%s · app\n",dn,nm);}}}
+                fprintf(f,"open %s\t%s · app\n",dn,nm);}}
         closedir(d);}}
     fclose(f);
     if(!fork()){char ad[P],fp2[P],ln[256];snprintf(ad,P,"%s/git/activity",AROOT);
@@ -105,7 +100,7 @@ static void gen_icache(void) {
             if(j==nc&&nc<1024){snprintf(ct[nc].n,64,"%s",p);ct[nc].c=1;nc++;}}
         closedir(d);qsort(ct,(size_t)nc,sizeof(ct[0]),ctcmp);
         snprintf(fp2,P,"%s/freq_cache.txt",DDIR);
-        FILE*ff=fopen(fp2,"w");if(ff){for(int j=0;j<nc&&j<1024;j++)fprintf(ff,"%s:%d\n",ct[j].n,ct[j].c);fclose(ff);}
+        FILE*ff=fopen(fp2,"w");if(ff){for(int j=0;j<nc;j++)fprintf(ff,"%s:%d\n",ct[j].n,ct[j].c);fclose(ff);}
         _exit(0);}
 }
 

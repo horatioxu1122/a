@@ -94,9 +94,9 @@ static int cmd_dir_file(int argc, char **argv) { (void)argc;
 
 /* ── interactive picker ── */
 typedef struct{char*p;int sc;}fqm_t;
-static FC fq[1024]; int nfq;
-static int fq_get(const char*s){int sl=(int)strlen(s),best=0,bl=0;
-    for(int i=0;i<nfq;i++){int fl=(int)strlen(fq[i].n);if(fl<=sl&&fl>bl&&!strncasecmp(s,fq[i].n,(size_t)fl)){best=fq[i].c;bl=fl;}}return best;}
+static FC fq[1024];int nfq;
+static int fq_get(const char*s){int sl=(int)strlen(s),b=0,bl=0;
+    for(int i=0;i<nfq;i++){int l=(int)strlen(fq[i].n);if(l<=sl&&l>bl&&!strncasecmp(s,fq[i].n,(size_t)l)){b=fq[i].c;bl=l;}}return b;}
 static int fqm_cmp(const void*a,const void*b){return((const fqm_t*)b)->sc-((const fqm_t*)a)->sc;}
 static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
     perf_disarm(); init_db();
@@ -168,10 +168,8 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             if(hs){snprintf(prefix,256,"%s ",cmd);buf[0]=0;blen=0;sel=0;printf("\033[J");continue;}
             tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
             (void)!system("clear");
-            if(!strncmp(cmd,"open ",5)){printf("Opening: %s\n",cmd+5);
-                alog(cmd,"");
-                if(!fork()){setsid();execlp("gtk-launch","gtk-launch",cmd+5,(char*)NULL);_exit(1);}
-                free(raw);return 0;}
+            if(!strncmp(cmd,"open ",5)){alog(cmd,"");
+                if(!fork()){setsid();execlp("gtk-launch","gtk-launch",cmd+5,(char*)NULL);_exit(1);}free(raw);return 0;}
             printf("Running: a %s\n",cmd);
             char*args[32];int ac=0;args[ac++]="a";
             for(char*p=cmd;*p&&ac<31;){while(*p==' ')p++;if(!*p)break;args[ac++]=p;while(*p&&*p!=' ')p++;if(*p)*p++=0;}
