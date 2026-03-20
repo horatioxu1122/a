@@ -137,6 +137,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
         {char fb[B*4];int fl=0;
         #define FP(f,...) fl+=snprintf(fb+fl,(size_t)(B*4-fl),f,##__VA_ARGS__)
         FP("\033[H\033[?25l%s> %s\033[K\n",prefix,buf);
+        if(!nm&&blen)FP(" > \033[36mGoogle: %s\033[0m\033[K\n",buf);
         for(int i=0;i<show;i++){int j=top+i,W=ws.ws_col;char*t=strchr(fm[j].p,'\t');int ml=t?(int)(t-fm[j].p):(int)strlen(fm[j].p);
             if(ml>W-5)ml=W-5;FP("%s a %.*s\033[K",j==sel?" >":"  ",ml,fm[j].p);
             if(t&&ml+5+(int)strlen(t+1)<W)FP("\033[%dG\033[90m%s\033[0m",W-(int)strlen(t+1),t+1);FP("\n");}
@@ -159,7 +160,11 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             } else if(prefix[0]){prefix[0]=0;buf[0]=0;blen=0;sel=0;} else break;
         } else if(ch=='\t'){if(sel<nm-1)sel++;}
         else if(ch=='\x7f'||ch=='\b'){if(blen)buf[--blen]=0;sel=0;}
-        else if(ch=='\r'||ch=='\n')do_pick=1;
+        else if(ch=='\r'||ch=='\n'){if(!nm&&blen){char u[512];
+            snprintf(u,512,"https://google.com/search?q=%s",buf);for(char*p=u;*p;p++)if(*p==' ')*p='+';
+            tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
+            if(!fork()){setsid();execlp("xdg-open","xdg-open",u,(char*)NULL);_exit(1);}
+            free(raw);free(wraw);return 0;}do_pick=1;}
         else if(ch==3||ch==4)break;
         else if(isalnum(ch)||ch=='-'||ch=='_'||ch==' '||ch=='.'){if(blen<254){buf[blen++]=ch;buf[blen]=0;sel=0;}}
         if(do_pick&&nm){char*m=fm[sel].p,cmd[256];
