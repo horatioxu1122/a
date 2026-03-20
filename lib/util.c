@@ -1,8 +1,10 @@
 /* utilities */
 #ifdef __APPLE__
 #define OPENER "open"
+#define APP_CMD "open -a"
 #else
 #define OPENER "xdg-open"
+#define APP_CMD "gtk-launch"
 #endif
 static void bg_exec(const char *c,const char *a){if(!fork()){setsid();int n=open("/dev/null",O_RDWR);dup2(n,0);dup2(n,1);dup2(n,2);close(n);execlp(c,c,a,(char*)NULL);_exit(1);}}
 static int fexists(const char *p) { struct stat s; return stat(p, &s) == 0; }

@@ -70,6 +70,12 @@ static void gen_icache(void) {
         kvs_t kv = kvfile(sp[i]);
         const char *nm = kvget(&kv,"Name"); if (!nm) continue;  fprintf(f, "ssh %s\thost\n", nm);
     }
+#ifdef __APPLE__
+    {const char*ad[]={"/Applications","/System/Applications"};
+    for(int di=0;di<2;di++){DIR*d=opendir(ad[di]);if(!d)continue;struct dirent*e;
+        while((e=readdir(d))){char*p=strstr(e->d_name,".app");
+            if(p&&!p[4])fprintf(f,"open %.*s\tapp\n",(int)(p-e->d_name),e->d_name);}closedir(d);}}
+#else
     {char hp[P];snprintf(hp,P,"%s/.local/share/applications",HOME);
     const char*ad[]={"/usr/share/applications","/usr/local/share/applications",
         "/var/lib/flatpak/exports/share/applications",hp};
@@ -86,6 +92,7 @@ static void gen_icache(void) {
                 char*dd=strrchr(dn,'.');if(dd)*dd=0;
                 fprintf(f,"open %s\t%s · app\n",dn,nm);}}
         closedir(d);}}
+#endif
     fclose(f);
     if(!fork()){char ad[P],fp2[P],ln[256];snprintf(ad,P,"%s/git/activity",AROOT);
         DIR*d=opendir(ad);if(!d)_exit(0);FC ct[1024];int nc=0;struct dirent*e;

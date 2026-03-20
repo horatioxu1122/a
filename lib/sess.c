@@ -116,6 +116,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
     raw_t.c_lflag&=~(tcflag_t)(ICANON|ECHO|ISIG);raw_t.c_cc[VMIN]=1;raw_t.c_cc[VTIME]=0;
     tcsetattr(STDIN_FILENO,TCSANOW,&raw_t);write(STDOUT_FILENO,"\033[?1000h\033[?1006h",16);
     char buf[256]="";int blen=0,sel=0;char prefix[256]="";
+    #define IRST tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);(void)!system("clear");free(raw);free(wraw)
     printf("Filter (↑↓/Tab, Enter=run, Esc=quit)\n");
     while (1) {
         /* Search */
@@ -158,9 +159,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             } else if(prefix[0]){prefix[0]=0;buf[0]=0;blen=0;sel=0;} else break;
         } else if(ch=='\t'){int mx=nm?nm-1:blen?1:0;if(sel<mx)sel++;}
         else if(ch=='\x7f'||ch=='\b'){if(blen)buf[--blen]=0;sel=0;}
-        else if(ch=='\r'||ch=='\n'){if(!nm&&blen){
-            tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
-            (void)!system("clear");free(raw);free(wraw);
+        else if(ch=='\r'||ch=='\n'){if(!nm&&blen){IRST;
             if(sel==0){char u[512];snprintf(u,512,"https://google.com/search?q=%s",buf);
                 for(char*p=u;*p;p++)if(*p==' ')*p='+';bg_exec(OPENER,u);}
             else{char*args[]={"a","c",buf,NULL};execvp("a",args);}
@@ -175,17 +174,16 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             int hs=0,cl=(int)strlen(cmd);
             for(int i=0;i<n;i++)if(!strncmp(lines[i],cmd,(size_t)cl)&&lines[i][cl]==' '){hs=1;break;}
             if(hs){snprintf(prefix,256,"%s ",cmd);buf[0]=0;blen=0;sel=0;printf("\033[J");continue;}
-            tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
-            (void)!system("clear");
+            IRST;
             {int wo=!strncmp(cmd,"open ",5)?5:!strncmp(cmd,"web ",4)?4:0;
-            if(wo){alog(cmd,"");bg_exec(wo==5?"gtk-launch":OPENER,cmd+wo);free(raw);free(wraw);return 0;}}
+            if(wo){alog(cmd,"");if(wo==5){char ac[256];snprintf(ac,256,APP_CMD " '%s'",cmd+5);(void)!system(ac);}
+                else bg_exec(OPENER,cmd+4);return 0;}}
             printf("Running: a %s\n",cmd);
             char*args[32];int ac=0;args[ac++]="a";
             for(char*p=cmd;*p&&ac<31;){while(*p==' ')p++;if(!*p)break;args[ac++]=p;while(*p&&*p!=' ')p++;if(*p)*p++=0;}
-            args[ac]=NULL;free(raw);free(wraw);execvp("a",args);return 0;}
+            args[ac]=NULL;execvp("a",args);return 0;}
     }
-    write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
-    tcsetattr(STDIN_FILENO, TCSANOW, &old);
-    printf("\033[2J\033[H"); free(raw);free(wraw);
+    IRST;
+    #undef IRST
     return 0;
 }
