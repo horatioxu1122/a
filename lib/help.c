@@ -109,12 +109,21 @@ static void gen_icache(void) {
         snprintf(fp2,P,"%s/freq_cache.txt",DDIR);
         FILE*ff=fopen(fp2,"w");if(ff){for(int j=0;j<nc;j++)fprintf(ff,"%s:%d\n",ct[j].n,ct[j].c);fclose(ff);}
         {snprintf(fp2,P,"%s/web_cache.txt",DDIR);
-        char cm[P*2];snprintf(cm,P*2,"T=/tmp/.a_h$$;"
+        char cm[P*2];snprintf(cm,P*2,"T=/tmp/.a_h$$;Q=\"SELECT url,title FROM urls WHERE title<>'' ORDER BY visit_count DESC LIMIT 50\";"
+#ifdef __APPLE__
+            "for b in 'Google/Chrome' 'Google/Chrome Canary' 'BraveSoftware/Brave-Browser' "
+            "'BraveSoftware/Brave-Browser-Beta' Chromium;do "
+            "cp '%s/Library/Application Support/'$b'/Default/History' $T 2>/dev/null&&"
+            "sqlite3 $T \"$Q\" 2>/dev/null;done;"
+            "cp '%s/Library/Safari/History.db' $T 2>/dev/null&&"
+            "sqlite3 $T \"SELECT h.url,v.title FROM history_items h,history_visits v WHERE h.id=v.history_item AND v.title<>'' ORDER BY h.visit_count DESC LIMIT 50\" 2>/dev/null;"
+#else
             "for b in google-chrome google-chrome-unstable google-chrome-beta google-chrome-canary "
             "BraveSoftware/Brave-Browser-Beta chromium;do "
             "cp '%s/.config/'$b'/Default/History' $T 2>/dev/null&&"
-            "sqlite3 $T \"SELECT url,title FROM urls WHERE title<>'' ORDER BY visit_count DESC LIMIT 50\" 2>/dev/null;"
-            "done;rm -f $T",HOME);
+            "sqlite3 $T \"$Q\" 2>/dev/null;done;"
+#endif
+            "rm -f $T",HOME,HOME);
         FILE*sp=popen(cm,"r");if(sp){FILE*wf=fopen(fp2,"w");if(wf){
             unsigned char uh[4096]={0};char sl[1024];
             while(fgets(sl,1024,sp)){sl[strcspn(sl,"\n")]=0;
