@@ -57,7 +57,7 @@ static int cmd_dash(int c, char **v) { (void)c;(void)v;
     if(c>2&&!strcmp(v[2],"--tui"))return cmd_dash_tui();
     if(c>2&&!strcmp(v[2],"--input"))return cmd_dash_input();
     char cm[B];CWD(wd);
-    (void)!system("tmux kill-session -t =dash 2>/dev/null");
+    (void)!system("tmux kill-session -t =dash 2>/dev/null;pkill -f 'a dash --tui' 2>/dev/null");
     snprintf(cm,B,"tmux new-session -d -s dash -c '%s' '%s/a dash --tui'",wd,DDIR);
     (void)!system(cm);
     (void)!system("tmux set-option -t =dash destroy-unattached on 2>/dev/null");
@@ -88,9 +88,9 @@ __attribute__((noreturn)) static void dash_poller(pid_t tui){
     setsid();signal(SIGTERM,SIG_DFL);
     char dir[P];snprintf(dir,P,"%s/ssh",SROOT);
     char paths[32][P];int np=listdir(dir,paths,32);
-    char rf[P];snprintf(rf,P,"%s/dash_remote.txt",DDIR);
+    char rf[P],tf[P];snprintf(rf,P,"%s/dash_remote.txt",DDIR);snprintf(tf,P,"%s/.dash_remote.tmp",DDIR);
     for(;;){
-        FILE*out=fopen(rf,"w");if(!out){sleep(5);continue;}
+        FILE*out=fopen(tf,"w");if(!out){sleep(5);continue;}
         for(int i=np-1;i>=0;i--){
             kvs_t kv=kvfile(paths[i]);const char*nm=kvget(&kv,"Name"),*h=kvget(&kv,"Host"),*pw=kvget(&kv,"Password");
             if(!nm||!h||!strcmp(nm,DEV))continue;
@@ -102,7 +102,7 @@ __attribute__((noreturn)) static void dash_poller(pid_t tui){
             for(char*p=sb;*p;){char*e=strchr(p,'\n');if(e)*e=0;
                 if(*p)fprintf(out,"%s@%s\n",p,nm);if(e)p=e+1;else break;}
         }
-        fclose(out);if(getppid()==1)_exit(0);kill(tui,SIGUSR1);sleep(10);
+        fclose(out);rename(tf,rf);if(getppid()==1)_exit(0);kill(tui,SIGUSR1);sleep(10);
     }
 }
 static int cmd_dash_input(void) {
