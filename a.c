@@ -333,37 +333,31 @@ static int cmd_cat(int c,char**v){perf_disarm();
         printf("> ");fflush(stdout);char ch[4];if(!fgets(ch,4,stdin))return 0;m=ch[0];}
     const char*ex=m!='1'?" -- ':!lab/'":"";
     #define GA(p,n) if(l+(n)>=cap){cap=(l+(n)+8192)*2;d=realloc(d,cap);}memcpy(d+l,p,n);l+=(n)
-    if(m=='3'){char cm[B];snprintf(cm,B,"git grep -lI ''%s",ex);
-        size_t l=0,cap=0;char*d=NULL,b[8192];size_t n;int nf=0,skf=0;
-        FILE*fl=popen(cm,"r");char fb[65536];size_t fl2=0;
-        if(fl){while((n=fread(b,1,8192,fl))>0){if(fl2+n<65536){memcpy(fb+fl2,b,n);fl2+=n;}}pclose(fl);}
-        fb[fl2]=0;
-        for(char*p=fb;p<fb+fl2;){char*e=memchr(p,'\n',(size_t)(fb+fl2-p));if(!e)break;*e=0;
-            if(l>131072&&strchr(p,'/')){skf++;p=e+1;continue;}
-            FILE*f=fopen(p,"r");if(!f){p=e+1;continue;}
-            int tl=0;char ln[512];while(fgets(ln,512,f))tl++;
-            rewind(f);nf++;
-            char hdr[600];size_t hl=(size_t)snprintf(hdr,600,"\n==> %s (%d lines) <==\n",p,tl);
-            GA(hdr,hl);
-            int hd=strchr(p,'/')?10:1000;
-            int i=0;while(fgets(ln,512,f)){
-                size_t sl=strlen(ln);
-                if(i<hd||(tl>hd+5&&i>=tl-5)){GA(ln,sl);}
-                if(i==hd&&tl>hd+5){const char*dots="  ...\n";size_t dl=6;GA(dots,dl);}
-                i++;}
-            fclose(f);p=e+1;}
-        if(!d)return 1;d[l]=0;
-        (void)!write(1,d,l);to_clip(d);
-        if(skf)fprintf(stderr,"✓ %d files %zub (%d skipped)\n",nf,l,skf);
-        else fprintf(stderr,"✓ %d files %zub\n",nf,l);
-        free(d);return 0;}
+    {char cm[B];snprintf(cm,B,"git grep -lI ''%s",ex);
+    size_t l=0,cap=0;char*d=NULL,b[8192];size_t n;int nf=0,skf=0;
+    FILE*fl=popen(cm,"r");char fb[65536];size_t fl2=0;
+    if(fl){while((n=fread(b,1,8192,fl))>0){if(fl2+n<65536){memcpy(fb+fl2,b,n);fl2+=n;}}pclose(fl);}
+    fb[fl2]=0;
+    for(char*p=fb;p<fb+fl2;){char*e=memchr(p,'\n',(size_t)(fb+fl2-p));if(!e)break;*e=0;
+        if(m=='3'&&l>131072&&strchr(p,'/')){skf++;p=e+1;continue;}
+        FILE*f=fopen(p,"r");if(!f){p=e+1;continue;}
+        int tl=0;char ln[512];while(fgets(ln,512,f))tl++;
+        rewind(f);nf++;
+        char hdr[600];size_t hl=(size_t)snprintf(hdr,600,"\n==> %s (%d lines) <==\n",p,tl);
+        GA(hdr,hl);
+        int hd=m=='3'?(strchr(p,'/')?10:1000):tl;
+        int i=0;while(fgets(ln,512,f)){size_t sl=strlen(ln);
+            if(i<hd||(tl>hd+5&&i>=tl-5)){GA(ln,sl);}
+            if(i==hd&&tl>hd+5){GA("  ...\n",6);}
+            i++;}
+        fclose(f);p=e+1;}
+    if(!d)return 1;d[l]=0;
+    (void)!write(1,d,l);to_clip(d);
+    if(skf)fprintf(stderr,"✓ %d files %zub (%d skipped)\n",nf,l,skf);
+    else fprintf(stderr,"✓ %d files %zub\n",nf,l);
+    free(d);}
     #undef GA
-    char cm[B];snprintf(cm,B,"git ls-files -z%s|xargs -0 grep -lIZ ''|xargs -0 tail -n+1",ex);
-    size_t l=0;char*d=NULL,b[8192];size_t n,cap=0;int nf=0;
-    FILE*f=popen(cm,"r");if(f){while((n=fread(b,1,8192,f))>0){
-        if(l+n>=cap){cap=(l+n)*2;d=realloc(d,cap+1);}memcpy(d+l,b,n);l+=n;}pclose(f);}
-    if(!d)return 1;d[l]=0;for(char*p=d;(p=strstr(p,"==> "));p+=4)nf++;
-    (void)!write(1,d,l);to_clip(d);fprintf(stderr,"✓ %d files %zub\n",nf,l);free(d);return 0;}
+    return 0;}
 static int cmd_j(int c,char**v){
     if(c<3||!strcmp(v[2],"rm")||!strcmp(v[2],"watch")||!strcmp(v[2],"-r")||(c==3&&isdigit(*v[2])))return cmd_jobs(c,v);
     if(c>2&&v[2][1]=='q'){char ln[B];for(fputs("j> ",stdout);fgets(ln,B,stdin);fputs("j> ",stdout)){
