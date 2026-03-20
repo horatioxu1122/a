@@ -255,8 +255,7 @@ static int cmd_task(int argc,char**argv){
         return 0;}
     if(*sub=='m'){execvp("a",(char*[]){"a","c","Run 'a t l' to see all tasks. Read a.c for context. Help me manage tasks: archive stale/done/duplicates via 'a task d <dirname>...', reprioritize via 'a task pri # N'. Large batches, only archive what I approve.",NULL});return 1;}
     if(*sub=='l'){int n=load_tasks(dir);if(!n){puts("No tasks");return 0;}
-        for(int i=0;i<n;i++){char ct[256];task_counts(T[i].d,ct,256);
-            printf("  %d. P%s %s%s\n",i+1,T[i].p,T[i].t,ct);}return 0;}
+        for(int i=0;i<n;i++)task_show(i,n);return 0;}
     if(0){review:;} /* due r jumps here with T[] pre-loaded */
     if(grn||isdigit(*sub)||!strcmp(sub,"rev")||!strcmp(sub,"review")||!strcmp(sub,"r")||!strcmp(sub,"t")){
         int n=grn?grn:load_tasks(dir);if(!n){puts("No tasks");return 0;}
