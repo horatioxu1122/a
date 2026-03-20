@@ -1,6 +1,6 @@
 Project context steps:
 Make sure the version is latest main.
-Read output of "a cat 3" to see codebase.
+Read output of "a cat 2" to see codebase. If its too long, use "a cat 3".
 Read a.c and use the index to jump as needed to see locations by searching.
 
 General information:
