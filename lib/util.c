@@ -54,15 +54,16 @@ static int ajoin(char*b,int sz,int argc,char**argv,int from){int l=0;for(int i=f
 static void rapid(const char *prompt, void (*fn)(const char*)) {
     if (!isatty(STDIN_FILENO)) return; perf_disarm();
     struct termios orig,raw;tcgetattr(0,&orig);raw=orig;
-    raw.c_lflag&=~(tcflag_t)ISIG;tcsetattr(0,TCSAFLUSH,&raw);
-    char line[512];
-    while ((void)fputs(prompt,stdout),(void)fflush(stdout), fgets(line, 512, stdin)) {
-        if(line[0]=='\x1b'||line[0]==3){break;}
-        line[strcspn(line, "\n")] = 0;
-        if (!line[0]) break;
-        fn(line);
-    }
-    tcsetattr(0,TCSAFLUSH,&orig);
+    raw.c_lflag&=~(tcflag_t)(ISIG|ICANON|ECHO);raw.c_cc[VMIN]=1;raw.c_cc[VTIME]=0;
+    tcsetattr(0,TCSAFLUSH,&raw);char line[512];int len;
+    for(;;){fputs(prompt,stdout);fflush(stdout);len=0;
+        for(;;){char c;if(read(0,&c,1)!=1){len=-1;break;}
+            if(c=='\x1b'||c==3){len=-1;break;}
+            if(c=='\r'||c=='\n'){putchar('\n');break;}
+            if((c=='\x7f'||c=='\b')&&len>0){len--;fputs("\b \b",stdout);fflush(stdout);continue;}
+            if(len<510){line[len++]=c;putchar(c);fflush(stdout);}}
+        if(len<0)break;line[len]=0;if(!len)break;fn(line);}
+    tcsetattr(0,TCSAFLUSH,&orig);putchar('\n');
 }
 
 /* raw terminal helpers */
