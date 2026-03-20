@@ -53,12 +53,16 @@ static int ajoin(char*b,int sz,int argc,char**argv,int from){int l=0;for(int i=f
 /* rapid input loop — call fn(line) for each line, empty line exits */
 static void rapid(const char *prompt, void (*fn)(const char*)) {
     if (!isatty(STDIN_FILENO)) return; perf_disarm();
+    struct termios orig,raw;tcgetattr(0,&orig);raw=orig;
+    raw.c_lflag&=~(tcflag_t)ISIG;tcsetattr(0,TCSAFLUSH,&raw);
     char line[512];
     while ((void)fputs(prompt,stdout),(void)fflush(stdout), fgets(line, 512, stdin)) {
+        if(line[0]=='\x1b'||line[0]==3){break;}
         line[strcspn(line, "\n")] = 0;
         if (!line[0]) break;
         fn(line);
     }
+    tcsetattr(0,TCSAFLUSH,&orig);
 }
 
 /* raw terminal helpers */
