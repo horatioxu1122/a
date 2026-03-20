@@ -83,7 +83,7 @@ static int cmd_dir_file(int argc, char **argv) { (void)argc;
             else if(!access(".venv/bin/python",X_OK)) snprintf(py,P,".venv/bin/python");
             execvp(py, (char*[]){ py, expanded, NULL });
         }
-        else{int t=ext?ext[1]:0;const char*ed=t=='c'||t=='s'?"sh":t=='h'?"xdg-open":getenv("EDITOR");
+        else{int t=ext?ext[1]:0;const char*ed=t=='c'||t=='s'?"sh":t=='h'?OPENER:getenv("EDITOR");
             if(!ed)ed="e";execlp(ed,ed,expanded,(char*)NULL);}
     }
     return 0;
@@ -162,9 +162,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
             (void)!system("clear");free(raw);free(wraw);
             if(sel==0){char u[512];snprintf(u,512,"https://google.com/search?q=%s",buf);
-                for(char*p=u;*p;p++)if(*p==' ')*p='+';
-                if(!fork()){setsid();int n=open("/dev/null",O_RDWR);dup2(n,0);dup2(n,1);dup2(n,2);close(n);
-                    execlp("xdg-open","xdg-open",u,(char*)NULL);_exit(1);}}
+                for(char*p=u;*p;p++)if(*p==' ')*p='+';bg_exec(OPENER,u);}
             else{char*args[]={"a","c",buf,NULL};execvp("a",args);}
             return 0;}do_pick=1;}
         else if(ch==3||ch==4)break;
@@ -180,9 +178,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
             (void)!system("clear");
             {int wo=!strncmp(cmd,"open ",5)?5:!strncmp(cmd,"web ",4)?4:0;
-            if(wo){alog(cmd,"");if(!fork()){setsid();int n2=open("/dev/null",O_RDWR);dup2(n2,0);dup2(n2,1);dup2(n2,2);close(n2);
-                if(wo==5)execlp("gtk-launch","gtk-launch",cmd+5,(char*)NULL);
-                else execlp("xdg-open","xdg-open",cmd+4,(char*)NULL);_exit(1);}free(raw);free(wraw);return 0;}}
+            if(wo){alog(cmd,"");bg_exec(wo==5?"gtk-launch":OPENER,cmd+wo);free(raw);free(wraw);return 0;}}
             printf("Running: a %s\n",cmd);
             char*args[32];int ac=0;args[ac++]="a";
             for(char*p=cmd;*p&&ac<31;){while(*p==' ')p++;if(!*p)break;args[ac++]=p;while(*p&&*p!=' ')p++;if(*p)*p++=0;}
