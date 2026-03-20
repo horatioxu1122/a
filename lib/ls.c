@@ -136,7 +136,8 @@ static int cmd_dash_input(void) {
     }
     return 0;
 }
-static void dash_sig(int s){(void)s;}
+static volatile sig_atomic_t dash_dirty;
+static void dash_sig(int s){(void)s;dash_dirty=1;}
 static int cmd_dash_tui(void) {
     char out[B],*lines[64],cm[B];int n,sel=0;
     char me[16]="",rp[2][16]={"",""};
@@ -149,7 +150,9 @@ static int cmd_dash_tui(void) {
     (void)!system(cm);
     snprintf(cm,B,"tmux select-pane -t %s",me);(void)!system(cm);
     {char rf[P];snprintf(rf,P,"%s/dash_remote.txt",DDIR);unlink(rf);}
-    signal(SIGUSR1,dash_sig);
+    dash_dirty=0;signal(SIGUSR1,dash_sig);
+    snprintf(cm,B,"tmux set-hook -g after-new-session 'run-shell \"kill -USR1 %d 2>/dev/null\"';"
+        "tmux set-hook -g session-closed 'run-shell \"kill -USR1 %d 2>/dev/null\"'",(int)getpid(),(int)getpid());(void)!system(cm);
     pid_t poller=fork();if(poller==0){
         int fd=open("/dev/null",O_WRONLY);if(fd>=0){dup2(fd,0);dup2(fd,1);dup2(fd,2);close(fd);}
         dash_poller(getppid());_exit(0);}
@@ -163,7 +166,7 @@ static int cmd_dash_tui(void) {
         {char fb[B*2];int fl=0,cols=ws.ws_col>4?ws.ws_col-3:1;
         fl+=snprintf(fb+fl,(size_t)(B*2-fl),"\033[H\033[?25l");
         char lastdev[128]="";int row=0;
-        for(int r=0;r<128;r++)row2idx[r]=-1;
+        memset(row2idx,-1,sizeof row2idx);
         for(int i=0;i<n&&row<rows-1;i++){
             char*at=strchr(lines[i],'@');
             char dev[128];snprintf(dev,128,"%s",at?at+1:DEV);
@@ -175,8 +178,8 @@ static int cmd_dash_tui(void) {
             row2idx[row]=i;row++;}
         fl+=snprintf(fb+fl,(size_t)(B*2-fl),"\033[J\033[%d;1H\033[7m j/k enter x q\033[0m\033[K",rows);
         (void)!write(1,fb,(size_t)fl);}
-        char ch;fd_set fds;struct timeval tv={10,0};FD_ZERO(&fds);FD_SET(0,&fds);
-        if(select(1,&fds,0,0,&tv)<=0){dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;continue;}
+        char ch;fd_set fds;FD_ZERO(&fds);FD_SET(0,&fds);
+        if(dash_dirty||select(1,&fds,0,0,NULL)<=0){dash_dirty=0;dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;continue;}
         if(read(0,&ch,1)!=1)break;
         if(ch=='\x1b'){int av;usleep(50000);ioctl(0,FIONREAD,&av);if(!av)break;
             char seq[2];if(read(0,seq,1)!=1)break;
@@ -203,13 +206,14 @@ static int cmd_dash_tui(void) {
                     snprintf(sc+sl,(size_t)(B-sl)," 'tmux attach -t \"%s\"'",sn);
                     snprintf(cm,B,"tmux respawn-pane -k -t %s %s",rp[0],sc);(void)!system(cm);
                     snprintf(cm,B,"tmux respawn-pane -k -t %s 'echo remote: %s@%s; cat'",rp[1],sn,dev);(void)!system(cm);break;}
-            } else {snprintf(cm,B,"tmux respawn-pane -k -t %s 'while tmux capture-pane -t \"%s\" -p -e 2>/dev/null;do printf \"\\033[H\";sleep 1;done'",rp[0],lines[sel]);(void)!system(cm);}
+            } else {snprintf(cm,B,"tmux respawn-pane -k -t %s 'TMUX= tmux attach -t \"%s\"'",rp[0],lines[sel]);(void)!system(cm);}
             snprintf(cm,B,"tmux select-pane -t %s",me);(void)!system(cm);
         }
         else if(ch=='x'&&n>0){snprintf(cm,B,"tmux kill-session -t '=%s' 2>/dev/null",lines[sel]);(void)!system(cm);}
         if(ch=='x'||ch=='\r'||ch=='\n'){dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;}
     }
     if(poller>0){kill(poller,SIGKILL);waitpid(poller,NULL,WNOHANG);}
+    (void)!system("tmux set-hook -gu after-new-session;tmux set-hook -gu session-closed");
     write(1,"\033[?1000l\033[?1006l",16);
     tcsetattr(0,TCSANOW,&old);printf("\033[2J\033[H\033[?25h");
     {char so[B],*sl[64];int sn=tm_list(so,sl,64);

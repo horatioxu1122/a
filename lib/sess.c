@@ -34,7 +34,17 @@ static int cmd_sess(int argc, char **argv) {
     if(gh){gh[strcspn(gh,"\n")]=0;if(!strcmp(gh,sn)&&tm_has(sn)){unlink(gf);free(gh);
         if(is_prompt&&prompt[0]){tm_send(sn,prompt);usleep(100000);tm_key(sn,"Enter");}
         tm_go(sn);return 0;}free(gh);}}
-    /* Inside tmux = split pane mode (user wants agent HERE, not session switch) */
+    /* Existing session = attach */
+    if (tm_has(sn)) {
+        if (is_prompt && prompt[0]) {
+            tm_send(sn, prompt); usleep(100000);
+            tm_key(sn, "Enter");
+            puts("Prompt queued (existing session)");
+        }
+        tm_go(sn);
+        return 0;
+    }
+    /* Inside tmux = split pane mode */
     if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
         char ww[16],nc[16]; pcmd("tmux display-message -p '#{window_width}'",ww,16);
         pcmd("tmux list-panes -F '#{pane_left}'|sort -un|wc -l",nc,16);
@@ -46,16 +56,6 @@ static int cmd_sess(int argc, char **argv) {
             snprintf(c, B, "tmux select-pane -t '%s'", pid); (void)!system(c);
             send_prefix_bg(pid, s->name, wd, is_prompt ? prompt : NULL);
         }
-        return 0;
-    }
-    /* Existing session = attach (outside tmux only) */
-    if (tm_has(sn)) {
-        if (is_prompt && prompt[0]) {
-            tm_send(sn, prompt); usleep(100000);
-            tm_key(sn, "Enter");
-            puts("Prompt queued (existing session)");
-        }
-        tm_go(sn);
         return 0;
     }
     create_sess(sn, wd, s->cmd);
@@ -130,14 +130,15 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             fm[nm].p=lines[i];fm[nm].sc=blen?fq_get(lines[i]):0;nm++;
         }
         if(blen&&nfq)qsort(fm,(size_t)nm,sizeof(fqm_t),fqm_cmp);
-        if (sel >= nm) sel = nm ? nm-1 : 0;
+        {int mx=nm?nm:blen?2:0;if(sel>=mx)sel=mx?mx-1:0;}
         /* Scroll window around sel */
         int top=sel>=maxshow?sel-maxshow+1:0, show=nm-top<maxshow?nm-top:maxshow;
         /* Render — single write to avoid flicker */
         {char fb[B*4];int fl=0;
         #define FP(f,...) fl+=snprintf(fb+fl,(size_t)(B*4-fl),f,##__VA_ARGS__)
         FP("\033[H\033[?25l%s> %s\033[K\n",prefix,buf);
-        if(!nm&&blen)FP(" > \033[36mGoogle: %s\033[0m\033[K\n",buf);
+        if(!nm&&blen){FP("%s \033[36mGoogle: %s\033[0m\033[K\n",sel==0?" >":"  ",buf);
+            FP("%s \033[35ma c \"%s\"\033[0m\033[K\n",sel==1?" >":"  ",buf);}
         for(int i=0;i<show;i++){int j=top+i,W=ws.ws_col;char*t=strchr(fm[j].p,'\t');int ml=t?(int)(t-fm[j].p):(int)strlen(fm[j].p);
             if(ml>W-5)ml=W-5;FP("%s a %.*s\033[K",j==sel?" >":"  ",ml,fm[j].p);
             if(t&&ml+5+(int)strlen(t+1)<W)FP("\033[%dG\033[90m%s\033[0m",W-(int)strlen(t+1),t+1);FP("\n");}
@@ -150,7 +151,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             char seq[2];if(read(0,seq,1)!=1)break;
             if(seq[0]=='['){if(read(0,seq+1,1)!=1)break;
                 if(seq[1]=='A'){if(sel>0)sel--;}
-                else if(seq[1]=='B'){if(sel<nm-1)sel++;}
+                else if(seq[1]=='B'){int mx=nm?nm-1:blen?1:0;if(sel<mx)sel++;}
                 else if(seq[1]=='<'){int mb=0,mx=0,my=0;char mc;
                     while(read(0,&mc,1)==1&&mc!=';')mb=mb*10+mc-'0';
                     while(read(0,&mc,1)==1&&mc!=';')mx=mx*10+mc-'0';
@@ -158,13 +159,17 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
                     (void)mx;if(mc=='M'&&mb==0){int ci=my-2+top;if(ci>=0&&ci<nm){sel=ci;do_pick=1;}}
                     else if(mc=='M'&&(mb==64||mb==65)){if(mb==64&&sel>0)sel--;if(mb==65&&sel<nm-1)sel++;}}
             } else if(prefix[0]){prefix[0]=0;buf[0]=0;blen=0;sel=0;} else break;
-        } else if(ch=='\t'){if(sel<nm-1)sel++;}
+        } else if(ch=='\t'){int mx=nm?nm-1:blen?1:0;if(sel<mx)sel++;}
         else if(ch=='\x7f'||ch=='\b'){if(blen)buf[--blen]=0;sel=0;}
-        else if(ch=='\r'||ch=='\n'){if(!nm&&blen){char u[512];
-            snprintf(u,512,"https://google.com/search?q=%s",buf);for(char*p=u;*p;p++)if(*p==' ')*p='+';
+        else if(ch=='\r'||ch=='\n'){if(!nm&&blen){
             tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
-            if(!fork()){setsid();execlp("xdg-open","xdg-open",u,(char*)NULL);_exit(1);}
-            free(raw);free(wraw);return 0;}do_pick=1;}
+            (void)!system("clear");free(raw);free(wraw);
+            if(sel==0){char u[512];snprintf(u,512,"https://google.com/search?q=%s",buf);
+                for(char*p=u;*p;p++)if(*p==' ')*p='+';
+                if(!fork()){setsid();int n=open("/dev/null",O_RDWR);dup2(n,0);dup2(n,1);dup2(n,2);close(n);
+                    execlp("xdg-open","xdg-open",u,(char*)NULL);_exit(1);}}
+            else{char*args[]={"a","c",buf,NULL};execvp("a",args);}
+            return 0;}do_pick=1;}
         else if(ch==3||ch==4)break;
         else if(isalnum(ch)||ch=='-'||ch=='_'||ch==' '||ch=='.'){if(blen<254){buf[blen++]=ch;buf[blen]=0;sel=0;}}
         if(do_pick&&nm){char*m=fm[sel].p,cmd[256];
@@ -178,7 +183,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
             (void)!system("clear");
             {int wo=!strncmp(cmd,"open ",5)?5:!strncmp(cmd,"web ",4)?4:0;
-            if(wo){alog(cmd,"");if(!fork()){setsid();
+            if(wo){alog(cmd,"");if(!fork()){setsid();int n2=open("/dev/null",O_RDWR);dup2(n2,0);dup2(n2,1);dup2(n2,2);close(n2);
                 if(wo==5)execlp("gtk-launch","gtk-launch",cmd+5,(char*)NULL);
                 else execlp("xdg-open","xdg-open",cmd+4,(char*)NULL);_exit(1);}free(raw);free(wraw);return 0;}}
             printf("Running: a %s\n",cmd);
