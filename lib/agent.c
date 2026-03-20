@@ -42,10 +42,7 @@ static int cmd_agent(int argc, char **argv) {
         if(!isatty(1))return !!system(cmd);
         tm_ensure_conf();
         if(getenv("TMUX")){
-            char ww[16],nc[16]; pcmd("tmux display-message -p '#{window_width}'",ww,16);
-            pcmd("tmux list-panes -F '#{pane_left}'|sort -un|wc -l",nc,16);
-            int nw=atoi(nc)>0?atoi(ww)/(atoi(nc)+1):atoi(ww)/2;
-            char c[B];snprintf(c,B,"tmux split-window -hfP -l %d -F '#{pane_id}' -c '%s' '%s'",nw,wd,cmd);
+            char c[B];snprintf(c,B,"tmux new-window -P -F '#{pane_id}' -c '%s' '%s'",wd,cmd);
             char pid[64];pcmd(c,pid,64);pid[strcspn(pid,"\n")]=0;
             if(pid[0]){
                 snprintf(c,B,"tmux split-window -v -t '%s' -c '%s' 'sh -c \"ls;exec $SHELL\"'",pid,wd);(void)!system(c);

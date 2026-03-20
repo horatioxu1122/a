@@ -28,6 +28,17 @@ static int cmd_sess(int argc, char **argv) {
         pl+=snprintf(prompt+pl,(size_t)(B-pl),"%s%s",pl?" ":"",argv[i]);
         is_prompt = 1;
     }
+    /* Inside tmux = new window in same session */
+    if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
+        char c[B]; snprintf(c, B, "tmux new-window -P -F '#{pane_id}' -c '%s' 'unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT; %s'", wd, s->cmd);
+        char pid[64]; pcmd(c, pid, 64); pid[strcspn(pid,"\n")] = 0;
+        if (pid[0]) {
+            snprintf(c, B, "tmux split-window -v -t '%s' -c '%s' 'sh -c \"ls;exec $SHELL\"'", pid, wd); (void)!system(c);
+            snprintf(c, B, "tmux select-pane -t '%s'", pid); (void)!system(c);
+            send_prefix_bg(pid, s->name, wd, is_prompt ? prompt : NULL);
+        }
+        return 0;
+    }
     char sn[256]; snprintf(sn, 256, "%s-%s", s->name, bname(wd));
     /* claim ghost if matches */
     {char gf[P];snprintf(gf,P,"%s/ghost",DDIR);char*gh=readf(gf,NULL);
@@ -42,20 +53,6 @@ static int cmd_sess(int argc, char **argv) {
             puts("Prompt queued (existing session)");
         }
         tm_go(sn);
-        return 0;
-    }
-    /* Inside tmux = split pane mode */
-    if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
-        char ww[16],nc[16]; pcmd("tmux display-message -p '#{window_width}'",ww,16);
-        pcmd("tmux list-panes -F '#{pane_left}'|sort -un|wc -l",nc,16);
-        int nw=atoi(nc)>0?atoi(ww)/(atoi(nc)+1):atoi(ww)/2;
-        char c[B]; snprintf(c, B, "tmux split-window -hfP -l %d -F '#{pane_id}' -c '%s' 'unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT; %s'", nw, wd, s->cmd);
-        char pid[64]; pcmd(c, pid, 64); pid[strcspn(pid,"\n")] = 0;
-        if (pid[0]) {
-            snprintf(c, B, "tmux split-window -v -t '%s' -c '%s' 'sh -c \"ls;exec $SHELL\"'", pid, wd); (void)!system(c);
-            snprintf(c, B, "tmux select-pane -t '%s'", pid); (void)!system(c);
-            send_prefix_bg(pid, s->name, wd, is_prompt ? prompt : NULL);
-        }
         return 0;
     }
     create_sess(sn, wd, s->cmd);
