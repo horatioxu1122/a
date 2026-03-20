@@ -161,6 +161,7 @@ static int cmd_dash_tui(void) {
     tcsetattr(0,TCSANOW,&raw_t);
     write(1,"\033[?1000h\033[?1006h",16);
     dash_refresh(out,lines,&n);
+    if(n>0){snprintf(cm,B,"tmux respawn-pane -k -t %s 'TMUX= tmux attach -t \"%s\"'",rp[0],lines[0]);(void)!system(cm);}
     for(;;){
         struct winsize ws;ioctl(0,TIOCGWINSZ,&ws);int rows=ws.ws_row,row2idx[128];
         {char fb[B*2];int fl=0,cols=ws.ws_col>4?ws.ws_col-3:1;
