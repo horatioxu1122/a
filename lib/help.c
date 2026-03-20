@@ -112,7 +112,8 @@ static void gen_icache(void) {
             unsigned char uh[4096]={0};char sl[1024];
             while(fgets(sl,1024,sp)){sl[strcspn(sl,"\n")]=0;
                 char*u=sl,*t=strchr(sl,'|');if(!t)continue;*t++=0;
-                unsigned h=5381;for(char*p=u;*p;p++)h=h*33+*p;h%=32768;
+                char*hu=u;{char*s=strstr(u,"://");if(s){hu=s+3;if(!strncmp(hu,"www.",4))hu+=4;}}
+                unsigned h=5381;for(char*p=hu;*p;p++)h=h*33+*p;h%=32768;
                 if(uh[h/8]&(1<<(h%8)))continue;uh[h/8]|=1<<(h%8);
                 if(t[0])fprintf(wf,"web %s\t%s · web\n",u,t);}
             fclose(wf);}pclose(sp);}}
