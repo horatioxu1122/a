@@ -5,6 +5,7 @@ static int cmd_set(int argc, char **argv) {
         printf("1. n [%s] commands without aio prefix\n   aio set n %s\n", fexists(p)?"on":"off", fexists(p)?"off":"on");
         return 0;
     }
+    if(!strcmp(argv[2],"capslock")){char cmd[P];snprintf(cmd,P,"bash %s/lib/capslock.sh %s %s",SDIR,SDIR,argc>3?argv[3]:"on");return system(cmd);}
     char p[P]; snprintf(p, P, "%s/%s", DDIR, argv[2]);
     if (argc > 3 && !strcmp(argv[3], "on")) { int fd = open(p, O_CREAT|O_WRONLY, 0644); if (fd>=0) close(fd); puts("\xe2\x9c\x93 on"); }
     else if (argc > 3 && !strcmp(argv[3], "off")) { unlink(p); puts("\xe2\x9c\x93 off"); }

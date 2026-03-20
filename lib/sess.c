@@ -1,6 +1,8 @@
 /* ── session (c, l, g, co, cp, etc.) ── */
 static int cmd_sess(int argc, char **argv) {
-    perf_disarm();init_db(); load_cfg(); load_proj(); load_apps(); load_sess();
+    perf_disarm();
+    {int r=system("timeout 1 tmux info >/dev/null 2>&1");if(WIFEXITED(r)&&WEXITSTATUS(r)==124){fputs("tmux: server hung\n",stderr);return 1;}}
+    init_db(); load_cfg(); load_proj(); load_apps(); load_sess();
     const char *key = argv[1];
     sess_t *s = find_sess(key);
     if (!s) return -1;  /* not a session key */

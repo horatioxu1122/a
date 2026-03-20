@@ -178,7 +178,7 @@ static int cmd_dash_tui(void) {
             row2idx[row]=i;row++;}
         fl+=snprintf(fb+fl,(size_t)(B*2-fl),"\033[J\033[%d;1H\033[7m j/k enter x q\033[0m\033[K",rows);
         (void)!write(1,fb,(size_t)fl);}
-        char ch;fd_set fds;FD_ZERO(&fds);FD_SET(0,&fds);
+        int show=0;char ch;fd_set fds;FD_ZERO(&fds);FD_SET(0,&fds);
         if(dash_dirty||select(1,&fds,0,0,NULL)<=0){dash_dirty=0;dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;continue;}
         if(read(0,&ch,1)!=1)break;
         if(ch=='\x1b'){int av;usleep(50000);ioctl(0,FIONREAD,&av);if(!av)break;
@@ -190,13 +190,15 @@ static int cmd_dash_tui(void) {
                     while(read(0,&mc,1)==1&&mc!=';')mb=mb*10+mc-'0';
                     while(read(0,&mc,1)==1&&mc!=';')mx=mx*10+mc-'0';
                     while(read(0,&mc,1)==1&&mc!='M'&&mc!='m')my=my*10+mc-'0';(void)mx;
-                    if(mc=='M'&&mb==0&&my-1>=0&&my-1<128&&row2idx[my-1]>=0)sel=row2idx[my-1];
+                    if(mc=='M'&&mb==0&&my-1>=0&&my-1<128&&row2idx[my-1]>=0){sel=row2idx[my-1];show=1;}
                     if(mc=='M'&&mb==64&&sel>0)sel--;
                     if(mc=='M'&&mb==65&&sel<n-1)sel++;}}}
         else if(ch=='q'||ch==3)break;
         else if(ch=='k')sel=sel>0?sel-1:n-1;
         else if(ch=='j')sel=sel<n-1?sel+1:0;
-        else if((ch=='\r'||ch=='\n')&&n>0){
+        else if((ch=='\r'||ch=='\n')&&n>0)show=1;
+        else if(ch=='x'&&n>0){snprintf(cm,B,"tmux kill-session -t '=%s' 2>/dev/null",lines[sel]);(void)!system(cm);}
+        if(show&&n>0){
             char*at=strchr(lines[sel],'@');
             if(at){char sn[128],dev[128];snprintf(sn,128,"%.*s",(int)(at-lines[sel]),lines[sel]);snprintf(dev,128,"%s",at+1);
                 char dir2[P];snprintf(dir2,P,"%s/ssh",SROOT);char pp[32][P];int np2=listdir(dir2,pp,32);
@@ -209,8 +211,7 @@ static int cmd_dash_tui(void) {
             } else {snprintf(cm,B,"tmux respawn-pane -k -t %s 'TMUX= tmux attach -t \"%s\"'",rp[0],lines[sel]);(void)!system(cm);}
             snprintf(cm,B,"tmux select-pane -t %s",me);(void)!system(cm);
         }
-        else if(ch=='x'&&n>0){snprintf(cm,B,"tmux kill-session -t '=%s' 2>/dev/null",lines[sel]);(void)!system(cm);}
-        if(ch=='x'||ch=='\r'||ch=='\n'){dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;}
+        if(ch=='x'||show){dash_refresh(out,lines,&n);sel=sel<n?sel:n-1;if(sel<0)sel=0;}
     }
     if(poller>0){kill(poller,SIGKILL);waitpid(poller,NULL,WNOHANG);}
     (void)!system("tmux set-hook -gu after-new-session;tmux set-hook -gu session-closed");
