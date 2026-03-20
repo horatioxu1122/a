@@ -94,7 +94,7 @@ static int cmd_dir_file(int argc, char **argv) { (void)argc;
 
 /* ── interactive picker ── */
 typedef struct{char*p;int sc;}fqm_t;
-static FC fq[256]; int nfq;
+static FC fq[1024]; int nfq;
 static int fq_get(const char*s){int sl=(int)strlen(s),best=0,bl=0;
     for(int i=0;i<nfq;i++){int fl=(int)strlen(fq[i].n);if(fl<=sl&&fl>bl&&!strncasecmp(s,fq[i].n,(size_t)fl)){best=fq[i].c;bl=fl;}}return best;}
 static int fqm_cmp(const void*a,const void*b){return((const fqm_t*)b)->sc-((const fqm_t*)a)->sc;}
@@ -102,7 +102,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
     perf_disarm(); init_db();
     char cache[P];snprintf(cache,P,"%s/i_cache.txt",DDIR);gen_icache();
     {char fp[P];snprintf(fp,P,"%s/freq_cache.txt",DDIR);FILE*ff=fopen(fp,"r");if(ff){char ln[128];nfq=0;
-        while(nfq<256&&fgets(ln,128,ff)){char*c=strchr(ln,':');if(!c)continue;*c=0;
+        while(nfq<1024&&fgets(ln,128,ff)){char*c=strchr(ln,':');if(!c)continue;*c=0;
             snprintf(fq[nfq].n,64,"%s",ln);fq[nfq].c=atoi(c+1);nfq++;}fclose(ff);}}
     size_t len;char*raw=readf(cache,&len);if(!raw){puts("No cache");return 1;}
     char*lines[512];int n=0;
@@ -167,7 +167,12 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             for(int i=0;i<n;i++)if(!strncmp(lines[i],cmd,(size_t)cl)&&lines[i][cl]==' '){hs=1;break;}
             if(hs){snprintf(prefix,256,"%s ",cmd);buf[0]=0;blen=0;sel=0;printf("\033[J");continue;}
             tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);
-            (void)!system("clear");printf("Running: a %s\n",cmd);
+            (void)!system("clear");
+            if(!strncmp(cmd,"open ",5)){printf("Opening: %s\n",cmd+5);
+                alog(cmd,"");
+                if(!fork()){setsid();execlp("gtk-launch","gtk-launch",cmd+5,(char*)NULL);_exit(1);}
+                free(raw);return 0;}
+            printf("Running: a %s\n",cmd);
             char*args[32];int ac=0;args[ac++]="a";
             for(char*p=cmd;*p&&ac<31;){while(*p==' ')p++;if(!*p)break;args[ac++]=p;while(*p&&*p!=' ')p++;if(*p)*p++=0;}
             args[ac]=NULL;free(raw);execvp("a",args);return 0;}
