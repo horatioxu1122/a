@@ -123,6 +123,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
         fqm_t fm[1024]; int nm = 0; int plen = (int)strlen(prefix);
         for (int i=0;i<n&&nm<1024;i++) {
             if (plen && strncmp(lines[i], prefix, (size_t)plen)) continue;
+            if(!blen&&strstr(lines[i],"\tdir"))continue;
             if(blen){char*s=lines[i]+plen,b2[256],*w;snprintf(b2,256,"%s",buf);int ok=1;
                 for(w=strtok(b2," ");w&&ok;w=strtok(0," "))if(!strcasestr(s,w))ok=0;if(!ok)continue;}
             fm[nm].p=lines[i];fm[nm].sc=blen?fq_get(lines[i]):0;nm++;
@@ -175,6 +176,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             for(int i=0;i<n;i++)if(!strncmp(lines[i],cmd,(size_t)cl)&&lines[i][cl]==' '){hs=1;break;}
             if(hs){snprintf(prefix,256,"%s ",cmd);buf[0]=0;blen=0;sel=0;printf("\033[J");continue;}
             IRST;
+            if(dexists(cmd)){char tf[P];snprintf(tf,P,"%s/cd_target",DDIR);writef(tf,cmd);return 0;}
             {int wo=!strncmp(cmd,"open ",5)?5:!strncmp(cmd,"web ",4)?4:0;
             if(wo){alog(cmd,"");if(wo==5){char ac[256];snprintf(ac,256,APP_CMD " '%s'",cmd+5);(void)!system(ac);}
                 else bg_exec(OPENER,cmd+4);return 0;}}
