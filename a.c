@@ -296,6 +296,7 @@ static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)
 #include "lib/net.c"
 #include "lib/cal.c"
 #include "lib/agent.c"
+#include "lib/cc.c"
 #include "lib/perf.c"
 #include "lib/sess.c"
 
@@ -468,7 +469,7 @@ static const cmd_t CMDS[] = {
     {"--help",cmd_help_full},{"-h",cmd_help_full},
     {"a",cmd_a_default},{"adb",cmd_adb},{"add",cmd_add},{"agent",cmd_agent},{"ai",cmd_all},
     {"all",cmd_all},  /* apk,ask,attach,cleanup auto-discovered */
-    {"cal",cmd_cal},{"cat",cmd_cat},{"config",cmd_config},
+    {"cal",cmd_cal},{"cat",cmd_cat},{"cc",cmd_cc},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},{"dash",cmd_dash},{"deps",cmd_deps},
     {"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
     {"e",cmd_e},{"email",cmd_email},{"freq",cmd_freq},
@@ -497,7 +498,7 @@ __attribute__((noreturn)) static void perf_alarm(int sig){(void)sig;
 static void perf_arm(const char *cmd) {
     if (getenv("A_BENCH")) return;
     if (isdigit(*cmd)) return;
-    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|",sk))return;}
+    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|",sk))return;}
     unsigned secs = 1, limit_us = 1000000;
     char pf[P]; snprintf(pf, P, "%s/perf/%s.txt", SROOT, DEV);
     {char *data = readf(pf, NULL);
