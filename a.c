@@ -468,8 +468,8 @@ static const cmd_t CMDS[] = {
     {"a",cmd_a_default},{"adb",cmd_adb},{"add",cmd_add},{"agent",cmd_agent},{"ai",cmd_all},
     {"all",cmd_all},  /* apk,ask,attach,cleanup auto-discovered */
     {"cal",cmd_cal},{"cat",cmd_cat},{"cc",cmd_cc},{"config",cmd_config},
-    {"copy",cmd_copy},{"create",cmd_create},{"dash",cmd_dash},{"deps",cmd_deps},
-    {"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
+    {"copy",cmd_copy},{"create",cmd_create},
+    {"d",cmd_diff},{"dash",cmd_dash},{"deps",cmd_deps},{"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
     {"e",cmd_e},{"email",cmd_email},{"file",cmd_get},{"freq",cmd_freq},
     {"help",cmd_help_full},{"hi",cmd_hi},{"hub",cmd_hub},{"i",cmd_i},
     {"install",cmd_install},{"j",cmd_j},{"job",cmd_job},{"jobs",cmd_job},
