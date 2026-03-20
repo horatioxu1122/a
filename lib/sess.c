@@ -105,7 +105,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             snprintf(fq[nfq].n,64,"%s",ln);fq[nfq].c=atoi(c+1);nfq++;}fclose(ff);}}
     size_t len;char*raw=readf(cache,&len);if(!raw){puts("No cache");return 1;}
     char*lines[1024];int n=0;
-    for(char*p=raw,*end=raw+len;p<end&&n<512;){char*nl=memchr(p,'\n',(size_t)(end-p));
+    for(char*p=raw,*end=raw+len;p<end&&n<1024;){char*nl=memchr(p,'\n',(size_t)(end-p));
         if(!nl)nl=end;if(nl>p&&p[0]!='<'&&p[0]!='='&&p[0]!='>'&&p[0]!='#'){*nl=0;lines[n++]=p;}p=nl+1;}
     /* append web cache */
     size_t wl;char wp[P];snprintf(wp,P,"%s/web_cache.txt",DDIR);char*wraw=readf(wp,&wl);

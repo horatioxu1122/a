@@ -1,5 +1,8 @@
 /* utilities */
-#ifdef __APPLE__
+#ifdef __ANDROID__
+#define OPENER "termux-open"
+#define APP_CMD "CLASSPATH=/data/data/com.termux/files/usr/libexec/termux-am/am.apk /system/bin/app_process / com.termux.termuxam.Am start --user 0 -n"
+#elif defined(__APPLE__)
 #define OPENER "open"
 #define APP_CMD "open -a"
 #else

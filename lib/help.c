@@ -40,6 +40,10 @@ static void gen_icache(void) {
         DIR*sd=opendir(PJ[i].path);struct dirent*se;if(sd){while((se=readdir(sd)))if(se->d_name[0]!='.'&&se->d_type==DT_DIR)fprintf(f,"%s/%s\tdir\n",PJ[i].path,se->d_name);closedir(sd);}}
     for (i=0;i<NAP;i++) fprintf(f, "%d: %s\tcmd\n", NPJ+i, AP[i].name);
     for(i=0;i<NSE;i++)fprintf(f,"%s\t%s\n",SE[i].key,SE[i].name);
+#ifdef __ANDROID__
+    {char af[P];snprintf(af,P,"%s/local/apps.txt",AROOT);
+    size_t al;char*ad=readf(af,&al);if(ad){fwrite(ad,1,al,f);free(ad);}}
+#endif
     {char ad[P];snprintf(ad,P,"%s/lab/platonic_agents",SDIR);DIR*d=opendir(ad);struct dirent*e;
     if(d){while((e=readdir(d))){char*p=strrchr(e->d_name,'.');
         if(p&&(p[1]=='p'||p[1]=='c')){*p=0;fprintf(f,"agent run %s\tagent\n",e->d_name);}}closedir(d);}}
