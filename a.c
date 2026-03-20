@@ -296,6 +296,7 @@ static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)
 #include "lib/net.c"
 #include "lib/cal.c"
 #include "lib/agent.c"
+#include "lib/file.c"
 #include "lib/cc.c"
 #include "lib/perf.c"
 #include "lib/sess.c"
@@ -466,7 +467,7 @@ static const cmd_t CMDS[] = {
     {"cal",cmd_cal},{"cat",cmd_cat},{"cc",cmd_cc},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},{"dash",cmd_dash},{"deps",cmd_deps},
     {"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
-    {"e",cmd_e},{"email",cmd_email},{"freq",cmd_freq},
+    {"e",cmd_e},{"email",cmd_email},{"file",cmd_get},{"freq",cmd_freq},
     {"help",cmd_help_full},{"hi",cmd_hi},{"hub",cmd_hub},{"i",cmd_i},
     {"install",cmd_install},{"j",cmd_j},{"job",cmd_job},{"jobs",cmd_job},
     {"kill",cmd_kill},{"log",cmd_log},{"login",cmd_login},{"ls",cmd_ls},
