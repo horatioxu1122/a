@@ -61,7 +61,7 @@ static void tm_ensure_conf(void) {
         "set -g window-active-style 'bg=#000000,fill=#000000'\n"
         "set -g pane-border-style fg=colour238\n"
         "set -g pane-active-border-style fg=green\n"
-        "set -g status-style bg=black,fg=white\n"
+        "set -g status-style 'bg=#000000,fg=white,fill=#000000'\n"
         "set -g status-position bottom\n"
         "set -g status 2\n"
         "set -g status-right \"\"\n"
