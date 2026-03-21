@@ -113,5 +113,5 @@ static void tm_ensure_conf(void) {
         if (uf) { fputs("\nsource-file -q ~/.a/tmux.conf  # a\n", uf); fclose(uf); }
     }
     free(uc);
-    if(!system("tmux info >/dev/null 2>&1")){char cmd[B];snprintf(cmd,B,"tmux source-file '%s' 2>/dev/null",cpath);(void)!system(cmd);(void)!system("tmux refresh-client -S 2>/dev/null");}
+    {char cmd[B];snprintf(cmd,B,"tmux source-file '%s' 2>/dev/null&&tmux refresh-client -S 2>/dev/null&",cpath);(void)!system(cmd);}
 }

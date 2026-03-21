@@ -155,7 +155,7 @@ static int cmd_update(int argc, char **argv) { AB;
     }
     if (sub && (!strcmp(sub,"bash")||!strcmp(sub,"zsh")||!strcmp(sub,"shell")||!strcmp(sub,"cache"))) {
         init_db(); load_cfg(); list_all(1, 1);
-        gen_icache();
+        gen_icache(); tm_ensure_conf();
         puts("\xe2\x9c\x93 Cache"); return 0;
     }
     /* Pull, rebuild, exec new */
@@ -174,7 +174,7 @@ static int cmd_update(int argc, char **argv) { AB;
     }
     init_db(); load_cfg();
     snprintf(c, B, "sh '%s/a.c'", SDIR);
-    if (system(c) == 0) { puts("\xe2\x9c\x93 Built"); init_migrate(); tm_ensure_conf(); } else puts("x Build failed");
+    if (system(c) == 0) { puts("\xe2\x9c\x93 Built"); init_migrate(); } else puts("x Build failed");
     { char vp[P]; snprintf(vp, P, "%s/venv/bin/pip", AROOT);
       if (access(vp, X_OK) == 0) {
           snprintf(c, B, "'%s' install -q pexpect prompt_toolkit aiohttp 2>/dev/null", vp);
