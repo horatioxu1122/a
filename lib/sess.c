@@ -98,6 +98,7 @@ static int fq_get(const char*s){int sl=(int)strlen(s),b=0,bl=0;
     for(int i=0;i<nfq;i++){int l=(int)strlen(fq[i].n);if(l<=sl&&l>bl&&!strncasecmp(s,fq[i].n,(size_t)l)){b=fq[i].c;bl=l;}}return b;}
 static int fqm_cmp(const void*a,const void*b){return((const fqm_t*)b)->sc-((const fqm_t*)a)->sc;}
 static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
+    AB;
     perf_disarm(); init_db();
     char cache[P];snprintf(cache,P,"%s/i_cache.txt",DDIR);
     if(!fexists(cache))gen_icache();else if(!fork()){gen_icache();_exit(0);}

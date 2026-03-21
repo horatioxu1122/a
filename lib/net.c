@@ -173,7 +173,7 @@ static int cmd_update(int argc, char **argv) { AB;
         printf("\xe2\x9c\x93 Up to date\n");
     }
     snprintf(c, B, "sh '%s/a.c'", SDIR);
-    if (system(c) == 0) puts("\xe2\x9c\x93 Built"); else puts("x Build failed");
+    if (system(c) == 0) { puts("\xe2\x9c\x93 Built"); init_migrate(); } else puts("x Build failed");
     { char vp[P]; snprintf(vp, P, "%s/venv/bin/pip", AROOT);
       if (access(vp, X_OK) == 0) {
           snprintf(c, B, "'%s' install -q pexpect prompt_toolkit aiohttp 2>/dev/null", vp);

@@ -1,7 +1,7 @@
 /* ── perf: benchmark + timing display ── */
 static const char *BENCH_CMDS[] = {
-    "","help","config","task","ls","add","agent","copy","done","docs",
-    "hi","i","move","prompt","remove","repo","send","set","setup",
+    "i","help","config","task","ls","add","agent","copy","done","docs",
+    "hi","move","prompt","remove","repo","send","set","setup",
     "uninstall","watch","web",/* "x" kills tmux server, destroys active dev sessions */
     "e","kill","revert","deps","dash","hub",
     "jobs","mono","ssh","work","ask","login","gdrive","email","ui","attach",
@@ -9,7 +9,7 @@ static const char *BENCH_CMDS[] = {
     "sync","scan","update","install",NULL
 };
 
-/* parse limit for cmd from perf file data (microseconds); 0 = not found */
+/* parse limit (and optionally last bench time) from perf file. format: cmd:limit[:last] */
 static unsigned perf_limit(const char *data, const char *cmd) {
     if (!data) return 0;
     char needle[128]; snprintf(needle, 128, "\n%s:", cmd);
@@ -18,6 +18,16 @@ static unsigned perf_limit(const char *data, const char *cmd) {
         m = data - 1;
     if (m) return (unsigned)atoi(m + 1 + strlen(cmd) + 1);
     return 0;
+}
+static unsigned perf_last(const char *data, const char *cmd) {
+    if (!data) return 0;
+    char needle[128]; snprintf(needle, 128, "\n%s:", cmd);
+    const char *m = strstr(data, needle);
+    if (!m && !strncmp(data, cmd, strlen(cmd)) && data[strlen(cmd)] == ':') m = data - 1;
+    if (!m) return 0;
+    const char *p = m + 1 + strlen(cmd) + 1;
+    const char *c = strchr(p, ':');
+    return c ? (unsigned)atoi(c + 1) : 0;
 }
 
 #define fmt_us(us,buf,sz) snprintf(buf,sz,"%.3fms",(us)/1000.0)
@@ -43,16 +53,17 @@ static int cmd_perf(int argc, char **argv) {
         printf("PERF — device: %s\n", DEV);
         printf("Profile: %s\n", pf);
         puts("──────────────────────────────────────────────────");
-        printf("%-15s %10s  %8s\n", "COMMAND", "LIMIT", "TIMEOUT");
+        printf("%-15s %10s %10s\n", "COMMAND", "LIMIT", "LAST");
         puts("──────────────────────────────────────────────────");
         for (const char **c = BENCH_CMDS; *c; c++) {
-            const char *label = (*c)[0] ? *c : "(bare)";
-            unsigned lim = perf_limit(data, label);
-            if (lim) { char fb[32]; fmt_us(lim, fb, 32); printf("%-15s %10s  %5us\n", label, fb, (lim + 999999) / 1000000); }
-            else printf("%-15s %10s  %5s\n", label, "-", "1s");
+            const char *label = *c;
+            unsigned lim = perf_limit(data, label), last = perf_last(data, label);
+            char fb[32], fl[32]; if(lim)fmt_us(lim,fb,32);else snprintf(fb,32,"1000ms");
+            if(last)fmt_us(last,fl,32);else snprintf(fl,32,"-");
+            printf("%-15s %10s %10s\n", label, fb, fl);
         }
         puts("──────────────────────────────────────────────────");
-        puts("\nDefault: 1s (local). Override with per-device file.");
+        puts("\nDefault: 1000ms. Override with per-device file.");
         puts("Run 'a perf bench' to benchmark and auto-tighten limits.");
         free(data);
         return 0;
@@ -65,21 +76,27 @@ static int cmd_perf(int argc, char **argv) {
         typedef struct { const char *cmd; pid_t pid; unsigned us, old_lim, new_lim; int done, pass, skip; } res_t;
         res_t *res = calloc((size_t)ncmds, sizeof(res_t));
 
-        /* fork commands in parallel */
         struct timespec t0; clock_gettime(CLOCK_MONOTONIC, &t0);
         int nul = open("/dev/null", O_RDWR);
         char bin[P]; snprintf(bin, P, "%s/local/a", AROOT);
         for (int i = 0; i < ncmds; i++) {
             res[i].cmd = BENCH_CMDS[i];
-            res[i].old_lim = perf_limit(data, BENCH_CMDS[i][0] ? BENCH_CMDS[i] : "(bare)");
-            if (only && strcmp(only, BENCH_CMDS[i][0] ? BENCH_CMDS[i] : "bare")) { res[i].skip = 1; res[i].done = 1; continue; }
+            res[i].old_lim = perf_limit(data, BENCH_CMDS[i]);
+            if (only && strcmp(only, BENCH_CMDS[i])) { res[i].skip = 1; res[i].done = 1; continue; }
+            /* 'i': read internal timer from stderr (measures real TUI startup) */
+            if (!strcmp(BENCH_CMDS[i],"i")) {
+                int pfd[2];pipe(pfd);pid_t p=fork();
+                if(p==0){dup2(nul,0);dup2(nul,1);dup2(pfd[1],2);close(pfd[0]);putenv("A_BENCH=1");execl(bin,"a","i",(char*)NULL);_exit(127);}
+                close(pfd[1]);char sb[256]={0};read(pfd[0],sb,255);close(pfd[0]);
+                int st;waitpid(p,&st,0);res[i].us=(unsigned)(atof(sb)*1000);
+                res[i].done=1;res[i].pass=WIFEXITED(st);continue;
+            }
             pid_t p = fork();
             if (p == 0) {
                 dup2(nul, STDIN_FILENO); dup2(nul, STDOUT_FILENO); dup2(nul, STDERR_FILENO);
                 setpgid(0, 0);
                 putenv("A_BENCH=1");
-                if (BENCH_CMDS[i][0]) execl(bin, "a", BENCH_CMDS[i], (char *)NULL);
-                else execl(bin, "a", (char *)NULL);
+                execl(bin, "a", BENCH_CMDS[i], (char *)NULL);
                 _exit(127);
             }
             res[i].pid = p;
@@ -136,7 +153,7 @@ static int cmd_perf(int argc, char **argv) {
             else if (!old || proposed < old) { res[i].new_lim = proposed; tight = 1; }
             if (!killed) passed++;
             if (tight) tightened++;
-            const char *label = res[i].cmd[0] ? res[i].cmd : "(bare)";
+            const char *label = res[i].cmd;
             char ft[32], fo[32], fn[32];
             fmt_us(t, ft, 32); fmt_us(old, fo, 32); fmt_us(res[i].new_lim, fn, 32);
             const char *st = killed ? "\033[31mKILLED\033[0m" : tight ? "\033[32m↓ tight\033[0m" : "\033[32m\xe2\x9c\x93\033[0m";
@@ -144,18 +161,19 @@ static int cmd_perf(int argc, char **argv) {
         }
         puts("─────────────────────────────────────────────────────────────");
         printf("%d/%d passed, %d tightened\n\n", passed, shown, tightened);
-        if (tightened > 0) {
-            char pd[P]; snprintf(pd, P, "%s/perf", SROOT); mkdirp(pd);
+        {char pd[P]; snprintf(pd, P, "%s/perf", SROOT); mkdirp(pd);
             FILE *f = fopen(pf, "w");
             if (f) {
                 for (int i = 0; i < ncmds; i++) {
-                    const char *k = BENCH_CMDS[i][0] ? BENCH_CMDS[i] : "(bare)";
-                    fprintf(f, "%s:%u\n", k, res[i].skip ? perf_limit(data, k) : res[i].new_lim);
+                    const char *k = BENCH_CMDS[i];
+                    unsigned lim = res[i].skip ? perf_limit(data, k) : res[i].new_lim;
+                    unsigned last = res[i].skip ? perf_last(data, k) : res[i].us;
+                    fprintf(f, "%s:%u:%u\n", k, lim, last);
                 }
                 fclose(f);
-                printf("\033[32m\xe2\x9c\x93\033[0m Saved: %s\n", pf);
             }
-        } else puts("No limits tightened — all commands at or above current limits.");
+        }
+        printf("%d/%d passed, %d tightened\n", passed, shown, tightened);
         free(data); free(res);
         return 0;
     }

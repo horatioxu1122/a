@@ -250,6 +250,7 @@ exit 0
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/wait.h>
 #include <dirent.h>
 #include <time.h>
@@ -508,19 +509,19 @@ __attribute__((noreturn)) static void perf_alarm(int sig){(void)sig;
 static void perf_arm(const char *cmd) {
     if (getenv("A_BENCH")) return;
     if (isdigit(*cmd)) return;
-    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|",sk))return;}
-    unsigned secs = 1, limit_us = 1000000;
+    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|",sk))return;}
+    unsigned limit_us = 1000000;
     char pf[P]; snprintf(pf, P, "%s/perf/%s.txt", SROOT, DEV);
     {char *data = readf(pf, NULL);
     unsigned pl = perf_limit(data, cmd);
-    if (pl > 0) { limit_us = pl; secs = (pl + 999999) / 1000000; }
+    if (pl > 0) limit_us = pl;
     free(data);}
     snprintf(perf_msg, B,
-        "\n\033[31m✗ PERF KILL\033[0m: 'a %s' >%us (%uus, %s)\n  %s\n", cmd, secs, limit_us, DEV, pf);
+        "\n\033[31m✗ PERF KILL\033[0m: 'a %s' >%.1fms (%s)\n  %s\n", cmd, limit_us/1000.0, DEV, pf);
     signal(SIGALRM, perf_alarm);
-    alarm(secs);
+    {struct itimerval tv={{0,0},{(long)(limit_us/1000000),(long)(limit_us%1000000)}};setitimer(ITIMER_REAL,&tv,NULL);}
 }
-static void perf_disarm(void) { alarm(0); signal(SIGALRM, SIG_DFL); }
+static void perf_disarm(void) { struct itimerval z={{0,0},{0,0}};setitimer(ITIMER_REAL,&z,NULL);signal(SIGALRM,SIG_DFL); }
 static struct timespec gt0;
 static void gt_print(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);
     long ms=(t.tv_sec-gt0.tv_sec)*1000L+(t.tv_nsec-gt0.tv_nsec)/1000000;
@@ -537,9 +538,8 @@ static void gt_print(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);
 int main(int argc, char **argv) {
     init_paths();G_argc=argc;G_argv=argv;
 
-    if (argc < 2) return (isatty(1)?cmd_i:cmd_help)(argc, argv);
-
     clock_gettime(CLOCK_MONOTONIC,&gt0);atexit(gt_print);
+    if (argc < 2) { perf_arm("i"); return (isatty(1)?cmd_i:cmd_help)(argc, argv); }
     char acmd[B]="";ajoin(acmd,B,argc,argv,1);
     CWD(wd);
     alog(acmd, wd);
