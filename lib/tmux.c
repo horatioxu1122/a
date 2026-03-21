@@ -38,11 +38,11 @@ static void tm_key(const char *s, const char *key) {
 static void jcmd_fill(char*b,int cont){snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;while :;do claude --dangerously-skip-permissions%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",cont?" --continue":"",LOGDIR);}
 
 static void tm_ensure_conf(void) {
+    if (strcmp(cfget("tmux_conf"), "y") != 0) return;
+    if(fork())return;setsid();
     char adir[P]; snprintf(adir, P, "%s/.a", HOME);
     mkdirp(adir);
     char cpath[P]; snprintf(cpath, P, "%s/tmux.conf", adir);
-    if(!fexists(cpath)){FILE*t=fopen(cpath,"a");if(t)fclose(t);}
-    if (strcmp(cfget("tmux_conf"), "y") != 0) return;
     FILE *f = fopen(cpath, "w");
     if (!f) return;
     const char *cc = clip_cmd();
@@ -113,5 +113,6 @@ static void tm_ensure_conf(void) {
         if (uf) { fputs("\nsource-file -q ~/.a/tmux.conf  # a\n", uf); fclose(uf); }
     }
     free(uc);
-    {char cmd[B];snprintf(cmd,B,"tmux source-file '%s' 2>/dev/null&&tmux refresh-client -S 2>/dev/null&",cpath);(void)!system(cmd);}
+    {char cmd[B];snprintf(cmd,B,"tmux source-file '%s' 2>/dev/null&&tmux refresh-client -S 2>/dev/null",cpath);(void)!system(cmd);}
+    _exit(0);
 }
