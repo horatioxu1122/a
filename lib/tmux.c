@@ -85,7 +85,7 @@ static void tm_ensure_conf(void) {
         "agent) tmux new-window \"a j a\";; "
         "win) tmux new-window;; new) tmux split-window;; "
         "close) tmux kill-pane;; "
-        "menu) tmux display-popup -w 30 -h 12 -E sh ~/.a/menu.sh;; "
+        "menu) tmux display-menu -x C -y S \"Side Pane\" s split-window\\ -fh Zoom z resize-pane\\ -Z Sync y set\\ synchronize-panes Rename r \"command-prompt -p Name: \\\"rename-window %%\\\"\" \\\"\\\" \\\"\\\" \\\"\\\" Quit q detach Kill x kill-session;; "
         "kbd) tmux set -g mouse off; tmux display-message \"Mouse off 3s\"; "
         "(sleep 3; tmux set -g mouse on) &;; esac' }\n", f);
     /* Termux: /tmp is owned by shell:shell (0771), Termux app user can't mkdir
