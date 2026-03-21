@@ -66,7 +66,7 @@ static void tm_ensure_conf(void) {
         "set -g status 2\n"
         "set -g status-right \"\"\n"
         "set -g status-format[0] \"#[align=left]#{?#{e|>:#{session_windows},1},#[range=user|prev]  <  #[norange],}#[align=centre]#{W:#[range=window|#{window_index}]#{?window_active,#[fg=colour232 bg=colour231 bold] ,#[fg=colour231 bg=colour243] } #I:#W #{?window_active, , }#[default]#[norange]}#[align=right]#{?#{e|>:#{session_windows},1},#[range=user|next]  >  #[norange],}\"\n"
-        "set -g status-format[1] \"#[align=centre]#[range=user|agent]Agent#[norange] #[range=user|win]Win#[norange] #[range=user|new]Pane#[norange] #[range=user|close]Close#[norange] #[range=user|menu] ... #[norange]#[align=right]#[range=user|kbd]Kb#[norange] #[range=user|kill][x]#[norange]\"\n"
+        "set -g status-format[1] \"#[align=centre]#[range=user|aa]a#[norange] #[range=user|agent]Agent#[norange] #[range=user|win]Win#[norange] #[range=user|new]Pane#[norange] #[range=user|close]Close#[norange] #[range=user|menu] ... #[norange]#[align=right]#[range=user|kbd]Kb#[norange] #[range=user|kill][x]#[norange]\"\n"
         /* TODO: add -c '#{pane_current_path}' to splits/windows below + mouse handler
          * so new panes in worktrees open in worktree dir, not session start dir */
         "bind-key -n C-Tab next-window\n"
@@ -81,7 +81,8 @@ static void tm_ensure_conf(void) {
         "bind-key -T root MouseDown1Status if -F '#{==:#{mouse_status_range},window}' "
         "{ select-window } { run-shell 'r=\"#{mouse_status_range}\"; case \"$r\" in "
         "prev) tmux previous-window;; next) tmux next-window;; "
-        "agent) tmux new-window \"a\";; "
+        "aa) tmux new-window \"a\";; "
+        "agent) tmux new-window \"a j a\";; "
         "win) tmux new-window;; new) tmux split-window;; "
         "close) tmux kill-pane;; "
         "menu) tmux display-popup -w 30 -h 12 -E sh ~/.a/menu.sh;; "
