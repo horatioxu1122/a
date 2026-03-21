@@ -35,7 +35,7 @@ static void init_db(void) {
         char edp[B];esc_nl(dp,edp,B);
         char buf[B*2];int l=0;const char*pk[]={"claude_prompt","codex_prompt","gemini_prompt",NULL};
         for(const char**k=pk;*k;k++)l+=snprintf(buf+l,(size_t)(B*2-l),"%s: %s\n",*k,edp);
-        l+=snprintf(buf+l,(size_t)(B*2-l),"worktrees_dir: %s/worktrees\nmulti_default: l:3\nclaude_prefix: Ultrathink. \n",AROOT);
+        l+=snprintf(buf+l,(size_t)(B*2-l),"default_agent: c\nworktrees_dir: %s/worktrees\nmulti_default: l:3\nclaude_prefix: Ultrathink. \ntmux_conf: y\n",AROOT);
         writef(p,buf);
     }
     snprintf(p, P, "%s/sessions.txt", DDIR);

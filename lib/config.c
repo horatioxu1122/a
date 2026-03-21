@@ -79,7 +79,7 @@ static int cmd_config(int argc, char **argv) {
         char val[B]=""; ajoin(val,B,argc,argv,3);
         if (!strcmp(val,"off")||!strcmp(val,"none")||!strcmp(val,"\"\"")||!strcmp(val,"''")) val[0]=0;
         cfset(key, val);
-        load_cfg(); list_all(1, 1);
+        load_cfg(); list_all(1, 1); tm_ensure_conf();
         printf("\xe2\x9c\x93 %s=%s\n", key, val[0] ? val : "(cleared)");
     } else printf("%s: %s\n", key, cfget(key));
     return 0;

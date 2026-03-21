@@ -514,7 +514,7 @@ static void perf_arm(const char *cmd) {
     char pf[P]; snprintf(pf, P, "%s/perf/%s.txt", SROOT, DEV);
     {char *data = readf(pf, NULL);
     unsigned pl = perf_limit(data, cmd);
-    if (pl > 0) limit_us = pl;
+    if (pl >= 500) limit_us = pl;
     free(data);}
     snprintf(perf_msg, B,
         "\n\033[31m✗ PERF KILL\033[0m: 'a %s' >%.1fms (%s)\n  %s\n", cmd, limit_us/1000.0, DEV, pf);
