@@ -15,9 +15,7 @@ def _url(p): return f'http://localhost:{p}'
 def _cmd(m, p):
     s = f'{_LIB}/ui/{m}.py'
     if _UV: return [_UV, 'run', '--script', s, str(p)]
-    vp = join(dirname(_LIB), 'adata', 'venv', 'bin', 'python')
-    py = vp if os.access(vp, os.X_OK) else sys.executable
-    return [py, '-c', f"from ui.{m} import run;run({p})"]
+    return [sys.executable, '-c', f"from ui.{m} import run;run({p})"]
 
 def _bg(m, p):
     S.Popen(_cmd(m, p), start_new_session=True, stdout=S.DEVNULL, env=os.environ|{'PYTHONPATH':_LIB})
@@ -69,7 +67,7 @@ def _svc_on(m='ui_full', p=PORT):
         sd = _svdir(); _svc_off(); os.makedirs(sd, exist_ok=True); rs = join(sd, 'run')
         prefix = os.environ.get('PREFIX', '/data/data/com.termux/files/usr')
         with open(rs, 'w') as f: f.write(f'#!{prefix}/bin/sh\nexport PYTHONPATH={_LIB}\nexec {cmd}\n')
-        os.chmod(rs, 0o755); _r(['sv', 'up', 'a-ui']); return True
+        os.chmod(rs, 0o755); _r(['sv', 'up', 'a-ui']).returncode and S.Popen(['sh', rs], start_new_session=True, stdout=S.DEVNULL, stderr=S.DEVNULL); return True
     if _r(['systemctl', '--user', '--version']).returncode == 0:
         _svc_off(); ud = dirname(_unit()); os.makedirs(ud, exist_ok=True)
         with open(_unit(), 'w') as f:
