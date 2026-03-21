@@ -172,6 +172,7 @@ static int cmd_update(int argc, char **argv) { AB;
     } else {
         printf("\xe2\x9c\x93 Up to date\n");
     }
+    init_db(); load_cfg();
     snprintf(c, B, "sh '%s/a.c'", SDIR);
     if (system(c) == 0) { puts("\xe2\x9c\x93 Built"); init_migrate(); tm_ensure_conf(); } else puts("x Build failed");
     { char vp[P]; snprintf(vp, P, "%s/venv/bin/pip", AROOT);
