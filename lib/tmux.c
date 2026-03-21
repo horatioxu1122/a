@@ -57,7 +57,7 @@ static void tm_ensure_conf(void) {
         "set -g bell-action any\n"
         "set -g repeat-time 0\n"
         "set -g assume-paste-time 0\n"
-        "set -g window-style bg=colour235\n"
+        "set -g window-style bg=black\n"
         "set -g window-active-style bg=black\n"
         "set -g pane-border-style fg=colour238\n"
         "set -g pane-active-border-style fg=green\n"
