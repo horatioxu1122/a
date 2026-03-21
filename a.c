@@ -563,7 +563,11 @@ int main(int argc, char **argv) {
      if(strrchr(arg,'.')&&fexists(pf)){int r=run_lab(pf,argc,argv);if(r>=0)return r;}
      {static const char*X[]={".py",".c",".sh",".html",0};
       for(int i=0;X[i];i++){snprintf(pf,P,"%s/lab/%s%s",SDIR,arg,X[i]);
-       if(fexists(pf)){int r=run_lab(pf,argc,argv);if(r>=0)return r;}}}}
+       if(fexists(pf)){int r=run_lab(pf,argc,argv);if(r>=0)return r;}}
+      {DIR*ld;struct dirent*le;snprintf(pf,P,"%s/lab",SDIR);ld=opendir(pf);
+       if(ld){while((le=readdir(ld))){if(le->d_name[0]=='.')continue;
+        for(int i=0;X[i];i++){snprintf(pf,P,"%s/lab/%s/%s%s",SDIR,le->d_name,arg,X[i]);
+         if(fexists(pf)){closedir(ld);int r=run_lab(pf,argc,argv);if(r>=0)return r;}}}closedir(ld);}}}}
     {size_t l=strlen(arg);if(l>=3&&arg[l-1]=='+'&&arg[l-2]=='+'&&*arg!='w')return cmd_wt_plus(argc,argv);}
     if(*arg=='w'&&arg[1]&&!fexists(arg))return cmd_wt(argc,argv);
     {init_db();load_cfg();load_sess();if(find_sess(arg))return cmd_sess(argc,argv);}

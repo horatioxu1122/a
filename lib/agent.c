@@ -34,8 +34,7 @@ static int cmd_agent(int argc, char **argv) {
         CWD(wd);
         char sn[256];snprintf(sn,256,"agent-%s-%ld",argv[3],(long)time(NULL));
         char cmd[B];
-        if(strstr(f,".c")){snprintf(cmd,B,"sh '%s'",f);}
-        else{FILE*fp=fopen(f,"r");char h[32]={0};if(fp){(void)!fgets(h,32,fp);fclose(fp);}
+        {FILE*fp=fopen(f,"r");char h[32]={0};if(fp){(void)!fgets(h,32,fp);fclose(fp);}
             if(strstr(h,"/// script"))snprintf(cmd,B,"uv run --script '%s'",f);
             else snprintf(cmd,B,"python3 '%s'",f);}
         for(int i=4;i<argc;i++){int l=(int)strlen(cmd);snprintf(cmd+l,(size_t)(B-l)," '%s'",argv[i]);}
