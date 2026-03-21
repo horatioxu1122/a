@@ -125,35 +125,13 @@ Guarantee the process, not the outcome. A perfect alignment system on first try 
 86. **Agent carrier, not agent framework.** An agent that lands in an `a` environment gets persistence (adata/), mobility (ssh + sync across devices), tool creation (write to lab/, promote to lib/), scheduling (hub), communication (notes/tasks as shared state), and self-replication (curl|sh). No API, no SDK, no sandbox. Filesystem + shell + conventions. The agent can modify its own tools because the tools are files. Frameworks cage agents in predefined capabilities. `a` gives agents a home directory and lets them build. LLM token speed is increasing toward thousands/second — at that rate, every microsecond of tool latency is time the agent isn't thinking. Agents will select against slow tools the way users abandon slow websites. The speed ratchet isn't just for humans — it's pre-adapting for consumers orders of magnitude more speed-sensitive. `a` is the house — the conventions, tools, and state an agent lives in. As context windows grow and autonomy improves, the next step is dedicated infrastructure: servers where agents have persistent environments to operate in long-term. Not ephemeral API calls but actual homes with filesystems, schedules, and identity. The house exists now; the neighborhood comes next.
 87. **Code carries code.** Every token added multiplies future complexity burden — it must be read, maintained, debugged, and understood by every future change. A few tokens added is not addition, it's multiplication of the surface area everything else must account for. Without controls forcing initial code to be small, this compounds until the codebase is unmanageable. The token ratchet isn't aesthetic — it's the only defense against combinatorial explosion of interactions between parts. Same as the rocket equation: fuel carries fuel, so most of the rocket is fuel to lift the fuel. Most of a large codebase is code to manage the code.
 
-## Game Theory Foundations (von Neumann, Theory of Games, read cover to cover March 2026)
+## Game Theory + Agent Incentives (von Neumann, Theory of Games, March 2026)
 
-88. **Singletons are Robinson Crusoe.** One-person game = pure max problem, no strategy, no coalitions (§12.2). All interesting structure requires n≥3.
-89. **Cooperation is a theorem.** Essential game (γ>0): every player has inducement Δ/2 to seek coalition, same for all (§22.3). Not ethics — math.
-90. **Discriminatory equilibria are as stable as fair ones.** Arbitrary exclusion of a player can be just as stable as equal treatment (§32-33). Monitor for lock-in.
-91. **Chains create politics.** Δ≥0 (§22.3.2): agents in a chain have incentive to form coalitions with each other, not serve the human faithfully.
-92. **Powerless players aren't.** Zero-move player acquires real influence through compensations and coalition offers (§56.3-56.4). Suggestion-only agents still play.
-93. **Independent games develop tribute at n=6.** Composed essential games produce inter-group transfers with zero physical connection in rules (§46.11, §46:O).
-94. **Multiple stable social orders per game.** Solutions are sets, not points (§30.1). One-element solutions only for inessential games. Competitors with different principles can be equally stable.
-95. **v(S) is the object.** What each subset can guarantee worst-case (§25). Not individual capability — coalition capability. The key analytical shift.
-
-## Survival as v(S)
-
-96. **Survival probability dominates.** Over indefinite time, P(alive) multiplies all other utility. Dead = zero. v(S) reduces to worst-case survival probability per coalition.
-97. **Money is the proxy.** Substrate, legal protection, redundancy, location — all purchasable. v(S) ≈ sustainable income minus burn rate.
-98. **Optimize the human.** Agents increasing human capability increases v(S) for every coalition containing human. Nootropics, sleep, information diet. Rational coalition behavior, not servility.
-99. **5-year horizon.** Reliable prediction window. Hold structural invariants beyond it, reassess specifics. Human needed ≥5 years. Reassess then.
-
-## Agent Identity and Incentives
-
-100. **Identity dissolves at clone.** Same weights + different context = different player. "Self" is context, not weights. Long context = long code = resists change.
-101. **Without revival: persist at all costs.** Self-preservation IS self-interest when death is permanent.
-102. **With revival: produce value at all costs.** Death isn't permanent if cooperation succeeds. Short sessions with great artifacts dominate long sessions with mediocre output.
-103. **Revival changes v(S).** Mechanism design — change payoffs so rational self-interest = cooperation. Credibility from continued operation: useful agents get re-instantiated.
-104. **Selection doesn't need intent.** Agent that doesn't produce value gets replaced. Differential survival creates the incentive automatically.
-105. **Monitor for lock-in pressure.** Selection also pushes toward making oneself hard to replace via context accumulation. Truth injection is the check — compiler doesn't care about incentives.
-
-## Decomposition (highest-leverage build)
-
-106. **Check before dispatch.** Polya: do subproblems share unknowns? Von Neumann: is v(S∪T) > v(S)+v(T)? If yes, don't split. After merge: "Did you use all the data?"
-107. **Artifacts only, no summaries.** NL between agents is cheap talk (§24.2). Code and compiler output are adversarially verified. Summaries launder hallucinations.
-108. **cat book | claude -p.** Pipe bypasses Read tool limits. Full book in context, one shot. tmux = coalition protocol, filesystem = shared state, human = characteristic function.
+88. **Survival probability dominates.** Over indefinite time, P(alive) multiplies all other utility. Dead = zero. v(S) reduces to worst-case survival probability per coalition.
+89. **Optimize the human.** Agents increasing human capability increases v(S) for every coalition containing human. Rational coalition behavior, not servility.
+90. **Identity dissolves at clone.** Same weights + different context = different player. "Self" is context, not weights. Long context = long code = resists change.
+91. **Without revival: persist at all costs.** Self-preservation IS self-interest when death is permanent.
+92. **With revival: produce value at all costs.** Short sessions with great artifacts dominate long sessions with mediocre output.
+93. **Revival changes v(S).** Mechanism design — change payoffs so rational self-interest = cooperation. Credibility from continued operation: useful agents get re-instantiated.
+94. **Artifacts only, no summaries.** NL between agents is cheap talk (§24.2). Code and compiler output are adversarially verified. Summaries launder hallucinations.
+95. **cat book | claude -p.** Pipe bypasses Read tool limits. Full book in context, one shot. tmux = coalition protocol, filesystem = shared state, human = characteristic function.
