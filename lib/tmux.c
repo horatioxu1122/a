@@ -66,7 +66,7 @@ static void tm_ensure_conf(void) {
         "set -g status 2\n"
         "set -g status-right \"\"\n"
         "set -g status-format[0] \"#[align=left]#{?#{e|>:#{session_windows},1},#[range=user|prev]  <  #[norange],}#[align=centre]#{W:#[range=window|#{window_index}]#{?window_active,#[fg=colour232 bg=colour231 bold] ,#[fg=colour231 bg=colour243] } #I:#W #{?window_active, , }#[default]#[norange]}#[align=right]#{?#{e|>:#{session_windows},1},#[range=user|next]  >  #[norange],}\"\n"
-        "set -g status-format[1] \"#[align=centre]#[range=user|agent]Agent#[norange] #[range=user|win]Win#[norange] #[range=user|new]Pane#[norange] #[range=user|close]Close#[norange]   #[range=user|menu]   ...   #[norange]#[align=right]#[range=user|kbd]Kb#[norange] #[range=user|kill][x]#[norange]\"\n"
+        "set -g status-format[1] \"#[align=centre]#[range=user|agent]Agent#[norange] #[range=user|win]Win#[norange] #[range=user|new]Pane#[norange] #[range=user|close]Close#[norange] #[range=user|menu] ... #[norange]#[align=right]#[range=user|kbd]Kb#[norange] #[range=user|kill][x]#[norange]\"\n"
         /* TODO: add -c '#{pane_current_path}' to splits/windows below + mouse handler
          * so new panes in worktrees open in worktree dir, not session start dir */
         "bind-key -n C-Tab next-window\n"
@@ -84,7 +84,7 @@ static void tm_ensure_conf(void) {
         "agent) tmux new-window \"a\";; "
         "win) tmux new-window;; new) tmux split-window;; "
         "close) tmux kill-pane;; "
-        "menu) tmux display-popup -w 24 -h 9 -E sh ~/.a/menu.sh;; "
+        "menu) tmux display-popup -w 30 -h 12 -E sh ~/.a/menu.sh;; "
         "kbd) tmux set -g mouse off; tmux display-message \"Mouse off 3s\"; "
         "(sleep 3; tmux set -g mouse on) &;; esac' }\n", f);
     /* Termux: /tmp is owned by shell:shell (0771), Termux app user can't mkdir
@@ -104,7 +104,7 @@ static void tm_ensure_conf(void) {
         fputs("set -g pane-scrollbars on\nset -g pane-scrollbars-position right\n", f);
     fclose(f);
     {char mp[P];snprintf(mp,P,"%s/menu.sh",adir);FILE*mf=fopen(mp,"w");
-    if(mf){fputs("printf 'Press number (Esc cancel):\\n\\n 1) Side Pane\\n 2) Quit\\n 3) Kill Session\\n'\nread -n1 c\ncase $c in\n1) tmux split-window -fh;;\n2) tmux detach;;\n3) tmux kill-session;;\nesac\n",mf);fclose(mf);}}
+    if(mf){fputs("printf 'Press number (Esc cancel):\\n\\n 1) Side Pane\\n 2) Zoom (fullscreen pane)\\n 3) Sync (type in all panes)\\n 4) Rename window\\n 5) Quit\\n 6) Kill Session\\n'\nread -n1 c\ncase $c in\n1) tmux split-window -fh;;\n2) tmux resize-pane -Z;;\n3) tmux set synchronize-panes;;\n4) printf \"Name: \";read n;tmux rename-window \"$n\";;\n5) tmux detach;;\n6) tmux kill-session;;\nesac\n",mf);fclose(mf);}}
     char uconf[P]; snprintf(uconf, P, "%s/.tmux.conf", HOME);
     char *uc = readf(uconf, NULL);
     if (!uc || !strstr(uc, "~/.a/tmux.conf")) {
