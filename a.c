@@ -524,7 +524,7 @@ static void perf_arm(const char *cmd) {
 static void perf_disarm(void) { struct itimerval z={{0,0},{0,0}};setitimer(ITIMER_REAL,&z,NULL);signal(SIGALRM,SIG_DFL); }
 static struct timespec gt0;
 static void gt_print(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);
-    long ms=(t.tv_sec-gt0.tv_sec)*1000L+(t.tv_nsec-gt0.tv_nsec)/1000000;
+    long us=(t.tv_sec-gt0.tv_sec)*1000000L+(t.tv_nsec-gt0.tv_nsec)/1000;
     struct stat st;char p[P];DIR*d;struct dirent*e;
     snprintf(p,P,"%s/a.c",SDIR);long ac=!stat(p,&st)?st.st_size/4:0;
     long dt[2]={0,0};const char*dn[]={"lib","lab"};
@@ -533,8 +533,8 @@ static void gt_print(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);
             if(!stat(p,&st)&&S_ISREG(st.st_mode))dt[i]+=st.st_size;}closedir(d);}}
     long ct=0;const char*cn=G_argc>1?G_argv[1]:"";
     snprintf(p,P,"%s/lib/%s.c",SDIR,cn);if(!stat(p,&st))ct=st.st_size/4;
-    if(ct)fprintf(stderr,"%ldms tokens %s.c:%ld a.c:%ld lib:%ld lab:%ld\n",ms,cn,ct,ac,dt[0]/4,dt[1]/4);
-    else fprintf(stderr,"%ldms tokens a.c:%ld lib:%ld lab:%ld\n",ms,ac,dt[0]/4,dt[1]/4);}
+    if(ct)fprintf(stderr,"%ldus tokens %s.c:%ld a.c:%ld lib:%ld lab:%ld\n",us,cn,ct,ac,dt[0]/4,dt[1]/4);
+    else fprintf(stderr,"%ldus tokens a.c:%ld lib:%ld lab:%ld\n",us,ac,dt[0]/4,dt[1]/4);}
 int main(int argc, char **argv) {
     init_paths();G_argc=argc;G_argv=argv;
 

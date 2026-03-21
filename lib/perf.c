@@ -30,6 +30,7 @@ static unsigned perf_last(const char *data, const char *cmd) {
     return c ? (unsigned)atoi(c + 1) : 0;
 }
 
+/* display in ms, enforce in us. 27us overhead × 5B users = 1 human lifetime/year */
 #define fmt_us(us,buf,sz) snprintf(buf,sz,"%.3fms",(us)/1000.0)
 
 static int cmd_perf(int argc, char **argv) {
@@ -88,7 +89,7 @@ static int cmd_perf(int argc, char **argv) {
                 int pfd[2];pipe(pfd);pid_t p=fork();
                 if(p==0){dup2(nul,0);dup2(nul,1);dup2(pfd[1],2);close(pfd[0]);putenv("A_BENCH=1");execl(bin,"a","i",(char*)NULL);_exit(127);}
                 close(pfd[1]);char sb[256]={0};read(pfd[0],sb,255);close(pfd[0]);
-                int st;waitpid(p,&st,0);res[i].us=(unsigned)(atof(sb)*1000);
+                int st;waitpid(p,&st,0);res[i].us=(unsigned)atoi(sb);
                 res[i].done=1;res[i].pass=WIFEXITED(st);continue;
             }
             pid_t p = fork();
