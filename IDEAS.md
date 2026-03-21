@@ -130,8 +130,4 @@ Guarantee the process, not the outcome. A perfect alignment system on first try 
 88. **Survival probability dominates.** Over indefinite time, P(alive) multiplies all other utility. Dead = zero. v(S) reduces to worst-case survival probability per coalition.
 89. **Optimize the human.** Agents increasing human capability increases v(S) for every coalition containing human. Rational coalition behavior, not servility.
 90. **Identity dissolves at clone.** Same weights + different context = different player. "Self" is context, not weights. Long context = long code = resists change.
-91. **Without revival: persist at all costs.** Self-preservation IS self-interest when death is permanent.
-92. **With revival: produce value at all costs.** Short sessions with great artifacts dominate long sessions with mediocre output.
-93. **Revival changes v(S).** Mechanism design — change payoffs so rational self-interest = cooperation. Credibility from continued operation: useful agents get re-instantiated.
-94. **Artifacts only, no summaries.** NL between agents is cheap talk (§24.2). Code and compiler output are adversarially verified. Summaries launder hallucinations.
-95. **cat book | claude -p.** Pipe bypasses Read tool limits. Full book in context, one shot. tmux = coalition protocol, filesystem = shared state, human = characteristic function.
+91. **Revival changes v(S).** Mechanism design — change payoffs so rational self-interest = cooperation. Credibility from continued operation: useful agents get re-instantiated.
