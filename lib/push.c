@@ -24,40 +24,28 @@ static int cmd_push(int argc, char **argv) { AB;
         char buf2[8]; if (fgets(buf2,8,stdin) && buf2[0]=='y') return cmd_setup(argc, argv);
         return 0;
     }
-    /* Check dirty */
-    char dirty[64] = ""; pcmd("git status --porcelain 2>/dev/null", dirty, 64);
-    const char *tag = dirty[0] ? "\xe2\x9c\x93" : "\xe2\x97\x8b";
-
-    /* Check for prior push failure */
-    char ok[P],ef[P]; snprintf(ok,P,"%s/logs/push.ok",DDIR); snprintf(ef,P,"%s/logs/push.err",DDIR);
-    struct stat st;
-    {char *e=readf(ef,NULL); if(e){unlink(ef);unlink(ok);printf("\xe2\x9c\x97 Last push failed:\n%s\n",e);free(e);}}
-    /* Check instant mode */
+    char dirty[64]="";pcmd("git status --porcelain 2>/dev/null",dirty,64);
+    const char*tag=dirty[0]?"\xe2\x9c\x93":"\xe2\x97\x8b";
+    char ok[P],ef[P],c[B*2];struct stat st;
+    snprintf(ok,P,"%s/logs/push.ok",DDIR);snprintf(ef,P,"%s/logs/push.err",DDIR);
+    {char*e=readf(ef,NULL);if(e){unlink(ef);unlink(ok);printf("\xe2\x9c\x97 %s\n",e);free(e);}}
+    #define PUSHCMD "{ git push -u origin HEAD 2>&1||{ git pull --rebase origin HEAD 2>/dev/null&&git push -u origin HEAD 2>&1;}; }"
     if (stat(ok, &st) == 0 && time(NULL) - st.st_mtime < 600) {
-        char c[B*2]; snprintf(c, sizeof(c),
-            "cd '%s' && git add -A && git commit -m \"%s\" --allow-empty 2>/dev/null && "
-            "out=$(git push 2>&1) && touch '%s' || echo \"$out\" > '%s'",
-            cwd, msg, ok, ef);
-        if (fork() == 0) { setsid();
-            int n=open("/dev/null",O_RDWR); if(n>=0){dup2(n,0);dup2(n,1);dup2(n,2);close(n);}
-            execl("/bin/sh","sh","-c",c,(char*)NULL); _exit(1);
-        }
-        printf("%s %s\n", tag, msg); return 0;
+        snprintf(c,sizeof(c),"cd '%s'&&git add -A&&git commit -m \"%s\" --allow-empty 2>/dev/null&&"
+            "{ " PUSHCMD "&&touch '%s'; }||echo fail>'%s'",cwd,msg,ok,ef);
+        if(!fork()){setsid();int n=open("/dev/null",O_RDWR);if(n>=0){dup2(n,0);dup2(n,1);dup2(n,2);close(n);}
+            execl("/bin/sh","sh","-c",c,(char*)NULL);_exit(1);}
+        printf("%s %s\n",tag,msg);return 0;
     }
-    /* Real push */
-    char c[B];
-    snprintf(c, B, "git -C '%s' config remote.origin.url 2>/dev/null", cwd);
-    if (system(c) != 0) {
-        snprintf(c, B, "cd '%s' && gh repo create --private --source . --push", cwd); (void)!system(c);
-    }
-    snprintf(c, B, "cd '%s' && git add -A && git commit -m '%s' --allow-empty 2>/dev/null", cwd, msg); (void)!system(c);
-    snprintf(c, B, "cd '%s' && git push -u origin HEAD 2>&1", cwd);
-    char out[B]; pcmd(c, out, B);
-    if (strstr(out, "->") || strstr(out, "up-to-date") || strstr(out, "Everything")) {
-        mkdirp(DDIR); snprintf(c, B, "%s/logs", DDIR); mkdirp(c);
-        int fd = open(ok, O_CREAT|O_WRONLY|O_TRUNC, 0644); if(fd>=0)close(fd);
-        printf("%s %s\n", tag, msg);
-    } else printf("\xe2\x9c\x97 %s\n", out);
+    snprintf(c,B,"git -C '%s' config remote.origin.url 2>/dev/null",cwd);
+    if(system(c)){snprintf(c,B,"cd '%s'&&gh repo create --private --source . --push",cwd);(void)!system(c);}
+    snprintf(c,sizeof(c),"cd '%s'&&git add -A&&git commit -m '%s' --allow-empty 2>/dev/null&&" PUSHCMD,cwd,msg);
+    char out[B];pcmd(c,out,B);
+    #undef PUSHCMD
+    if(!strstr(out,"->")&&!strstr(out,"up-to-date")&&!strstr(out,"Everything")){printf("\xe2\x9c\x97 %s\n",out);return 1;}
+    mkdirp(DDIR);snprintf(c,B,"%s/logs",DDIR);mkdirp(c);
+    {int fd=open(ok,O_CREAT|O_WRONLY|O_TRUNC,0644);if(fd>=0)close(fd);}
+    printf("%s %s%s\n",tag,msg,strstr(out,"rebase")?" (rebased)":"");
     return 0;
 }
 
