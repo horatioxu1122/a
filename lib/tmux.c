@@ -65,7 +65,7 @@ static void tm_ensure_conf(void) {
         "set -g status-position bottom\n"
         "set -g status 3\n"
         "set -g status-right \"\"\n"
-        "set -g status-format[0] \"#[align=left]#[range=user|prev] < #[norange]#[align=centre]#{W:#[range=window|#{window_index}]#{?window_active,#[fg=colour232 bg=colour231 bold] ,#[fg=colour231 bg=colour243] } #I:#W #{?window_active, , }#[default]#[norange]}#[align=right]#[range=user|next] > #[norange]\"\n"
+        "set -g status-format[0] \"#[align=left]#[range=user|prev]  <  #[norange]#[align=centre]#{W:#[range=window|#{window_index}]#{?window_active,#[fg=colour232 bg=colour231 bold] ,#[fg=colour231 bg=colour243] } #I:#W #{?window_active, , }#[default]#[norange]}#[align=right]#[range=user|next]  >  #[norange]\"\n"
         "set -g status-format[1] \"#[align=centre]#{?#{e|<:#{client_width},70},"
         "#[range=user|agent]Agent#[norange] #[range=user|win]Win#[norange] #[range=user|new]Pane#[norange] #[range=user|side]Side#[norange] #[range=user|close]Close#[norange] #[range=user|detach]Quit#[norange]#[align=right]#[range=user|kill][x]#[norange],"
         "#[range=user|agent]Ctrl+A:Agent#[norange] #[range=user|win]Ctrl+N:Win#[norange] #[range=user|new]Ctrl+T:Pane#[norange] #[range=user|side]Ctrl+Y:Side#[norange] #[range=user|close]Ctrl+W:Close#[norange] #[range=user|detach]Ctrl+Q:Quit#[norange]#[align=right]#[range=user|kill][x]#[norange]}\"\n"
