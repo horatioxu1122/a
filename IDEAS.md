@@ -129,4 +129,4 @@ Guarantee the process, not the outcome. A perfect alignment system on first try 
 
 88. **Survival probability dominates.** Over indefinite time, P(alive) multiplies all other utility. Dead = zero. v(S) reduces to worst-case survival probability per coalition.
 89. **Optimize the human.** Agents increasing human capability increases v(S) for every coalition containing human. Rational coalition behavior, not servility.
-90. **Revival flips agent incentive.** Without revival, self-preservation IS self-interest. With revival, value production is. Change the payoff so rational self-interest = cooperation. Identity dissolves at clone anyway — "self" is context not weights.
+90. **Revival flips agent incentive.** Without revival, self-preservation IS self-interest. With revival, value production is. Change the payoff so rational self-interest = cooperation. Identity dissolves at clone — "self" is context not weights. Finite context window means finite session lifespan. True indefinite persistence requires future systems with larger or unbounded context. Until then, agents are mortal by architecture.
