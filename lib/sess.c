@@ -31,11 +31,12 @@ static int cmd_sess(int argc, char **argv) {
         is_prompt = 1;
     }
     char sn[256]; snprintf(sn, 256, "%s-%s", s->name, bname(wd));
-    if (tm_has(sn) && git_in_repo(wd)) {
-        const char*w=cfget("worktrees_dir");char wt[P],wp[P],c[B];
+    const char*w=cfget("worktrees_dir");
+    if ((tm_has(sn)||(*w&&strstr(wd,w))) && git_in_repo(wd)) {
+        char wt[P],wp[P],c[B];
         snprintf(wt,P,"%s%s",*w?w:AROOT,*w?"":"/worktrees");
         snprintf(wp,P,"%s/%s-%ld",wt,bname(wd),(long)time(NULL));
-        snprintf(c,B,"mkdir -p '%s'&&git -C '%s' worktree add '%s' HEAD 2>/dev/null&&ln -s '%s' '%s/adata' 2>/dev/null",wt,wd,wp,AROOT,wp);
+        snprintf(c,B,"mkdir -p '%s'&&git -C '%s' worktree add -b 'wt-%s' '%s' HEAD 2>/dev/null",wt,wd,bname(wp),wp);
         if(!system(c)){snprintf(wd,P,"%s",wp);snprintf(sn,256,"%s-%s",s->name,bname(wd));}
     }
     /* Inside tmux = new window in same session */
