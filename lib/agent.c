@@ -1,5 +1,7 @@
 /* ── review ── */
-static int cmd_review(int argc, char **argv) { fallback_py("review", argc, argv); }
+static int cmd_review(int argc, char **argv) { (void)argc;(void)argv;
+    (void)!system("gh pr list 2>/dev/null");
+    char*v[]={"a","job",NULL};return cmd_jobs(2,v); }
 
 /* ── docs ── */
 static int cmd_docs(int argc, char **argv) {

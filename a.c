@@ -101,12 +101,8 @@ build) _PT=${EPOCHREALTIME/./}
     printf '%s' $$ > "$ABIN/.bld"
     _build_fix() {
         warn "Build failed. Attempting agent fix..."
-        local E="$1" AG
-        for AG in claude codex gemini; do command -v $AG &>/dev/null && { cd "$D" && $AG -p "a.c failed to compile. Error: $E. Fix the build error, run 'sh a.c' to verify, then git add a.c && git commit -m 'fix: build' && gh pr create --fill"; return; }; done
-        echo -e "\n${R}Could not auto-fix. Contact Sean Patten for help:${R}"
-        echo "  email: spatten2@fordham.edu"
-        echo "  github: seanpattencode"
-        echo "  whatsapp: Sean Patten"
+        command -v a &>/dev/null && { a j --no-wt "a.c failed to compile. Error: $1. Fix the build error and run 'sh a.c' to verify."; return; }
+        echo -e "\nCould not auto-fix. Contact Sean Patten: spatten2@fordham.edu github:seanpattencode"
     }
     _Q=-DSRC="\"$D\""
     if command -v tcc &>/dev/null; then
@@ -516,7 +512,7 @@ static void perf_arm_for(const char *cmd) {
 }
 static void perf_arm(const char *cmd) {
     if(getenv("A_BENCH")||isdigit(*cmd))return;
-    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|",sk))return;}
+    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|review|",sk))return;}
     perf_arm_for(cmd);
 }
 static void perf_disarm(void) { struct itimerval z={{0,0},{0,0}};setitimer(ITIMER_REAL,&z,NULL);signal(SIGALRM,SIG_DFL); }
