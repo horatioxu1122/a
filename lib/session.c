@@ -24,7 +24,7 @@ static void create_sess(const char *sn, const char *wd, const char *cmd) {
     int ai = cmd && (strstr(cmd,"claude") || strstr(cmd,"codex") || strstr(cmd,"gemini") || strstr(cmd,"aider"));
     char wcmd[B*2];
     if (ai) snprintf(wcmd, sizeof(wcmd),
-        "unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT;while :;do %s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo -e \"\\n! crash $e [R]estart/[Q]uit:\";read -n1 k;[[ $k =~ [Rr] ]]||break;done", cmd, LOGDIR);
+        "unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT;while :;do %s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo -e \"\\n! crash $e [R]estart/[Q]uit:\";read -n1 k;[[ $k =~ [Rr] ]]||break;done[B", cmd, LOGDIR);
     else snprintf(wcmd, sizeof(wcmd), "%s", cmd ? cmd : "");
     tm_ensure_conf();
     tm_new(sn, wd, wcmd);
@@ -49,16 +49,14 @@ static void send_prefix_bg(const char *sn, const char *agent, const char *wd, co
     const char *cp = strstr(agent, "claude") ? cfget("claude_prefix") : "";
     char pre[B*4]; int n = snprintf(pre, sizeof(pre), "%s%s", dprompt(), cp);
     n += snprintf(pre+n, sizeof(pre)-(unsigned)n,
-        "\nTools (\"a\" agent manager):"
-        " a done <msg> — signal done."
+        "\nTools (\"a\" agent manager). When your work is done, or to notify human run: a done[D <Message>."
         " a help — full command list."
         " a diff — token change vs main."
         " a note <text> — log a note."
         " a push [msg] — git push."
         " a pr [title] — create PR."
-        " a cat 2 — read codebase."
-        " a ls — list running agents."
-        " a kill <name> — kill agent."
+        " a cat 2 — reawhole codebase."
+	" a ssh - ssh to devices."
         " sh a.c — build (O0). sh a.c check — full checkers.\n");
     char af[P]; snprintf(af, P, "%s/AGENTS.md", wd);
     char *amd = readf(af, NULL);
