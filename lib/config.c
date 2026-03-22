@@ -14,9 +14,17 @@ static int cmd_set(int argc, char **argv) {
 }
 
 static int cmd_settings(int argc,char**argv) {
-    char p[P],d[P];snprintf(d,P,"%s/settings",SROOT);mkdirp(d);snprintf(p,P,"%s/%s",d,argc>2?argv[2]:"dev");
-    if(argc>3){if(argv[3][1]=='n')writef(p,"");else unlink(p);sync_bg();}
-    puts(fexists(p)?"on":"off");return 0;
+    init_db();load_cfg();load_sess();
+    if(argc>3){cfset(argv[2],argv[3]);printf("\xe2\x9c\x93 %s=%s\n",argv[2],argv[3]);return 0;}
+    if(argc>2&&!strcmp(argv[2],"agent")){
+        const char*da=cfget("default_agent");if(!da[0])da="c";
+        for(int i=0;i<NSE;i++)printf("%s %-4s %s\n",!strcmp(SE[i].key,da)?"*":" ",SE[i].key,SE[i].name);
+        puts("\nSet: a settings agent <key>");return 0;}
+    static const char*show[]={"default_agent","claude_prefix","multi_default","worktrees_dir","tmux_conf",NULL};
+    for(const char**s=show;*s;s++){const char*v=cfget(*s);
+        printf("  %-16s%s\n",*s,v[0]?v:!strcmp(*s,"default_agent")?"c":"-");}
+    puts("\n  a settings agent         List agents\n  a settings <key> <value>  Set any config");
+    return 0;
 }
 
 /* ── install ── */
