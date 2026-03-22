@@ -160,10 +160,7 @@ static int cmd_done(int argc,char**argv){AB;
     {FILE*f=fopen(p,"w");if(f){fputs(msg,f);fclose(f);}}
     {char wd[P];if(getcwd(wd,P)){char df[P];snprintf(df,P,"%s/.a_done",wd);
         FILE*f=fopen(df,"w");if(f){fputs(msg[0]?msg:"done",f);fclose(f);}}}
-    if(getenv("TMUX_PANE")){char c[256],tty[64];
-        snprintf(c,256,"tmux display -t '%s' -p '#{pane_tty}'",getenv("TMUX_PANE"));
-        pcmd(c,tty,64);tty[strcspn(tty,"\n")]=0;
-        snprintf(c,256,"printf '\\a' > %s",tty);(void)!system(c);}
+    (void)!write(STDERR_FILENO,"\a",1);
     puts("\xe2\x9c\x93 done");return 0;}
 
 static int cmd_dir(int c,char**v){(void)c;(void)v;char w[P];if(getcwd(w,P))puts(w);execlp("ls","ls",(char*)0);return 1;}
