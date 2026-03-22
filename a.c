@@ -331,7 +331,7 @@ static int cmd_freq(int c,char**v){perf_disarm();
     long total_uses=0,total_kb=0;
     printf("%6s %5s %5s %s\n","USES","FILE","USE/K","CMD");
     for(int i=0;i<n;i++){struct stat st;char sf[P];long kb=0;
-        const char*cn=ct[i].n;static const struct{const char*a,*f;}AL[]={{"task","note"},{"t","note"},{"n","note"},{"i","ls"},{"dash","ls"},{"diff","push"},{"d","push"},{"kill","ls"},{"j","sess"},{"jobs","sess"},{0,0}};
+        const char*cn=ct[i].n;static const struct{const char*a,*f;}AL[]={{"task","note"},{"t","note"},{"n","note"},{"i","ls"},{"diff","push"},{"d","push"},{"kill","ls"},{"j","sess"},{"jobs","sess"},{0,0}};
         for(int a=0;AL[a].a;a++)if(!strcmp(cn,AL[a].a)){cn=AL[a].f;break;}
         static const char*X[]={".c",".py",NULL};
         for(int x=0;X[x];x++){snprintf(sf,P,"%s/lib/%s%s",SDIR,cn,X[x]);if(!stat(sf,&st)){kb=(st.st_size+512)/1024;break;}}
@@ -401,7 +401,7 @@ static int cmd_j(int c,char**v){
         printf("+ resume: %s\n",wd);
         tm_ensure_conf();char jcmd[B];jcmd_fill(jcmd,1);
         if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",bname(wd));tm_new(sn,wd,jcmd);tm_go(sn);}
-        else{char cm[B],pid[64];snprintf(cm,B,"tmux new-window -P -F '#{pane_id}' -c '%s' '%s'",wd,jcmd);pcmd(cm,pid,64);}
+        else{char cm[B],pid[64];snprintf(cm,B,"tmux new-window -t '%s' -P -F '#{pane_id}' -c '%s' '%s'",TMS,wd,jcmd);pcmd(cm,pid,64);}
         return 0;}
     int si=2,nowt=0;if(c>3&&v[2][0]>='0'&&v[2][0]<='9'){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
     char pr[B]="";int pl=0;for(int i=si;i<c;i++){if(!strcmp(v[i],"--no-wt")){nowt=1;continue;}pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);}
@@ -423,7 +423,7 @@ static int cmd_j(int c,char**v){
     if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",bname(wd));
         tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);tm_go(sn);}
     char cm[B],pid[64];
-    snprintf(cm,B,"tmux new-window -d -n '%s' -P -F '#{pane_id}' -c '%s' '%s'",bname(wd),wd,jcmd);
+    snprintf(cm,B,"tmux new-window -t '%s' -d -n '%s' -P -F '#{pane_id}' -c '%s' '%s'",TMS,bname(wd),wd,jcmd);
     pcmd(cm,pid,64);pid[strcspn(pid,"\n")]=0;if(pid[0])send_prefix_bg(pid,"claude",wd,pr);
     return 0;}
 static int cmd_job(int c,char**v){
@@ -483,7 +483,7 @@ static const cmd_t CMDS[] = {
     {"all",cmd_all},  /* apk,ask,attach,cleanup auto-discovered */
     {"cal",cmd_cal},{"cat",cmd_cat},{"cc",cmd_cc},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},
-    {"d",cmd_diff},{"dash",cmd_dash},{"deps",cmd_deps},{"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
+    {"d",cmd_diff},{"deps",cmd_deps},{"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
     {"e",cmd_e},{"email",cmd_email},{"file",cmd_get},{"freq",cmd_freq},
     {"help",cmd_help_full},{"hi",cmd_hi},{"hub",cmd_hub},{"i",cmd_i},
     {"install",cmd_install},{"j",cmd_j},{"job",cmd_job},{"jobs",cmd_job},

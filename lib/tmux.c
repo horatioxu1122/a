@@ -1,39 +1,39 @@
-/* tmux */
-static int tm_has(const char *s) {
-    char c[256];snprintf(c,256,"tmux has-session -t '=%s' 2>/dev/null",s);
+/* tmux — one session "a", windows are jobs */
+#define TMS "a"
+static void tm_ensure_sess(void){
+    char c[256];snprintf(c,256,"tmux has-session -t '%s' 2>/dev/null||tmux new-session -d -s '%s'",TMS,TMS);(void)!system(c);}
+static int tm_has(const char *w) {
+    char c[B];snprintf(c,B,"tmux list-windows -t '%s' -F '#{window_name}' 2>/dev/null|grep -qx '%s'",TMS,w);
     return !system(c);
 }
-
-static void tm_go(const char *s) {
-    perf_disarm(); /* interactive session — no timeout */
-    if (getenv("TMUX")) execlp("tmux", "tmux", "switch-client", "-t", s, (char*)NULL);
-    else execlp("tmux", "tmux", "attach", "-t", s, (char*)NULL);
+static void tm_go(const char *w) {
+    perf_disarm();
+    if(getenv("TMUX")){char t[256];snprintf(t,256,"%s:%s",TMS,w);execlp("tmux","tmux","select-window","-t",t,(char*)NULL);}
+    else{char c[B];snprintf(c,B,"tmux select-window -t '%s:%s' 2>/dev/null",TMS,w);(void)!system(c);
+        execlp("tmux","tmux","attach","-t",TMS,(char*)NULL);}
 }
-
-static int tm_new(const char *s, const char *wd, const char *cmd) {
-    char c[B*2];
-    if (cmd && cmd[0]) snprintf(c, sizeof(c), "tmux new-session -d -s '%s' -c '%s' '%s'", s, wd, cmd);
-    else snprintf(c, sizeof(c), "tmux new-session -d -s '%s' -c '%s'", s, wd);
+static int tm_new(const char *w, const char *wd, const char *cmd) {
+    tm_ensure_sess();char c[B*2];
+    if(cmd&&cmd[0])snprintf(c,sizeof(c),"tmux new-window -t '%s' -n '%s' -c '%s' '%s'",TMS,w,wd,cmd);
+    else snprintf(c,sizeof(c),"tmux new-window -t '%s' -n '%s' -c '%s'",TMS,w,wd);
     return system(c);
 }
-
-static void tm_send(const char *s, const char *text) {
-    pid_t p = fork();
-    if (p == 0) { execlp("tmux", "tmux", "send-keys", "-l", "-t", s, text, (char*)NULL); _exit(1); }
-    if (p > 0) waitpid(p, NULL, 0);
+static void tm_send(const char *w, const char *text) {
+    char t[256];snprintf(t,256,"%s:%s",TMS,w);
+    pid_t p=fork();
+    if(p==0){execlp("tmux","tmux","send-keys","-l","-t",t,text,(char*)NULL);_exit(1);}
+    if(p>0)waitpid(p,NULL,0);
 }
-
-static int tm_read(const char *s, char *buf, int len) {
-    char c[B]; snprintf(c, B, "tmux capture-pane -t '%s' -p 2>/dev/null", s);
-    return pcmd(c, buf, len);
+static int tm_read(const char *w, char *buf, int len) {
+    char c[B];snprintf(c,B,"tmux capture-pane -t '%s:%s' -p 2>/dev/null",TMS,w);
+    return pcmd(c,buf,len);
 }
-
-static void tm_key(const char *s, const char *key) {
-    pid_t p = fork();
-    if (p == 0) { execlp("tmux", "tmux", "send-keys", "-t", s, key, (char*)NULL); _exit(1); }
-    if (p > 0) waitpid(p, NULL, 0);
+static void tm_key(const char *w, const char *key) {
+    char t[256];snprintf(t,256,"%s:%s",TMS,w);
+    pid_t p=fork();
+    if(p==0){execlp("tmux","tmux","send-keys","-t",t,key,(char*)NULL);_exit(1);}
+    if(p>0)waitpid(p,NULL,0);
 }
-
 /* job cmd */
 static void jcmd_fill(char*b,int cont){snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;while :;do claude --dangerously-skip-permissions%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",cont?" --continue":"",LOGDIR);}
 
@@ -67,8 +67,6 @@ static void tm_ensure_conf(void) {
         "set -g status-right \"\"\n"
         "set -g status-format[0] \"#[align=left]#{?#{e|>:#{session_windows},1},#[range=user|prev]  <  #[norange],}#[align=centre]#{W:#[range=window|#{window_index}]#{?window_active,#[fg=colour232 bg=colour231 bold] ,#[fg=colour231 bg=colour243] } #I:#W #{?window_active, , }#[default]#[norange]}#[align=right]#{?#{e|>:#{session_windows},1},#[range=user|next]  >  #[norange],}\"\n"
         "set -g status-format[1] \"#[align=centre]#[range=user|aa]a#[norange] #[range=user|agent]Agent#[norange] #[range=user|win]Win#[norange] #[range=user|new]Pane#[norange] #[range=user|close]Close#[norange] #[range=user|menu] ... #[norange]#[align=right]#[range=user|kbd]Kb#[norange] #[range=user|kill][x]#[norange]\"\n"
-        /* TODO: add -c '#{pane_current_path}' to splits/windows below + mouse handler
-         * so new panes in worktrees open in worktree dir, not session start dir */
         "bind-key -n C-Tab next-window\n"
         "bind-key -n C-S-Tab previous-window\n"
         "bind-key -n C-n new-window\n"
@@ -88,16 +86,12 @@ static void tm_ensure_conf(void) {
         "menu) tmux display-menu Pane 1 \"split-window -fh\" Zoom 2 \"resize-pane -Z\" Sync 3 \"set synchronize-panes\" Rename 4 \"command-prompt \\\"rename-window %%\\\"\" Quit 5 detach Kill 6 kill-session;; "
         "kbd) tmux set -g mouse off; tmux display-message \"Mouse off 3s\"; "
         "(sleep 3; tmux set -g mouse on) &;; esac' }\n", f);
-    /* Termux: /tmp is owned by shell:shell (0771), Termux app user can't mkdir
-     * inside it. Claude Code sandbox does mkdir /tmp/claude-* before every tool
-     * call, failing with EACCES. CLAUDE_CODE_TMPDIR redirects to writable dir */
     if (access("/data/data/com.termux",F_OK)==0)
         fprintf(f,"set-environment -g CLAUDE_CODE_TMPDIR \"%s/.tmp\"\n",HOME);
     if (cc) fprintf(f, "set -s copy-command \"%s\"\n", cc);
     {const char*cm[]={"copy-mode","copy-mode-vi",NULL};
     for(int i=0;cm[i];i++) cc?fprintf(f,"bind -T %s MouseDragEnd1Pane send -X copy-pipe-and-cancel \"%s\"\n",cm[i],cc)
         :fprintf(f,"bind -T %s MouseDragEnd1Pane send -X copy-pipe-and-cancel\n",cm[i]);}
-    /* tmux >= 3.6: scrollbar support */
     char vbuf[64] = ""; int vmaj = 0, vmin = 0;
     pcmd("tmux -V 2>/dev/null", vbuf, 64);
     { char *v = strstr(vbuf, "tmux "); if (v) sscanf(v + 5, "%d.%d", &vmaj, &vmin); }

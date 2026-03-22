@@ -29,14 +29,14 @@ static void create_sess(const char *sn, const char *wd, const char *cmd) {
     tm_ensure_conf();
     tm_new(sn, wd, wcmd);
     if (ai) {
-        char c[B]; snprintf(c, B, "tmux split-window -v -t '%s' -c '%s' 'sh -c \"ls;exec $SHELL\"'", sn, wd);
+        char c[B]; snprintf(c, B, "tmux split-window -v -t '%s:%s' -c '%s' 'sh -c \"ls;exec $SHELL\"'", TMS, sn, wd);
         (void)!system(c);
-        snprintf(c, B, "tmux select-pane -t '%s' -U", sn); (void)!system(c);
+        snprintf(c, B, "tmux select-pane -t '%s:%s' -U", TMS, sn); (void)!system(c);
     }
     /* logging */
     mkdirp(LOGDIR); char c[B];
     char lf[P]; snprintf(lf, P, "%s/%s__%s.log", LOGDIR, DEV, sn);
-    snprintf(c, B, "tmux pipe-pane -t '%s' 'cat >> %s'", sn, lf); (void)!system(c);
+    snprintf(c, B, "tmux pipe-pane -t '%s:%s' 'cat >> %s'", TMS, sn, lf); (void)!system(c);
     char al[B]; snprintf(al, B, "session:%s log:%s", sn, lf);
     alog(al, wd);
     /* agent_logs */
