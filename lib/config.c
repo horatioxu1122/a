@@ -19,7 +19,7 @@ static int cmd_settings(int argc,char**argv) {
     if(argc>2&&!strcmp(argv[2],"agent")){
         const char*da=cfget("default_agent");if(!da[0])da="c";
         for(int i=0;i<NSE;i++)printf("%s %-4s %s\n",!strcmp(SE[i].key,da)?"*":" ",SE[i].key,SE[i].name);
-        puts("\nSet: a settings agent <key>");return 0;}
+        puts("\nSwitch default: a settings default_agent g");return 0;}
     static const char*show[]={"default_agent","claude_prefix","multi_default","worktrees_dir","tmux_conf",NULL};
     for(const char**s=show;*s;s++){const char*v=cfget(*s);
         printf("  %-16s%s\n",*s,v[0]?v:!strcmp(*s,"default_agent")?"c":"-");}
