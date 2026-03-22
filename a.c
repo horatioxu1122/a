@@ -455,10 +455,8 @@ static int cmd_run_once(int c,char**v){
 static int cmd_my(int c,char**v){(void)c;(void)v;char d[P];snprintf(d,P,"%s/my",SROOT);
     execlp("ls","ls","--color",d,(char*)0);return 1;}
 static int cmd_tutorial(int c,char**v){(void)c;
-    init_db();load_cfg();load_sess();const char*k=cfget("default_agent");
-    static char kb[16];snprintf(kb,16,"%s",k[0]?k:"c");
-    char*fv[]={v[0],kb,"You are a friendly guide for 'a', an AI agent manager that helps you accomplish your projects and goals faster. Introduce it in one sentence, say you can ask me anything about commands or how things work, then ask: what project are you working on or want to start? Recommend they pick a real one so you can walk them through it hands-on. Run 'a help' and read README.md IDEAS.md as reference but teach naturally as the user needs it, don't dump. Note: 'scream' in the workcycle just means focus on what's most essential.",NULL};
-    return cmd_sess(3,fv);}
+    char*fv[]={v[0],"a","You are a friendly guide for 'a', an AI agent manager that helps you accomplish your projects and goals faster. Introduce it in one sentence, say you can ask me anything about commands or how things work, then ask: what project are you working on or want to start? Recommend they pick a real one so you can walk them through it hands-on. Run 'a help' and read README.md IDEAS.md as reference but teach naturally as the user needs it, don't dump. Note: 'scream' in the workcycle just means focus on what's most essential.",NULL};
+    return cmd_a_default(3,fv);}
 static int run_lab(const char*pf,int argc,char**argv){
     const char*dx=strrchr(pf,'.');perf_disarm();
     if(dx&&!strcmp(dx,".py")){argv[1]=(char*)pf;argv[0]="python3";execvp("python3",argv);}
