@@ -156,17 +156,15 @@ static int cmd_help_full(int c,char**v){(void)c;(void)v;init_db();load_cfg();pri
 static int cmd_hi(int c,char**v){(void)c;(void)v;for(int i=1;i<=10;i++)printf("%d\n",i);puts("hi");return 0;}
 
 static int cmd_done(int argc,char**argv){AB;
-    char p[P],msg[B]="",wd[P],gc[B],gd[P];snprintf(p,P,"%s/.done",DDIR);ajoin(msg,B,argc,argv,2);
+    char p[P],msg[B]="";snprintf(p,P,"%s/.done",DDIR);ajoin(msg,B,argc,argv,2);
     {FILE*f=fopen(p,"w");if(f){fputs(msg,f);fclose(f);}}
-    if(!getcwd(wd,P))wd[0]=0;snprintf(gc,B,"git -C '%s' rev-parse --git-dir 2>/dev/null",wd);
-    pcmd(gc,gd,P);gd[strcspn(gd,"\n")]=0;
-    if(strstr(gd,"worktrees")){perf_disarm();char sm[B],ad[B]="";
-        snprintf(sm,B,"job: %.200s",msg[0]?msg:"done");
-        snprintf(gc,B,"cd '%s'&&git add -A&&git diff --cached --quiet 2>/dev/null||(git commit -m '%s'&&git push -u origin HEAD 2>/dev/null&&gh pr create --fill 2>/dev/null)",wd,sm);
-        if(!system(gc))puts("+ PR created");
-        snprintf(gc,B,"cd '%s'&&a diff main 2>/dev/null",wd);pcmd(gc,ad,B);
-        snprintf(gc,B,"a email '[a job] %s' '%s\n%s'",bname(wd),msg[0]?msg:"done",ad);(void)!system(gc);}
-    (void)!write(STDOUT_FILENO,"\a",1);puts("\xe2\x9c\x93 done");return 0;}
+    {char wd[P];if(getcwd(wd,P)){char df[P];snprintf(df,P,"%s/.a_done",wd);
+        FILE*f=fopen(df,"w");if(f){fputs(msg[0]?msg:"done",f);fclose(f);}}}
+    if(getenv("TMUX_PANE")){char c[256],tty[64];
+        snprintf(c,256,"tmux display -t '%s' -p '#{pane_tty}'",getenv("TMUX_PANE"));
+        pcmd(c,tty,64);tty[strcspn(tty,"\n")]=0;
+        snprintf(c,256,"printf '\\a' > %s",tty);(void)!system(c);}
+    puts("\xe2\x9c\x93 done");return 0;}
 
 static int cmd_dir(int c,char**v){(void)c;(void)v;char w[P];if(getcwd(w,P))puts(w);execlp("ls","ls",(char*)0);return 1;}
 static int cmd_x(int c,char**v){(void)c;(void)v;(void)!system("tmux kill-server 2>/dev/null");puts("\xe2\x9c\x93 All sessions killed");return 0;}
