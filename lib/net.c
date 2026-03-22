@@ -10,7 +10,7 @@ static void bg_backup_jsonl(void) {
 
 /* ── email ── */
 static int cmd_email(int argc, char **argv) { AB;
-    char bp[P]; snprintf(bp,P,"%s/agents/base.py",SROOT);
+    char bp[P]; snprintf(bp,P,"%s/scan/base.py",SROOT);
     char **na=malloc(((unsigned)argc+2)*sizeof(char*));
     na[0]="python3"; na[1]=bp;
     for(int i=2;i<argc;i++) na[i]=argv[i];
@@ -129,7 +129,7 @@ static int cmd_sync(int argc, char **argv) { AB;
     else if (!t[0]) status = "empty (no commits yet)";
     printf("  %s\n  Last: %s\n  Status: %s\n", out[0] ? out : "(no remote)", t[0] ? t : "(none)", status);
     /* Count files per folder */
-    const char *folders[] = {"common","ssh","login","agents","notes","workspace","adocs","tasks","cal"};
+    const char *folders[] = {"common","ssh","login","scan","notes","workspace","adocs","tasks","cal"};
     for (int i = 0; i < 9; i++) {
         char d[P]; snprintf(d, P, "%s/%s", SROOT, folders[i]);
         if (!dexists(d)) continue;

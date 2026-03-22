@@ -5,7 +5,7 @@ static hub_t HJ[MJ]; static int NJ;
 
 #define DFL(a,b) ((a)?(a):(b))
 static void hub_load(void) {
-    char hd[P],fp[P];snprintf(hd,P,"%s/agents",SROOT);mkdirp(hd);NJ=0;
+    char hd[P],fp[P];snprintf(hd,P,"%s/hub",SROOT);mkdirp(hd);NJ=0;
     snprintf(fp,P,"ls -t %s/*.txt 2>/dev/null",hd);FILE*f=popen(fp,"r");if(!f)return;
     while(fgets(fp,P,f)&&NJ<MJ){fp[strcspn(fp,"\n")]=0;
         kvs_t kv=kvfile(fp);const char*nm=kvget(&kv,"Name");if(!nm)continue;
@@ -16,7 +16,7 @@ static void hub_load(void) {
 }
 
 static void hub_save(hub_t *j) {
-    char hd[P],fn[P],buf[B]; snprintf(hd,P,"%s/agents",SROOT); mkdirp(hd);
+    char hd[P],fn[P],buf[B]; snprintf(hd,P,"%s/hub",SROOT); mkdirp(hd);
     {char c[B];snprintf(c,B,"rm -f '%s'/%s_*.txt",hd,j->n);(void)!system(c);}
     struct timespec t;clock_gettime(CLOCK_REALTIME,&t);struct tm*tm=localtime(&t.tv_sec);
     char ts[32];strftime(ts,32,"%Y%m%dT%H%M%S",tm);snprintf(fn,P,"%s/%s_%s.%09ld.txt",hd,j->n,ts,t.tv_nsec);

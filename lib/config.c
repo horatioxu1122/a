@@ -182,5 +182,3 @@ static int cmd_move(int argc, char **argv) {
     sync_repo(); load_proj(); list_all(1,0); printf("\xe2\x9c\x93 %d -> %d\n",fr,to); return 0;
 }
 
-/* ── scan ── */
-static int cmd_scan(int argc, char **argv) { fallback_py("scan", argc, argv); }

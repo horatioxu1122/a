@@ -246,7 +246,7 @@ HELP = """a sync - Append-only sync to GitHub (no conflicts possible)
   a sync help      Show this help
 
 Data: ~/adata/git/ -> github.com/seanpattencode/a-git
-Folders: common ssh login agents notes workspace docs tasks"""
+Folders: common ssh login scan notes workspace docs tasks"""
 
 def run():
     import sys
@@ -271,7 +271,7 @@ def run():
     status = "CONFLICT" if conflict else ("synced" if ok else "no changes")
     print(f"  {url}\n  Last: {t}\n  Status: {status}")
 
-    for folder in FOLDERS + ['agents']:
+    for folder in FOLDERS + ['scan']:
         p = SYNC_ROOT / folder
         if p.exists():
             count = len(list(p.glob('*.txt')))

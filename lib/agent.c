@@ -25,11 +25,12 @@ static int cmd_a_default(int c,char**v){
 
 /* ── agent ── */
 static int cmd_agent(int argc, char **argv) {
-    if(argc<3){char c[B];snprintf(c,B,"ls %s/agents/*.py 2>/dev/null|xargs -I{} basename {} .py|grep -v base",SROOT);
+    if(argc<3){char c[B];snprintf(c,B,"ls %s/scan/*.py 2>/dev/null|xargs -I{} basename {} .py|grep -v base",SROOT);
         return system(c);}
     if(!strcmp(argv[2],"run")&&argc>3){char f[P];
-        snprintf(f,P,"%s/agents/%s.py",SROOT,argv[3]);
-        if(!fexists(f)){printf("x Not found: %s\n",argv[3]);return 1;}
+        snprintf(f,P,"%s/scan/%s.py",SROOT,argv[3]);
+        if(!fexists(f)){snprintf(f,P,"%s/lab/platonic_agents/%s.py",SDIR,argv[3]);
+        if(!fexists(f)){printf("x Not found: %s\n",argv[3]);return 1;}}
         perf_disarm();
         CWD(wd);
         char sn[256];snprintf(sn,256,"agent-%s-%ld",argv[3],(long)time(NULL));
@@ -88,6 +89,14 @@ static int cmd_agent(int argc, char **argv) {
     char out[B*4]; tm_read(sn, out, sizeof(out));
     printf("--- Output ---\n%s\n--- End ---\n", out);
     return 0;
+}
+
+/* ── scan: a scan X → a agent run X ── */
+static int cmd_scan(int argc, char **argv) {
+    if(argc<3){char c[B];snprintf(c,B,"ls %s/scan/*.py 2>/dev/null|xargs -I{} basename {} .py|grep -v base",SROOT);return system(c);}
+    char *nv[64];nv[0]=argv[0];nv[1]=(char*)"agent";nv[2]=(char*)"run";
+    for(int i=2;i<argc&&i<61;i++)nv[i+1]=argv[i];nv[argc+1]=NULL;
+    return cmd_agent(argc+1,nv);
 }
 
 /* ── multi/all ── */

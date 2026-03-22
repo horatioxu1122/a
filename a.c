@@ -509,7 +509,7 @@ __attribute__((noreturn)) static void perf_alarm(int sig){(void)sig;
 static void perf_arm(const char *cmd) {
     if (getenv("A_BENCH")) return;
     if (isdigit(*cmd)) return;
-    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|",sk))return;}
+    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|",sk))return;}
     unsigned limit_us = 1000000;
     char pf[P]; snprintf(pf, P, "%s/perf/%s.txt", SROOT, DEV);
     {char *data = readf(pf, NULL);

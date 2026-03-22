@@ -3,7 +3,7 @@ import sys, os, subprocess as sp, json, time
 from pathlib import Path
 from _common import init_db, load_cfg, alog, DATA_DIR, DEVICE_ID, SYNC_ROOT, tm, create_sess
 
-AGENTS_DIR = Path(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))).parent / 'agents'
+SCAN_DIR = Path(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))).parent / 'scan'
 WORK_LOG = Path(DATA_DIR) / 'work_log.jsonl'
 
 def _entries():
@@ -62,7 +62,7 @@ def run():
     limit = sub if sub and sub.isdigit() else '3'
     sn = f"work-daily-{int(time.time())}"
     sp.Popen(['tmux', 'new-session', '-d', '-s', sn,
-              sys.executable, str(AGENTS_DIR / 'work.py'), limit])
+              sys.executable, str(SCAN_DIR / 'work.py'), limit])
     alog(f"work:launched {sn}")
     print(f"+ Launched: {sn}\n  Monitor: tmux attach -t {sn}\n  Log:     a work log")
 
