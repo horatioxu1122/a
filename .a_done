@@ -1,1 +1,1 @@
-test bell from new window
+fix: removed stray [B from session.c done keyword — was killing new tmux windows immediately
