@@ -140,8 +140,8 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
         {char fb[B*4];int fl=0;
         #define FP(f,...) fl+=snprintf(fb+fl,(size_t)(B*4-fl),f,##__VA_ARGS__)
         FP("\033[H\033[?25l%s> %s\033[K\n",prefix,buf);
-        if(!nm&&blen){FP("%s \033[36mGoogle: %s\033[0m\033[K\n",sel==0?" >":"  ",buf);
-            FP("%s \033[35ma c \"%s\"\033[0m\033[K\n",sel==1?" >":"  ",buf);}
+        if(!nm&&blen){FP("%s \033[35ma c \"%s\"\033[0m\033[K\n",sel==0?" >":"  ",buf);
+            FP("%s \033[36mGoogle: %s\033[0m\033[K\n",sel==1?" >":"  ",buf);}
         for(int i=0;i<show;i++){int j=top+i,W=ws.ws_col;char*t=strchr(fm[j].p,'\t');int ml=t?(int)(t-fm[j].p):(int)strlen(fm[j].p);
             if(ml>W-5)ml=W-5;FP("%s a %.*s\033[K",j==sel?" >":"  ",ml,fm[j].p);
             if(t&&ml+5+(int)strlen(t+1)<W)FP("\033[%dG\033[90m%s\033[0m",W-(int)strlen(t+1),t+1);FP("\n");}
@@ -165,9 +165,9 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
         } else if(ch=='\t'){int mx=nm?nm-1:blen?1:0;if(sel<mx)sel++;}
         else if(ch=='\x7f'||ch=='\b'){if(blen)buf[--blen]=0;sel=0;}
         else if(ch=='\r'||ch=='\n'){if(!nm&&blen){IRST;
-            if(sel==0){char u[512];snprintf(u,512,"https://google.com/search?q=%s",buf);
+            if(sel==0){char*args[]={"a","c",buf,NULL};execvp("a",args);}
+            else{char u[512];snprintf(u,512,"https://google.com/search?q=%s",buf);
                 for(char*p=u;*p;p++)if(*p==' ')*p='+';bg_exec(OPENER,u);}
-            else{char*args[]={"a","c",buf,NULL};execvp("a",args);}
             return 0;}do_pick=1;}
         else if(ch==3||ch==4)break;
         else if(isalnum(ch)||ch=='-'||ch=='_'||ch==' '||ch=='.'){if(blen<254){buf[blen++]=ch;buf[blen]=0;sel=0;}}
