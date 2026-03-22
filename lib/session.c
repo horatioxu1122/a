@@ -48,6 +48,18 @@ static void create_sess(const char *sn, const char *wd, const char *cmd) {
 static void send_prefix_bg(const char *sn, const char *agent, const char *wd, const char *extra) {
     const char *cp = strstr(agent, "claude") ? cfget("claude_prefix") : "";
     char pre[B*4]; int n = snprintf(pre, sizeof(pre), "%s%s", dprompt(), cp);
+    n += snprintf(pre+n, sizeof(pre)-(unsigned)n,
+        "\nTools (\"a\" agent manager):"
+        " a done <msg> — signal done."
+        " a help — full command list."
+        " a diff — token change vs main."
+        " a note <text> — log a note."
+        " a push [msg] — git push."
+        " a pr [title] — create PR."
+        " a cat 2 — read codebase."
+        " a ls — list running agents."
+        " a kill <name> — kill agent."
+        " sh a.c — build (O0). sh a.c check — full checkers.\n");
     char af[P]; snprintf(af, P, "%s/AGENTS.md", wd);
     char *amd = readf(af, NULL);
     if (amd) { n += snprintf(pre+n, sizeof(pre)-(unsigned)n, "%s ", amd); free(amd); }
