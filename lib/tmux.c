@@ -1,39 +1,31 @@
 /* tmux — one session "a", windows are jobs */
 #define TMS "a"
-static void tm_ensure_sess(void){
-    char c[256];snprintf(c,256,"tmux has-session -t '%s' 2>/dev/null||tmux new-session -d -s '%s'",TMS,TMS);(void)!system(c);}
+static void tm_ensure_sess(void){(void)!system("tmux has-session -t '"TMS"' 2>/dev/null||tmux new-session -d -s '"TMS"'");}
 static int tm_has(const char *w) {
-    char c[B];snprintf(c,B,"tmux list-windows -t '%s' -F '#{window_name}' 2>/dev/null|grep -qx '%s'",TMS,w);
+    char c[B];snprintf(c,B,"tmux list-windows -t '"TMS"' -F '#{window_name}' 2>/dev/null|grep -qx '%s'",w);
     return !system(c);
 }
+static void tm_t(const char*w,char*t){if(*w=='%')snprintf(t,256,"%s",w);else snprintf(t,256,TMS":%s",w);}
 static void tm_go(const char *w) {
-    perf_disarm();
-    if(getenv("TMUX")){char t[256];snprintf(t,256,"%s:%s",TMS,w);execlp("tmux","tmux","select-window","-t",t,(char*)NULL);}
-    else{char c[B];snprintf(c,B,"tmux select-window -t '%s:%s' 2>/dev/null",TMS,w);(void)!system(c);
+    perf_disarm();char t[256];tm_t(w,t);
+    if(getenv("TMUX"))execlp("tmux","tmux","select-window","-t",t,(char*)NULL);
+    else{char c[B];snprintf(c,B,"tmux select-window -t '%s' 2>/dev/null",t);(void)!system(c);
         execlp("tmux","tmux","attach","-t",TMS,(char*)NULL);}
 }
 static int tm_new(const char *w, const char *wd, const char *cmd) {
     tm_ensure_sess();char c[B*2];
-    if(cmd&&cmd[0])snprintf(c,sizeof(c),"tmux new-window -t '%s' -n '%s' -c '%s' '%s'",TMS,w,wd,cmd);
-    else snprintf(c,sizeof(c),"tmux new-window -t '%s' -n '%s' -c '%s'",TMS,w,wd);
+    if(cmd&&*cmd)snprintf(c,sizeof(c),"tmux new-window -t '"TMS"' -n '%s' -c '%s' '%s'",w,wd,cmd);
+    else snprintf(c,sizeof(c),"tmux new-window -t '"TMS"' -n '%s' -c '%s'",w,wd);
     return system(c);
 }
-static void tm_send(const char *w, const char *text) {
-    char t[256];snprintf(t,256,"%s:%s",TMS,w);
-    pid_t p=fork();
-    if(p==0){execlp("tmux","tmux","send-keys","-l","-t",t,text,(char*)NULL);_exit(1);}
-    if(p>0)waitpid(p,NULL,0);
-}
-static int tm_read(const char *w, char *buf, int len) {
-    char c[B];snprintf(c,B,"tmux capture-pane -t '%s:%s' -p 2>/dev/null",TMS,w);
-    return pcmd(c,buf,len);
-}
-static void tm_key(const char *w, const char *key) {
-    char t[256];snprintf(t,256,"%s:%s",TMS,w);
-    pid_t p=fork();
-    if(p==0){execlp("tmux","tmux","send-keys","-t",t,key,(char*)NULL);_exit(1);}
-    if(p>0)waitpid(p,NULL,0);
-}
+static void tm_sk(const char*w,const char*s,int l){char t[256];tm_t(w,t);pid_t p=fork();
+    if(p==0){if(l)execlp("tmux","tmux","send-keys","-l","-t",t,s,(char*)NULL);
+    else execlp("tmux","tmux","send-keys","-t",t,s,(char*)NULL);_exit(1);}
+    if(p>0)waitpid(p,NULL,0);}
+#define tm_send(w,s) tm_sk(w,s,1)
+#define tm_key(w,s) tm_sk(w,s,0)
+static int tm_read(const char*w,char*buf,int len){char t[256];tm_t(w,t);
+    char c[B];snprintf(c,B,"tmux capture-pane -t '%s' -p 2>/dev/null",t);return pcmd(c,buf,len);}
 /* job cmd */
 static void jcmd_fill(char*b,int cont){snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;while :;do claude --dangerously-skip-permissions%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",cont?" --continue":"",LOGDIR);}
 
