@@ -171,7 +171,6 @@ static int cmd_update(int argc, char **argv) { AB;
     /* detect dep change: a.c modified → pip/shell/node */
     int dc=0;
     if(ch&&oh[0]){snprintf(c,B,"git -C '%s' diff --name-only '%s' HEAD 2>/dev/null",SDIR,oh);char df[B];pcmd(c,df,B);dc=!!strstr(df,"a.c");}
-    if(!dc)perf_arm_for("update_code");
     init_db();load_cfg();
     snprintf(c,B,"sh '%s/a.c'",SDIR);
     if(system(c)==0){puts("\xe2\x9c\x93 Built");init_migrate();}else puts("x Build failed");
