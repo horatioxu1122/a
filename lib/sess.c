@@ -30,6 +30,14 @@ static int cmd_sess(int argc, char **argv) {
         pl+=snprintf(prompt+pl,(size_t)(B-pl),"%s%s",pl?" ":"",argv[i]);
         is_prompt = 1;
     }
+    char sn[256]; snprintf(sn, 256, "%s-%s", s->name, bname(wd));
+    if (tm_has(sn) && git_in_repo(wd)) {
+        const char*w=cfget("worktrees_dir");char wt[P],wp[P],c[B];
+        snprintf(wt,P,"%s%s",*w?w:AROOT,*w?"":"/worktrees");
+        snprintf(wp,P,"%s/%s-%ld",wt,bname(wd),(long)time(NULL));
+        snprintf(c,B,"mkdir -p '%s'&&git -C '%s' worktree add '%s' HEAD 2>/dev/null&&ln -s '%s' '%s/adata' 2>/dev/null",wt,wd,wp,AROOT,wp);
+        if(!system(c)){snprintf(wd,P,"%s",wp);snprintf(sn,256,"%s-%s",s->name,bname(wd));}
+    }
     /* Inside tmux = new window in same session */
     if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
         char c[B]; snprintf(c, B, "tmux new-window -P -F '#{pane_id}' -c '%s' 'unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT; %s'", wd, s->cmd);
@@ -41,13 +49,12 @@ static int cmd_sess(int argc, char **argv) {
         }
         return 0;
     }
-    char sn[256]; snprintf(sn, 256, "%s-%s", s->name, bname(wd));
     /* claim ghost if matches */
     {char gf[P];snprintf(gf,P,"%s/ghost",DDIR);char*gh=readf(gf,NULL);
     if(gh){gh[strcspn(gh,"\n")]=0;if(!strcmp(gh,sn)&&tm_has(sn)){unlink(gf);free(gh);
         if(is_prompt&&prompt[0]){tm_send(sn,prompt);usleep(100000);tm_key(sn,"Enter");}
         tm_go(sn);return 0;}free(gh);}}
-    /* Existing session = attach */
+    /* Existing session (no git / worktree failed) = attach */
     if (tm_has(sn)) {
         if (is_prompt && prompt[0]) {
             tm_send(sn, prompt); usleep(100000);
