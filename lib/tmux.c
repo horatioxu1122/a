@@ -57,11 +57,11 @@ static void tm_ensure_conf(void) {
         "set -g bell-action any\n"
         "set -g repeat-time 0\n"
         "set -g assume-paste-time 0\n"
-        "set -g window-style 'bg=#000000,fill=#000000'\n"
-        "set -g window-active-style 'bg=#000000,fill=#000000'\n"
+        "set -g window-style bg=black\n"
+        "set -g window-active-style bg=black\n"
         "set -g pane-border-style fg=colour238\n"
         "set -g pane-active-border-style fg=green\n"
-        "set -g status-style 'bg=#000000,fg=white,fill=#000000'\n"
+        "set -g status-style bg=black,fg=white\n"
         "set -g status-position bottom\n"
         "set -g status 2\n"
         "set -g status-right \"\"\n"
@@ -85,7 +85,7 @@ static void tm_ensure_conf(void) {
         "agent) tmux new-window \"a j a\";; "
         "win) tmux new-window;; new) tmux split-window;; "
         "close) tmux kill-pane;; "
-        "menu) tmux display-menu -x C -y S \"Side Pane\" s split-window\\ -fh Zoom z resize-pane\\ -Z Sync y set\\ synchronize-panes Rename r \"command-prompt -p Name: \\\"rename-window %%\\\"\" \\\"\\\" \\\"\\\" \\\"\\\" Quit q detach Kill x kill-session;; "
+        "menu) tmux display-menu Pane 1 \"split-window -fh\" Zoom 2 \"resize-pane -Z\" Sync 3 \"set synchronize-panes\" Rename 4 \"command-prompt \\\"rename-window %%\\\"\" Quit 5 detach Kill 6 kill-session;; "
         "kbd) tmux set -g mouse off; tmux display-message \"Mouse off 3s\"; "
         "(sleep 3; tmux set -g mouse on) &;; esac' }\n", f);
     /* Termux: /tmp is owned by shell:shell (0771), Termux app user can't mkdir
@@ -104,8 +104,6 @@ static void tm_ensure_conf(void) {
     if (vmaj > 3 || (vmaj == 3 && vmin >= 6))
         fputs("set -g pane-scrollbars on\nset -g pane-scrollbars-position right\n", f);
     fclose(f);
-    {char mp[P];snprintf(mp,P,"%s/menu.sh",adir);FILE*mf=fopen(mp,"w");
-    if(mf){fputs("printf 'Press number (Esc cancel):\\n\\n 1) Side Pane\\n 2) Zoom (fullscreen pane)\\n 3) Sync (type in all panes)\\n 4) Rename window\\n 5) Quit\\n 6) Kill Session\\n'\nread -n1 c\ncase $c in\n1) tmux split-window -fh;;\n2) tmux resize-pane -Z;;\n3) tmux set synchronize-panes;;\n4) printf \"Name: \";read n;tmux rename-window \"$n\";;\n5) tmux detach;;\n6) tmux kill-session;;\nesac\n",mf);fclose(mf);}}
     char uconf[P]; snprintf(uconf, P, "%s/.tmux.conf", HOME);
     char *uc = readf(uconf, NULL);
     if (!uc || !strstr(uc, "~/.a/tmux.conf")) {

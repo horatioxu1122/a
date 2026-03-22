@@ -276,6 +276,7 @@ exit 0
 static void mkdirp(const char *p);
 static void alog(const char *cmd, const char *cwd);
 static void perf_disarm(void);
+static void perf_arm_for(const char *);
 static int cmd_sess(int, char**);
 typedef struct{char n[64];int c;}FC;
 static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)a)->c;}
@@ -506,20 +507,17 @@ static const cmd_t CMDS[] = {
 static char perf_msg[B];
 __attribute__((noreturn)) static void perf_alarm(int sig){(void)sig;
     (void)!write(STDERR_FILENO,perf_msg,strlen(perf_msg));kill(0,SIGTERM);_exit(124);}
+static void perf_arm_for(const char *cmd) {
+    unsigned l=1000000;char pf[P];snprintf(pf,P,"%s/perf/%s.txt",SROOT,DEV);
+    {char*d=readf(pf,NULL);unsigned pl=perf_limit(d,cmd);if(pl>=500)l=pl;free(d);}
+    snprintf(perf_msg,B,"\n\033[31m✗ PERF KILL\033[0m: 'a %s' >%.1fms (%s)\n  %s\n",cmd,l/1000.0,DEV,pf);
+    signal(SIGALRM,perf_alarm);
+    {struct itimerval tv={{0,0},{(long)(l/1000000),(long)(l%1000000)}};setitimer(ITIMER_REAL,&tv,NULL);}
+}
 static void perf_arm(const char *cmd) {
-    if (getenv("A_BENCH")) return;
-    if (isdigit(*cmd)) return;
+    if(getenv("A_BENCH")||isdigit(*cmd))return;
     {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|",sk))return;}
-    unsigned limit_us = 1000000;
-    char pf[P]; snprintf(pf, P, "%s/perf/%s.txt", SROOT, DEV);
-    {char *data = readf(pf, NULL);
-    unsigned pl = perf_limit(data, cmd);
-    if (pl >= 500) limit_us = pl;
-    free(data);}
-    snprintf(perf_msg, B,
-        "\n\033[31m✗ PERF KILL\033[0m: 'a %s' >%.1fms (%s)\n  %s\n", cmd, limit_us/1000.0, DEV, pf);
-    signal(SIGALRM, perf_alarm);
-    {struct itimerval tv={{0,0},{(long)(limit_us/1000000),(long)(limit_us%1000000)}};setitimer(ITIMER_REAL,&tv,NULL);}
+    perf_arm_for(cmd);
 }
 static void perf_disarm(void) { struct itimerval z={{0,0},{0,0}};setitimer(ITIMER_REAL,&z,NULL);signal(SIGALRM,SIG_DFL); }
 static struct timespec gt0;

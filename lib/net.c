@@ -158,52 +158,44 @@ static int cmd_update(int argc, char **argv) { AB;
         gen_icache(); tm_ensure_conf();
         puts("\xe2\x9c\x93 Cache"); return 0;
     }
-    /* Pull, rebuild, exec new */
     {char g[P];snprintf(g,P,"%s/.git",SDIR);if(access(g,F_OK)!=0){puts("x Not in git repo");init_db();load_cfg();list_all(1,1);gen_icache();return 0;}}
-    char c[B];snprintf(c, B, "git -C '%s' fetch 2>/dev/null", SDIR); (void)!system(c);
-    snprintf(c, B, "git -C '%s' status -uno 2>/dev/null", SDIR);
-    char out[B]; pcmd(c, out, B);
-    if (strstr(out, "diverged")) {
-        puts("Diverged — rebasing...");
-        snprintf(c, B, "git -C '%s' pull --rebase 2>/dev/null", SDIR); (void)!system(c);
-    } else if (strstr(out, "behind")) {
-        puts("Downloading...");
-        snprintf(c, B, "git -C '%s' pull --ff-only 2>/dev/null", SDIR); (void)!system(c);
-    } else {
-        printf("\xe2\x9c\x93 Up to date\n");
+    char c[B],oh[64]={0};
+    snprintf(c,B,"git -C '%s' rev-parse HEAD 2>/dev/null",SDIR);pcmd(c,oh,64);oh[strcspn(oh,"\n")]=0;
+    snprintf(c,B,"git -C '%s' fetch 2>/dev/null",SDIR);(void)!system(c);
+    snprintf(c,B,"git -C '%s' status -uno 2>/dev/null",SDIR);char out[B];pcmd(c,out,B);
+    int ch=0;
+    if(strstr(out,"diverged")){puts("Diverged — rebasing...");snprintf(c,B,"git -C '%s' pull --rebase 2>/dev/null",SDIR);(void)!system(c);ch=1;}
+    else if(strstr(out,"behind")){puts("Downloading...");snprintf(c,B,"git -C '%s' pull --ff-only 2>/dev/null",SDIR);(void)!system(c);ch=1;}
+    /* no-op: up to date + binary exists */
+    {char b[P];snprintf(b,P,"%s/a",DDIR);if(!ch&&!access(b,X_OK)){puts("\xe2\x9c\x93 Up to date");return 0;}}
+    /* detect dep change: a.c modified → pip/shell/node */
+    int dc=0;
+    if(ch&&oh[0]){snprintf(c,B,"git -C '%s' diff --name-only '%s' HEAD 2>/dev/null",SDIR,oh);char df[B];pcmd(c,df,B);dc=!!strstr(df,"a.c");}
+    if(!dc)perf_arm_for("update_code");
+    init_db();load_cfg();
+    snprintf(c,B,"sh '%s/a.c'",SDIR);
+    if(system(c)==0){puts("\xe2\x9c\x93 Built");init_migrate();}else puts("x Build failed");
+    if(dc){
+        {char vp[P];snprintf(vp,P,"%s/venv/bin/pip",AROOT);
+         if(access(vp,X_OK)==0){snprintf(c,B,"'%s' install -q pexpect prompt_toolkit aiohttp 2>/dev/null",vp);
+          if(system(c)==0)puts("\xe2\x9c\x93 Python deps");else puts("x pip failed");}}
+        snprintf(c,B,"bash '%s/a.c' shell 2>&-;bash '%s/a.c' node 2>&-",SDIR,SDIR);(void)!system(c);
+        if(access("/data/data/com.termux",F_OK)==0){char td[P];snprintf(td,P,"%s/.tmp",HOME);mkdirp(td);
+         snprintf(c,B,"tmux set-environment -g CLAUDE_CODE_TMPDIR '%s' 2>/dev/null",td);(void)!system(c);}
     }
-    init_db(); load_cfg();
-    snprintf(c, B, "sh '%s/a.c'", SDIR);
-    if (system(c) == 0) { puts("\xe2\x9c\x93 Built"); init_migrate(); } else puts("x Build failed");
-    { char vp[P]; snprintf(vp, P, "%s/venv/bin/pip", AROOT);
-      if (access(vp, X_OK) == 0) {
-          snprintf(c, B, "'%s' install -q pexpect prompt_toolkit aiohttp 2>/dev/null", vp);
-          if (system(c) == 0) puts("\xe2\x9c\x93 Python deps"); else puts("x pip failed");
-      }
-    }
-    snprintf(c, B, "bash '%s/a.c' shell 2>&-;bash '%s/a.c' node 2>&-", SDIR, SDIR); (void)!system(c);
-    /* Termux: ensure Claude Code sandbox dir + tmux env on update */
-    if (access("/data/data/com.termux",F_OK)==0) {
-        char td[P]; snprintf(td,P,"%s/.tmp",HOME); mkdirp(td);
-        snprintf(c,B,"tmux set-environment -g CLAUDE_CODE_TMPDIR '%s' 2>/dev/null",td); (void)!system(c);
-    }
-    snprintf(c, B, "'%s/a' update cache", DDIR); (void)!system(c);
-    ensure_adata();
-    sync_repo();
-    /* rclone: append-only timestamped */
-    { char ld[P];snprintf(ld,P,"%s/git/login",AROOT);mkdirp(ld);
-      char t[64];pcmd("rclone listremotes 2>/dev/null|grep a-gdrive|head -1",t,64);
-      if(t[0]&&t[0]!='\n'){struct timespec ts;clock_gettime(CLOCK_REALTIME,&ts);struct tm*tm=localtime(&ts.tv_sec);char tf[32];strftime(tf,32,"%Y%m%dT%H%M%S",tm);
-        snprintf(c,B,"cp ~/.config/rclone/rclone.conf '%s/rclone_%s.%09ld.conf'",ld,tf,ts.tv_nsec);(void)!system(c);
-      } else {char ps[16][P];int np=listdir(ld,ps,16);char*lp=NULL;
-        for(int i=np-1;i>=0;i--)if(strstr(ps[i],"rclone_")&&strstr(ps[i],".conf")){lp=ps[i];break;}
-        if(lp){snprintf(c,B,"mkdir -p ~/.config/rclone&&cp '%s' ~/.config/rclone/rclone.conf",lp);
-          if(!system(c))puts("\xe2\x9c\x93 rclone config from sync");}}}
-    bg_backup_jsonl();
+    snprintf(c,B,"'%s/a' update cache",DDIR);(void)!system(c);
+    /* background: sync, rclone, backup */
+    {pid_t p=fork();if(p==0){setsid();int n=open("/dev/null",O_WRONLY);dup2(n,1);dup2(n,2);close(n);
+        ensure_adata();sync_repo();
+        {char ld[P];snprintf(ld,P,"%s/git/login",AROOT);mkdirp(ld);
+         char t[64];pcmd("rclone listremotes 2>/dev/null|grep a-gdrive|head -1",t,64);
+         if(t[0]&&t[0]!='\n'){struct timespec ts;clock_gettime(CLOCK_REALTIME,&ts);struct tm*tm=localtime(&ts.tv_sec);char tf[32];strftime(tf,32,"%Y%m%dT%H%M%S",tm);
+          snprintf(c,B,"cp ~/.config/rclone/rclone.conf '%s/rclone_%s.%09ld.conf'",ld,tf,ts.tv_nsec);(void)!system(c);
+         }else{char ps[16][P];int np=listdir(ld,ps,16);char*lp=NULL;
+          for(int i=np-1;i>=0;i--)if(strstr(ps[i],"rclone_")&&strstr(ps[i],".conf")){lp=ps[i];break;}
+          if(lp){snprintf(c,B,"mkdir -p ~/.config/rclone&&cp '%s' ~/.config/rclone/rclone.conf",lp);(void)!system(c);}}}
+        bg_backup_jsonl();_exit(0);}}
     hub_load();if(!hub_find("sync")){hub_t j={.en=1,.n="sync",.s="6:00",.p="a sync"};strcpy(j.d,DEV);hub_save(&j);hub_timer(&j,1);}
-    if (sub && !strcmp(sub, "all")) {
-        puts("\n--- Broadcasting to SSH hosts ---");
-        snprintf(c, B, "'%s/a' ssh all 'a update'", DDIR); (void)!system(c);
-    }
+    if(sub&&!strcmp(sub,"all")){puts("\n--- Broadcasting to SSH hosts ---");snprintf(c,B,"'%s/a' ssh all 'a update'",DDIR);(void)!system(c);}
     return 0;
 }
