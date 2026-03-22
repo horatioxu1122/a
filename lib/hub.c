@@ -4,9 +4,10 @@ typedef struct { char n[64],s[16],p[512],d[64],lr[24]; int en; } hub_t;
 static hub_t HJ[MJ]; static int NJ;
 
 #define DFL(a,b) ((a)?(a):(b))
+static char HD[P];
 static void hub_load(void) {
-    char hd[P],fp[P];snprintf(hd,P,"%s/hub",SROOT);mkdirp(hd);NJ=0;
-    snprintf(fp,P,"ls -t %s/*.txt 2>/dev/null",hd);FILE*f=popen(fp,"r");if(!f)return;
+    char fp[P];snprintf(HD,P,"%s/agents",SROOT);mkdirp(HD);NJ=0;
+    snprintf(fp,P,"ls -t %s/*.txt 2>/dev/null",HD);FILE*f=popen(fp,"r");if(!f)return;
     while(fgets(fp,P,f)&&NJ<MJ){fp[strcspn(fp,"\n")]=0;
         kvs_t kv=kvfile(fp);const char*nm=kvget(&kv,"Name");if(!nm)continue;
         int di=0;for(;di<NJ&&strcmp(HJ[di].n,nm);di++){} if(di<NJ)continue;
@@ -16,10 +17,10 @@ static void hub_load(void) {
 }
 
 static void hub_save(hub_t *j) {
-    char hd[P],fn[P],buf[B]; snprintf(hd,P,"%s/hub",SROOT); mkdirp(hd);
-    {char c[B];snprintf(c,B,"rm -f '%s'/%s_*.txt",hd,j->n);(void)!system(c);}
+    char fn[P],buf[B];
+    {char c[B];snprintf(c,B,"rm -f '%s'/%s_*.txt",HD,j->n);(void)!system(c);}
     struct timespec t;clock_gettime(CLOCK_REALTIME,&t);struct tm*tm=localtime(&t.tv_sec);
-    char ts[32];strftime(ts,32,"%Y%m%dT%H%M%S",tm);snprintf(fn,P,"%s/%s_%s.%09ld.txt",hd,j->n,ts,t.tv_nsec);
+    char ts[32];strftime(ts,32,"%Y%m%dT%H%M%S",tm);snprintf(fn,P,"%s/%s_%s.%09ld.txt",HD,j->n,ts,t.tv_nsec);
     int l=snprintf(buf,B,"Name: %s\nSchedule: %s\nPrompt: %s\nDevice: %s\nEnabled: %s\n",
         j->n,j->s,j->p,j->d,j->en?"true":"false");
     if(j->lr[0]) snprintf(buf+l,(size_t)(B-l),"Last-Run: %s\n",j->lr);
@@ -96,7 +97,6 @@ static hub_t *hub_find(const char *s) {
 static int cmd_hub(int argc, char **argv) {
     init_db(); hub_load();
     const char *sub=argc>2?argv[2]:NULL;
-    char hd[P]; snprintf(hd,P,"%s/agents",SROOT);
 
     if(!sub||!strcmp(sub,"all")) {
         int all=sub&&!strcmp(sub,"all");
@@ -151,7 +151,7 @@ static int cmd_hub(int argc, char **argv) {
             printf("\xe2\x9c\x93 %s %s\n",j->n,sub); return 0;
         }
         hub_timer(j,0);/* rm all versions */
-        {char c[B];snprintf(c,B,"rm -f '%s'/%s*.txt",hd,j->n);(void)!system(c);}
+        {char c[B];snprintf(c,B,"rm -f '%s'/%s*.txt",HD,j->n);(void)!system(c);}
         sync_repo(); printf("\xe2\x9c\x93 rm %s\n",j->n); return 0;
     }
 

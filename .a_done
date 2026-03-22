@@ -1,1 +1,1 @@
-fix: removed stray [B from session.c done keyword — was killing new tmux windows immediately
+C-j/C-k prev/next window bindings live in tmux. Test with Ctrl+J and Ctrl+K.

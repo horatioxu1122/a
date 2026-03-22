@@ -50,6 +50,7 @@ static void tm_ensure_conf(void) {
         "set-hook -g alert-bell 'run-shell \"osascript -e \\\"display notification \\\\\\\"#{hook_window_name}\\\\\\\" with title \\\\\\\"a: done\\\\\\\"\\\"\"'\n"
         "set -g repeat-time 0\n"
         "set -s extended-keys on\n"
+        "set -as terminal-features 'xterm*:extkeys'\n"
         "set -g assume-paste-time 0\n"
         "set -g window-style bg=#000000\n"
         "set -g window-active-style bg=#000000\n"
@@ -63,6 +64,9 @@ static void tm_ensure_conf(void) {
         "set -g status-format[1] \"#[align=centre]#[range=user|aa]a#[norange] #[range=user|agent]Agent#[norange] #[range=user|win]Win#[norange] #[range=user|new]Pane#[norange] #[range=user|close]Close#[norange] #[range=user|menu] ... #[norange]#[align=right]#[range=user|kbd]Kb#[norange]\"\n"
         "bind-key -n M-Right next-window\n"
         "bind-key -n M-Left previous-window\n"
+        /* C-Tab/C-S-Tab won't work: Tab=0x09=C-i, so C-Tab is indistinguishable from Tab */
+        "bind-key -n C-k next-window\n"
+        "bind-key -n C-j previous-window\n"
         "bind-key -n C-n new-window\n"
         "bind-key -n C-t new-window\n"
         "bind-key -n C-y split-window -fh\n"
