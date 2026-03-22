@@ -74,7 +74,7 @@ static void tm_ensure_conf(void) {
         "prev) tmux previous-window;; next) tmux next-window;; "
         "aa) tmux new-window \"a\";; "
         "agent) tmux new-window \"a j a\";; "
-        "win) tmux new-window;; new) tmux split-window;; "
+        "win) tmux new-window;; new) if [ $(tmux display -p \"#{window_panes}\") -gt 1 ];then tmux kill-pane;else tmux split-window;fi;; "
         "close) tmux kill-window;; "
         "menu) tmux display-menu Pane 1 \"split-window -fh\" Zoom 2 \"resize-pane -Z\" Sync 3 \"set synchronize-panes\" Rename 4 \"command-prompt \\\"rename-window %%\\\"\" Quit 5 detach Kill 6 kill-session;; "
         "kbd) tmux set -g mouse off; tmux display-message \"Mouse off 3s\"; "
