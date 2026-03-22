@@ -14,8 +14,8 @@ static void tm_go(const char *w) {
 }
 static int tm_new(const char *w, const char *wd, const char *cmd) {
     tm_ensure_sess();char c[B*2];
-    if(cmd&&*cmd)snprintf(c,sizeof(c),"tmux new-window -t '"TMS"' -n '%s' -c '%s' '%s'",w,wd,cmd);
-    else snprintf(c,sizeof(c),"tmux new-window -t '"TMS"' -n '%s' -c '%s'",w,wd);
+    if(cmd&&*cmd)snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s' '%s'",w,wd,cmd);
+    else snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s'",w,wd);
     return system(c);
 }
 static void tm_sk(const char*w,const char*s,int l){char t[256];tm_t(w,t);pid_t p=fork();
@@ -47,6 +47,7 @@ static void tm_ensure_conf(void) {
         "set -s set-clipboard on\n"
         "set -g visual-bell off\n"
         "set -g bell-action any\n"
+        "set-hook -g alert-bell 'run-shell \"osascript -e \\\"display notification \\\\\\\"#{hook_window_name}\\\\\\\" with title \\\\\\\"a: done\\\\\\\"\\\"\"'\n"
         "set -g repeat-time 0\n"
         "set -s extended-keys on\n"
         "set -g assume-paste-time 0\n"
@@ -58,7 +59,7 @@ static void tm_ensure_conf(void) {
         "set -g status-position bottom\n"
         "set -g status 2\n"
         "set -g status-right \"\"\n"
-        "set -g status-format[0] \"#[align=left]#{?#{e|>:#{session_windows},1},#[range=user|prev]  <  #[norange],}#[align=centre]#{W:#[range=window|#{window_index}]#{?window_active,#[fg=colour232 bg=colour231 bold] ,#[fg=colour231 bg=colour243] } #I:#W #{?window_active, , }#[default]#[norange]}#[align=right]#{?#{e|>:#{session_windows},1},#[range=user|next]  >  #[norange],}\"\n"
+        "set -g status-format[0] \"#[align=left]#{?#{e|>:#{session_windows},1},#[range=user|prev]  <  #[norange],}#[align=centre]#{W:#[range=window|#{window_index}]#{?window_bell_flag,#[fg=white bg=red bold],#{?window_active,#[fg=colour232 bg=colour231 bold],#[fg=colour231 bg=colour243]}} #{?window_bell_flag,\\U0001F534 ,}#I:#W #{?window_active, , }#[default]#[norange]}#[align=right]#{?#{e|>:#{session_windows},1},#[range=user|next]  >  #[norange],}\"\n"
         "set -g status-format[1] \"#[align=centre]#[range=user|aa]a#[norange] #[range=user|agent]Agent#[norange] #[range=user|win]Win#[norange] #[range=user|new]Pane#[norange] #[range=user|close]Close#[norange] #[range=user|menu] ... #[norange]#[align=right]#[range=user|kbd]Kb#[norange]\"\n"
         "bind-key -n M-Right next-window\n"
         "bind-key -n M-Left previous-window\n"

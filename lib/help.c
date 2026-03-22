@@ -166,7 +166,7 @@ static int cmd_done(int argc,char**argv){AB;
         if(!system(gc))puts("+ PR created");
         snprintf(gc,B,"cd '%s'&&a diff main 2>/dev/null",wd);pcmd(gc,ad,B);
         snprintf(gc,B,"a email '[a job] %s' '%s\n%s'",bname(wd),msg[0]?msg:"done",ad);(void)!system(gc);}
-    puts("\xe2\x9c\x93 done");return 0;}
+    (void)!write(STDOUT_FILENO,"\a",1);puts("\xe2\x9c\x93 done");return 0;}
 
 static int cmd_dir(int c,char**v){(void)c;(void)v;char w[P];if(getcwd(w,P))puts(w);execlp("ls","ls",(char*)0);return 1;}
 static int cmd_x(int c,char**v){(void)c;(void)v;(void)!system("tmux kill-server 2>/dev/null");puts("\xe2\x9c\x93 All sessions killed");return 0;}
