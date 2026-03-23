@@ -1,4 +1,4 @@
-/* fork — independent local clones */
+/* fork — independent local copies, git remote intact for direct push */
 static int in_fork(const char *p) { return strstr(p, "/adata/forks/") != NULL; }
 
 static int cmd_fork(int argc, char **argv) {
@@ -24,23 +24,6 @@ static int cmd_fork(int argc, char **argv) {
         printf("\xe2\x9c\x93 rm %s\n",argv[3]); return 0;
     }
 
-    if(!strcmp(sub,"merge")) {
-        if(argc<4){fprintf(stderr,"Usage: a fork merge <name>\n");return 1;}
-        char fp[P]; snprintf(fp,P,"%s/%s",fd,argv[3]);
-        struct stat st; if(stat(fp,&st)){fprintf(stderr,"x %s?\n",argv[3]);return 1;}
-        char c[B]; snprintf(c,B,"git -C '%s' fetch origin 2>/dev/null;git -C '%s' diff origin/main..HEAD -- ':!adata' 2>/dev/null",fp,fp);
-        FILE*f=popen(c,"r"); if(!f){perror("popen");return 1;}
-        char patch[P]; snprintf(patch,P,"%s/.fork-patch",AROOT);
-        FILE*pf=fopen(patch,"w"); char b[B];
-        int bytes=0; while(fgets(b,B,f)){fputs(b,pf);bytes+=(int)strlen(b);}
-        fclose(pf); pclose(f);
-        if(!bytes){puts("no changes to merge");unlink(patch);return 0;}
-        snprintf(c,B,"git -C '%s' apply --stat '%s' && git -C '%s' apply '%s'",SDIR,patch,SDIR,patch);
-        int r=system(c); unlink(patch);
-        if(r){fprintf(stderr,"x apply failed — resolve manually\n");return 1;}
-        printf("\xe2\x9c\x93 merged %s\n",argv[3]); return 0;
-    }
-
     if(!strcmp(sub,"run")) {
         if(argc<5){fprintf(stderr,"Usage: a fork run <name> <cmd...>\n");return 1;}
         char fp[P]; snprintf(fp,P,"%s/%s",fd,argv[3]);
@@ -49,13 +32,13 @@ static int cmd_fork(int argc, char **argv) {
         execvp(argv[4],argv+4);perror(argv[4]);return 1;
     }
 
-    /* a fork <name> — create */
+    /* a fork <name> — create via local copy, keeps git remote for direct push */
     char fp[P]; snprintf(fp,P,"%s/%s",fd,sub);
     struct stat st; if(!stat(fp,&st)){printf("exists: %s\n",fp);
         char tf[P];snprintf(tf,P,"%s/cd_target",DDIR);writef(tf,fp);return 0;}
-    char c[B]; snprintf(c,B,"git clone '%s' '%s' 2>&1",SDIR,fp);
-    if(system(c)){fprintf(stderr,"x clone failed\n");return 1;}
-    snprintf(c,B,"ln -s '%s' '%s/adata'",AROOT,fp); (void)!system(c);
+    char c[B]; snprintf(c,B,"cp -r '%s' '%s'",SDIR,fp);
+    if(system(c)){fprintf(stderr,"x copy failed\n");return 1;}
+    snprintf(c,B,"rm -f '%s/adata' && ln -s '%s' '%s/adata'",fp,AROOT,fp); (void)!system(c);
     printf("\xe2\x9c\x93 %s\n",fp);
     char tf[P];snprintf(tf,P,"%s/cd_target",DDIR);writef(tf,fp);
     return 0;

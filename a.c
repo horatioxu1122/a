@@ -96,6 +96,7 @@ _checkers() {
 case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
 build) _PT=${EPOCHREALTIME/./}
+    # forks/worktrees: compile locally, skip global symlink — bare "a" runs main binary, "./a" runs fork binary
     R="${D%%/adata/worktrees/*}"; R="${R%%/adata/forks/*}"; if [[ "$D" == *"/adata/worktrees/"* || "$D" == *"/adata/forks/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
     BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
     rm -f "$ABIN/.chk"
@@ -272,7 +273,7 @@ exit 0
 /* amalgamation — LLM index: read this to navigate the codebase from a.c alone
    globals(paths) init(device,db) util(readf,writef,pcmd,mkdirp,clip) kv(ini config)
    data(load projects/tasks/notes/sessions) tmux(tm_new/go/send, jcmd_fill, one session "a")
-   git(in_repo,root) fork(clone,rm,merge,run) session(agent launch,send_prefix_bg,crash loop)
+   git(in_repo,root) fork(copy,rm,run) session(agent launch,send_prefix_bg,crash loop)
    alog(activity) help(TUI picker) project(by number) config(agent/model/key settings)
    push(git push+tok diff) hub(multi-device fleet) ls(windows,kill,copy,watch,job review)
    note(notes+tasks CRUD) ssh(devices) net(sync,backup,email) cal agent(review,scan) file cc
@@ -293,7 +294,7 @@ static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)
 #include "lib/data.c"     /* load proj/cfg/sess/notes */
 #include "lib/tmux.c"     /* tm_new/go/send, jcmd_fill */
 #include "lib/git.c"      /* git_in_repo, git_root */
-#include "lib/fork.c"     /* fork clone/rm/merge/run */
+#include "lib/fork.c"     /* fork copy/rm/run */
 #include "lib/session.c"  /* agent launch, send_prefix_bg */
 #include "lib/alog.c"     /* activity logging */
 #include "lib/help.c"     /* help, TUI picker */
