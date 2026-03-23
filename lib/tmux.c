@@ -14,8 +14,8 @@ static void tm_go(const char *w) {
 }
 static int tm_new(const char *w, const char *wd, const char *cmd) {
     tm_ensure_sess();char c[B*2];
-    if(cmd&&*cmd)snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s' '%s' \\; set-option -w automatic-rename off",w,wd,cmd);
-    else snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s' \\; set-option -w automatic-rename off",w,wd);
+    if(cmd&&*cmd)snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s' '%s'",w,wd,cmd);
+    else snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s'",w,wd);
     return system(c);
 }
 static void tm_sk(const char*w,const char*s,int l){char t[256];tm_t(w,t);pid_t p=fork();
@@ -48,6 +48,7 @@ static void tm_ensure_conf(void) {
         "set -g visual-bell off\n"
         "set -g bell-action any\n"
         "set-hook -g alert-bell 'run-shell \"osascript -e \\\"display notification \\\\\\\"#{hook_window_name}\\\\\\\" with title \\\\\\\"a: done\\\\\\\"\\\"\"'\n"
+        "set -g automatic-rename off\n"
         "set -g repeat-time 0\n"
         "set -s extended-keys on\n"
         "set -as terminal-features 'xterm*:extkeys'\n"

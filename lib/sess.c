@@ -41,7 +41,7 @@ static int cmd_sess(int argc, char **argv) {
     }}
     /* Inside tmux = new window in same session */
     if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
-        char ac[B];if(in_fork(wd)){const char*fk=strstr(wd,"/adata/forks/")+13;snprintf(ac,B,"a fork run '%s' %s",fk,s->cmd);}else snprintf(ac,B,"%s",s->cmd);
+        char ac[B];if(in_fork(wd)){const char*fk=strstr(wd,"/adata/forks/")+13;snprintf(ac,B,"a fork run %s %s",fk,s->cmd);}else snprintf(ac,B,"%s",s->cmd);
         char c[B]; snprintf(c, B, "tmux new-window -P -F '#{pane_id}' -c '%s' 'unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT; %s'", wd, ac);
         char pid[64]; pcmd(c, pid, 64); pid[strcspn(pid,"\n")] = 0;
         if (pid[0]) {
