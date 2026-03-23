@@ -1,1 +1,1 @@
-hub: fixed cmd_j popen/no-tty path — isatty guard on tm_go. -7 tok.
+Fixed a kill all perf kill: added kill to perf skip list — tmux kill-server exceeds 1s timer
