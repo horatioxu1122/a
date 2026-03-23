@@ -43,7 +43,8 @@ _shell_funcs() {
         touch "$RC" 2>/dev/null || { warn "can't write $RC (skip)"; continue; }
         grep -q '.local/bin' "$RC" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$RC"
         sed -i.bak '/^_ADD=/d;/^a() {/,/^}/d;/^aio() /d;/^ai() /d;/aios/d' "$RC";rm "$RC.bak"
-        echo "_ADD=\"${D%%/adata/worktrees/*}/adata/local\"" >> "$RC"
+        _R="${D%%/adata/worktrees/*}"; _R="${_R%%/adata/forks/*}"
+        echo "_ADD=\"$_R/adata/local\"" >> "$RC"
         cat >> "$RC" << 'AFUNC'
 a() {
     local dd="$_ADD"
@@ -95,7 +96,7 @@ _checkers() {
 case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
 build) _PT=${EPOCHREALTIME/./}
-    R="${D%%/adata/worktrees/*}"; if [[ "$D" == *"/adata/worktrees/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
+    R="${D%%/adata/worktrees/*}"; R="${R%%/adata/forks/*}"; if [[ "$D" == *"/adata/worktrees/"* || "$D" == *"/adata/forks/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
     BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
     rm -f "$ABIN/.chk"
     printf '%s' $$ > "$ABIN/.bld"
@@ -110,7 +111,7 @@ build) _PT=${EPOCHREALTIME/./}
     else
         _ensure_cc; E=$($CC $_Q -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { _build_fix "$E"; exit 1; }
     fi
-    [[ "$D" != *"/adata/worktrees/"* ]] && ln -sf "$ABIN/a" "$BIN/a"; _perf_chk build
+    [[ "$D" != *"/adata/worktrees/"* && "$D" != *"/adata/forks/"* ]] && ln -sf "$ABIN/a" "$BIN/a"; _perf_chk build
     [[ -d /data/data/com.termux ]]&&/system/bin/cmd package query-activities --brief --user 0 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER 2>/dev/null|awk '/\//{gsub(/^ +/,"");p=$0;sub(/\/.*/,"",p);sub(/.*\./,"",p);printf"open %s\t%s · app\n",$0,p}'>$ABIN/apps.txt&
     (
         T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\""
@@ -129,10 +130,10 @@ build) _PT=${EPOCHREALTIME/./}
 # sh a.c check — build + run all checkers foreground, exit 0 on pass.
 # Use 'sh a.c' for fast iteration, 'sh a.c check' before presenting to user.
 check) _PT=${EPOCHREALTIME/./}
-    R="${D%%/adata/worktrees/*}"; if [[ "$D" == *"/adata/worktrees/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
+    R="${D%%/adata/worktrees/*}"; R="${R%%/adata/forks/*}"; if [[ "$D" == *"/adata/worktrees/"* || "$D" == *"/adata/forks/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
     BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
     _ensure_cc; E=$($CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { echo "$E"; exit 1; }
-    [[ "$D" != *"/adata/worktrees/"* ]] && ln -sf "$ABIN/a" "$BIN/a"
+    [[ "$D" != *"/adata/worktrees/"* && "$D" != *"/adata/forks/"* ]] && ln -sf "$ABIN/a" "$BIN/a"
     T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\"";_warn_flags
     _checkers
     if ls "$T"/[0-9].f "$T"/1[0-9].f &>/dev/null 2>&1;then cat "$T"/[0-9] "$T"/1[0-9] 2>/dev/null; exit 1
@@ -291,6 +292,7 @@ static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)
 #include "lib/config.c"
 #include "lib/push.c"
 #include "lib/hub.c"
+#include "lib/fork.c"
 #include "lib/ls.c"
 #include "lib/note.c"
 #include "lib/ssh.c"
@@ -478,7 +480,7 @@ static const cmd_t CMDS[] = {
     {"cal",cmd_cal},{"cat",cmd_cat},{"cc",cmd_cc},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},
     {"d",cmd_diff},{"deps",cmd_deps},{"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
-    {"e",cmd_e},{"email",cmd_email},{"file",cmd_get},{"freq",cmd_freq},
+    {"e",cmd_e},{"email",cmd_email},{"file",cmd_get},{"fork",cmd_fork},{"freq",cmd_freq},
     {"help",cmd_help_full},{"hi",cmd_hi},{"hub",cmd_hub},{"i",cmd_i},
     {"install",cmd_install},{"j",cmd_j},{"job",cmd_job},{"jobs",cmd_job},
     {"kill",cmd_kill},{"log",cmd_log},{"login",cmd_login},{"ls",cmd_ls},

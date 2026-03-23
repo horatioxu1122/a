@@ -15,6 +15,7 @@ static void init_paths(void) {
         if (s) { *s = 0;
             {char *al=strstr(self,"/adata/local");if(al)*al=0;}
             {char *wt=strstr(self,"/adata/worktrees/");if(wt)*wt=0;}
+            {char *fk=strstr(self,"/adata/forks/");if(fk)*fk=0;}
             snprintf(SDIR, P, "%s", self);
             snprintf(AROOT, P, "%s/adata", self);
             snprintf(SROOT, P, "%s/git", AROOT);
