@@ -22,9 +22,11 @@ static void fallback_py(const char *mod, int argc, char **argv) {
 /* session create */
 static void create_sess(const char *sn, const char *wd, const char *cmd) {
     int ai = cmd && (strstr(cmd,"claude") || strstr(cmd,"codex") || strstr(cmd,"gemini") || strstr(cmd,"aider"));
+    char acmd[B];snprintf(acmd,B,"%s",cmd?cmd:"");
+    if(ai&&in_fork(wd)){const char*fk=strstr(wd,"/adata/forks/")+13;snprintf(acmd,B,"a fork run '%s' %s",fk,cmd);}
     char wcmd[B*2];
     if (ai) snprintf(wcmd, sizeof(wcmd),
-        "unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT;while :;do %s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo -e \"\\n! crash $e [R]estart/[Q]uit:\";read -n1 k;[[ $k =~ [Rr] ]]||break;done", cmd, LOGDIR);
+        "unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT;while :;do %s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo -e \"\\n! crash $e [R]estart/[Q]uit:\";read -n1 k;[[ $k =~ [Rr] ]]||break;done", acmd, LOGDIR);
     else snprintf(wcmd, sizeof(wcmd), "%s", cmd ? cmd : "");
     tm_ensure_conf();
     tm_new(sn, wd, wcmd);

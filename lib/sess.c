@@ -31,17 +31,18 @@ static int cmd_sess(int argc, char **argv) {
         is_prompt = 1;
     }
     char sn[256]; snprintf(sn, 256, "%s-%s", s->name, bname(wd));
-    const char*w=cfget("worktrees_dir");
-    if ((tm_has(sn)||(*w&&strstr(wd,w))) && git_in_repo(wd)) {
-        char wt[P],wp[P],c[B];
-        snprintf(wt,P,"%s%s",*w?w:AROOT,*w?"":"/worktrees");
-        snprintf(wp,P,"%s/%s-%ld",wt,bname(wd),(long)time(NULL));
-        snprintf(c,B,"mkdir -p '%s'&&git -C '%s' worktree add -b 'wt-%s' '%s' HEAD 2>/dev/null",wt,wd,bname(wp),wp);
-        if(!system(c)){snprintf(wd,P,"%s",wp);snprintf(sn,256,"%s-%s",s->name,bname(wd));}
-    }
+    {char fkd[P];snprintf(fkd,P,"%s/forks",AROOT);
+    if ((tm_has(sn)||strstr(wd,fkd)) && git_in_repo(wd)) {
+        char fn[256],fk[P],c[B];
+        snprintf(fn,256,"%s-%ld",bname(wd),(long)time(NULL));
+        snprintf(fk,P,"%s/%s",fkd,fn);
+        snprintf(c,B,"git clone '%s' '%s' >/dev/null 2>&1&&ln -sf '%s' '%s/adata'",wd,fk,AROOT,fk);
+        if(!system(c)){snprintf(wd,P,"%s",fk);snprintf(sn,256,"%s-%s",s->name,fn);}
+    }}
     /* Inside tmux = new window in same session */
     if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
-        char c[B]; snprintf(c, B, "tmux new-window -P -F '#{pane_id}' -c '%s' 'unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT; %s'", wd, s->cmd);
+        char ac[B];if(in_fork(wd)){const char*fk=strstr(wd,"/adata/forks/")+13;snprintf(ac,B,"a fork run '%s' %s",fk,s->cmd);}else snprintf(ac,B,"%s",s->cmd);
+        char c[B]; snprintf(c, B, "tmux new-window -P -F '#{pane_id}' -c '%s' 'unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT; %s'", wd, ac);
         char pid[64]; pcmd(c, pid, 64); pid[strcspn(pid,"\n")] = 0;
         if (pid[0]) {
             snprintf(c, B, "tmux split-window -v -t '%s' -c '%s' 'sh -c \"ls;exec $SHELL\"'", pid, wd); (void)!system(c);
@@ -55,7 +56,7 @@ static int cmd_sess(int argc, char **argv) {
     if(gh){gh[strcspn(gh,"\n")]=0;if(!strcmp(gh,sn)&&tm_has(sn)){unlink(gf);free(gh);
         if(is_prompt&&prompt[0]){tm_send(sn,prompt);usleep(100000);tm_key(sn,"Enter");}
         tm_go(sn);return 0;}free(gh);}}
-    /* Existing session (no git / worktree failed) = attach */
+    /* Existing session (no git / fork failed) = attach */
     if (tm_has(sn)) {
         if (is_prompt && prompt[0]) {
             tm_send(sn, prompt); usleep(100000);

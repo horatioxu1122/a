@@ -27,7 +27,7 @@ static void tm_sk(const char*w,const char*s,int l){char t[256];tm_t(w,t);pid_t p
 static int tm_read(const char*w,char*buf,int len){char t[256];tm_t(w,t);
     char c[B];snprintf(c,B,"tmux capture-pane -t '%s' -p 2>/dev/null",t);return pcmd(c,buf,len);}
 /* job cmd */
-static void jcmd_fill(char*b,int cont){snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;while :;do claude --dangerously-skip-permissions%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done;git add -A&&git diff --cached --quiet 2>/dev/null||{m=$(head -1 .a_done 2>/dev/null||echo done);git commit -m \"job: $m\"&&git push -u origin HEAD 2>/dev/null&&gh pr create --fill 2>/dev/null&&a email \"[a job] $(basename $PWD)\" \"$m\";}",cont?" --continue":"",LOGDIR);}
+static void jcmd_fill(char*b,int cont,const char*wd){char fp[128]="";{const char*fk=strstr(wd,"/adata/forks/");if(fk)snprintf(fp,128,"a fork run '%s' ",fk+13);}snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;while :;do %sclaude --dangerously-skip-permissions%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done;git add -A&&git diff --cached --quiet 2>/dev/null||{m=$(head -1 .a_done 2>/dev/null||echo done);git commit -m \"job: $m\"&&git push -u origin HEAD 2>/dev/null&&gh pr create --fill 2>/dev/null&&a email \"[a job] $(basename $PWD)\" \"$m\";}",fp,cont?" --continue":"",LOGDIR);}
 
 static void tm_ensure_conf(void) {
     if (strcmp(cfget("tmux_conf"), "y") != 0) return;

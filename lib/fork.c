@@ -1,4 +1,6 @@
-/* fork — independent local clones sharing adata */
+/* fork — independent local clones with bwrap isolation */
+static int in_fork(const char *p) { return strstr(p, "/adata/forks/") != NULL; }
+
 static int cmd_fork(int argc, char **argv) {
     char fd[P]; snprintf(fd,P,"%s/forks",AROOT); mkdirp(fd);
     const char *sub=argc>2?argv[2]:NULL;

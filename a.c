@@ -285,6 +285,7 @@ static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)
 #include "lib/data.c"
 #include "lib/tmux.c"
 #include "lib/git.c"
+#include "lib/fork.c"
 #include "lib/session.c"
 #include "lib/alog.c"
 #include "lib/help.c"
@@ -292,7 +293,6 @@ static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)
 #include "lib/config.c"
 #include "lib/push.c"
 #include "lib/hub.c"
-#include "lib/fork.c"
 #include "lib/ls.c"
 #include "lib/note.c"
 #include "lib/ssh.c"
@@ -397,27 +397,26 @@ static int cmd_j(int c,char**v){
     if(c>3&&!strcmp(v[2],"--resume")){snprintf(wd,P,"%s",v[3]);
         if(!dexists(wd)){printf("x %s not found\n",wd);return 1;}
         printf("+ resume: %s\n",wd);
-        tm_ensure_conf();char jcmd[B];jcmd_fill(jcmd,1);
+        tm_ensure_conf();char jcmd[B];jcmd_fill(jcmd,1,wd);
         if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",bname(wd));tm_new(sn,wd,jcmd);tm_go(sn);}
         else{char cm[B],pid[64];snprintf(cm,B,"tmux new-window -t '%s:' -P -F '#{pane_id}' -c '%s' '%s'",TMS,wd,jcmd);pcmd(cm,pid,64);}
         return 0;}
     int si=2,nowt=0;if(c>3&&v[2][0]>='0'&&v[2][0]<='9'){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
     char pr[B]="";int pl=0;for(int i=si;i<c;i++){if(!strcmp(v[i],"--no-wt")){nowt=1;continue;}pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);}
     if(!nowt&&git_in_repo(wd)){
-        char wt[P];{const char*w=cfget("worktrees_dir");snprintf(wt,P,"%s%s",w[0]?w:AROOT,w[0]?"":"/worktrees");}
+        char fkd[P];snprintf(fkd,P,"%s/forks",AROOT);mkdirp(fkd);
         time_t now=time(NULL);struct tm*t=localtime(&now);char ts[16];
         strftime(ts,16,"%b%d",t);for(char*p=ts;*p;p++)*p=(*p>='A'&&*p<='Z')?*p+32:*p;
-        int h=t->tm_hour%12;if(!h)h=12;char nm[64],wp[P],gc[B];
+        int h=t->tm_hour%12;if(!h)h=12;char nm[64],fp[P],gc[B];
         snprintf(nm,64,"%s-%s-%d%02d%02d%s",bname(wd),ts,h,t->tm_min,t->tm_sec,t->tm_hour>=12?"pm":"am");
-        snprintf(wp,P,"%s/%s",wt,nm);
-        snprintf(gc,B,"mkdir -p '%s'&&git -C '%s' worktree add -b 'j-%s' '%s' HEAD 2>/dev/null",wt,wd,nm,wp);
-        if(!system(gc)){char sl[B];snprintf(sl,B,"ln -s '%s' '%s/adata' 2>/dev/null",AROOT,wp);(void)!system(sl);
-            printf("+ %s\n",wp);snprintf(wd,P,"%s",wp);}
+        snprintf(fp,P,"%s/%s",fkd,nm);
+        snprintf(gc,B,"git clone '%s' '%s' >/dev/null 2>&1&&ln -sf '%s' '%s/adata'",wd,fp,AROOT,fp);
+        if(!system(gc)){printf("+ %s\n",fp);snprintf(wd,P,"%s",fp);}
     }
     printf("+ job: %s\n  %.*s\n",bname(wd),80,pr);
     if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: write .a_done with summary + test commands");
     tm_ensure_conf();
-    char jcmd[B];jcmd_fill(jcmd,0);
+    char jcmd[B];jcmd_fill(jcmd,0,wd);
     if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",bname(wd));
         tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);if(isatty(0))tm_go(sn);return 0;}
     char cm[B],pid[64];
@@ -512,7 +511,7 @@ static void perf_arm_for(const char *cmd) {
 }
 static void perf_arm(const char *cmd) {
     if(getenv("A_BENCH")||isdigit(*cmd))return;
-    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|review|",sk))return;}
+    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|review|fork|",sk))return;}
     perf_arm_for(cmd);
 }
 static void perf_disarm(void) { struct itimerval z={{0,0},{0,0}};setitimer(ITIMER_REAL,&z,NULL);signal(SIGALRM,SIG_DFL); }

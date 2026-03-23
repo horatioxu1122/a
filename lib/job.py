@@ -1,6 +1,6 @@
-"""a job — full lifecycle: worktree → agent → PR → email
+"""a job — full lifecycle: fork → agent (bwrap isolated) → PR → email
 Usage: a job <project|path> <prompt> [--device DEV] [--agent c|g|l]
-Flow: create worktree branch, launch agent session with prompt, wait for completion,
+Flow: create fork clone, launch agent in bwrap isolation with prompt, wait for completion,
       git add+commit, gh pr create, email PR URL. Works locally or via SSH.
 Logs: two types — tmux visual capture (small, git-synced in adata/git/jobs/*.log)
       and claude JSONL transcripts (large, backed up to adata/backup/{device}/ for rclone)."""
@@ -142,7 +142,7 @@ def run():
         if args[i] == '--watch' or args[i] == '-w': watch = True; i += 1
         elif args[i] == '--no-prefix': use_prefix = False; i += 1
         elif args[i] == '--no-agents': use_agents = False; i += 1
-        elif args[i] == '--no-worktree': no_wt = True; i += 1
+        elif args[i] in ('--no-worktree','--no-fork'): no_wt = True; i += 1
         elif args[i] == '--bg': bg = True; i += 1
         elif args[i] == '--prompt-file' and i+1 < len(args): pfile = args[i+1]; i += 2
         elif args[i] == '--model' and i+1 < len(args): model = args[i+1]; i += 2
@@ -177,9 +177,9 @@ def run():
     now = datetime.now()
     ts = now.strftime('%b%d-%-I%M%p').lower()  # feb20-517am
     jn = f'{rn}-{ts}'
-    wt = cfg.get('worktrees_dir', str(ADATA_ROOT / 'worktrees'))
-    wp = os.path.join(wt, jn)
-    if os.path.exists(wp): jn += '-2'; wp = os.path.join(wt, jn)
+    fkd = str(ADATA_ROOT / 'forks')
+    wp = os.path.join(fkd, jn)
+    if os.path.exists(wp): jn += '-2'; wp = os.path.join(fkd, jn)
     br = f'job-{jn}'
     sn = f'job-{jn}'
 
@@ -187,21 +187,23 @@ def run():
     print(f"Job: {jn}\n  Repo: {rn}\n  Agent: {ak}\n  Device: {dev or 'local'}\n  Prompt: {prompt[:80]}")
 
     if dev: _run_remote(dev, ak, proj, rn, prompt, jn, br, ts, sn)
-    else: _run_local(ak, proj, rn, prompt, jn, br, wp if not no_wt else proj, wt, sn, watch, timeout, no_wt, bg, model)
+    else: _run_local(ak, proj, rn, prompt, jn, br, wp if not no_wt else proj, fkd, sn, watch, timeout, no_wt, bg, model)
 
-def _run_local(ak, proj, rn, prompt, jn, br, wp, wt, sn, watch=False, timeout=600, no_wt=False, bg=False, model=''):
+def _run_local(ak, proj, rn, prompt, jn, br, wp, fkd, sn, watch=False, timeout=600, no_wt=False, bg=False, model=''):
     if no_wt:
         print(f"+ Dir: {wp}")
     else:
-        _db_job(jn, 'worktree', 'running', wp, sn)
-        os.makedirs(wt, exist_ok=True)
-        r = S.run(['git', '-C', proj, 'worktree', 'add', '-b', br, wp, 'HEAD'], capture_output=True, text=True)
-        if r.returncode: print(f"x Worktree: {r.stderr}"); return
-        print(f"+ Worktree: {wp}")
+        _db_job(jn, 'fork', 'running', wp, sn)
+        os.makedirs(fkd, exist_ok=True)
+        r = S.run(['git', 'clone', proj, wp], capture_output=True, text=True)
+        if r.returncode: print(f"x Fork: {r.stderr}"); return
+        os.symlink(str(ADATA_ROOT), os.path.join(wp, 'adata'))
+        print(f"+ Fork: {wp}")
 
     _db_job(jn, 'agent', 'running', wp, sn)
     env = {k: v for k, v in os.environ.items() if k not in ('TMUX', 'TMUX_PANE')}
     acmd = 'claude --dangerously-skip-permissions' + (f' --model {model}' if model else '')
+    if not no_wt: acmd = f"a fork run '{jn}' {acmd}"
     S.run(['tmux', 'new-session', '-d', '-s', sn, '-c', wp, acmd], env=env)
     for _ in range(60):
         time.sleep(1)
@@ -263,17 +265,17 @@ def _run_remote(dev, ak, proj, rn, prompt, jn, br, ts, sn):
     else:
         _ssh(dev, f'cd ~/{rn} && git checkout main && git pull --ff-only', timeout=30)
 
-    # Worktree
-    wt = f'~/a/adata/worktrees/{jn}'
-    _db_job(jn, 'worktree', 'running', dev, sn)
-    rc, _, err = _ssh(dev, f'mkdir -p ~/a/adata/worktrees && git -C ~/{rn} worktree add -b {br} {wt} HEAD', timeout=30)
-    if rc: print(f"x Worktree: {err}"); return
-    print(f"+ Worktree: {wt}")
+    # Fork
+    fk = f'~/a/adata/forks/{jn}'
+    _db_job(jn, 'fork', 'running', dev, sn)
+    rc, _, err = _ssh(dev, f'mkdir -p ~/a/adata/forks && git clone ~/{rn} {fk} && ln -sf ~/a/adata {fk}/adata', timeout=60)
+    if rc: print(f"x Fork: {err}"); return
+    print(f"+ Fork: {fk}")
 
     # Launch agent — detached tmux, wait for ready, send prompt
     _db_job(jn, 'agent', 'running', dev, sn)
     q = prompt.replace("'", "'\\''")
-    rc, _, err = _ssh(dev, f"tmux new-session -d -s '{sn}' -c {wt} 'claude --dangerously-skip-permissions'", timeout=15)
+    rc, _, err = _ssh(dev, f"tmux new-session -d -s '{sn}' -c {fk} 'a fork run {jn} claude --dangerously-skip-permissions'", timeout=15)
     if rc: print(f"x Session: {err}"); return
     print(f"+ Attach: a ssh {dev} \"a {sn}\"")
     print("  Waiting for claude to start...")
@@ -296,7 +298,7 @@ def _run_remote(dev, ak, proj, rn, prompt, jn, br, ts, sn):
     _ssh_wait_done(dev, sn, timeout=600)
     _,summary,_=_ssh(dev,"cat ~/a/adata/local/.done 2>/dev/null",5)
     _,lg,_=_ssh(dev,f"tmux capture-pane -t '{sn}' -S -1000 -p",10)
-    _save_logs(jn, lg, f'~/a/adata/worktrees/{jn}', dev)
+    _save_logs(jn, lg, f'~/a/adata/forks/{jn}', dev)
     print("+ Agent finished")
 
     # PR on remote — write script to avoid shell quoting issues
@@ -304,7 +306,7 @@ def _run_remote(dev, ak, proj, rn, prompt, jn, br, ts, sn):
     import base64 as b64
     short = prompt[:50].replace('"', "'")
     script = f'''#!/bin/bash
-cd {wt}
+cd {fk}
 git add -A
 git diff --cached --quiet || git commit -m "job: {short}"
 git log --oneline origin/main..HEAD 2>/dev/null | grep -q . || {{ echo "NO_CHANGES"; exit 0; }}
@@ -319,8 +321,8 @@ gh pr create --title "job: {short}" --body "Prompt: {prompt[:200].replace('"', "
     if pr:
         print(f"+ PR: {pr}")
         _db_job(jn, 'email', 'running', dev, sn)
-        _,adiff,_=_ssh(dev,f"cd {wt} && a diff",15)
-        _email(jn, rn, prompt, pr, '', f'a ssh {dev} "cd {wt} && claude --continue"', summary, lg, adiff)
+        _,adiff,_=_ssh(dev,f"cd {fk} && a diff",15)
+        _email(jn, rn, prompt, pr, '', f'a ssh {dev} "cd {fk} && claude --continue"', summary, lg, adiff)
         _db_job(jn, 'done', 'done', dev, sn)
         print(f"+ Done: {pr}")
     else:

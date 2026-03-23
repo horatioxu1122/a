@@ -158,8 +158,8 @@ static int cmd_jobs(int argc, char **argv) {
                 if(re){rp=re+1;}else break;}}
         if(fo){fclose(fo);rename(tmp,cf);}
         _exit(0);}}
-    /* Review worktrees */
-    char wd[P];{const char*w=cfget("worktrees_dir");if(w[0])snprintf(wd,P,"%s",w);else snprintf(wd,P,"%s/worktrees",AROOT);}
+    /* Review forks */
+    char wd[P];snprintf(wd,P,"%s/forks",AROOT);
     wtr_t R[32];int nr=0;
     if(dexists(wd)){DIR*d=opendir(wd);struct dirent*de;if(d){while((de=readdir(d))&&nr<32){
         if(de->d_name[0]=='.')continue;char fp[P];snprintf(fp,P,"%s/%s",wd,de->d_name);
@@ -209,9 +209,8 @@ static int cmd_jobs(int argc, char **argv) {
             if(!getenv("TMUX")){tm_new("merge",gd,cc);snprintf(c,B,"tmux split-window -v -p 50 -t merge -c '%s'",gd);(void)!system(c);tm_go("merge");}
             else{snprintf(c,B,"tmux new-window -n merge -c '%s' '%s'",gd,cc);(void)!system(c);
                 snprintf(c,B,"tmux split-window -v -p 50 -c '%s'",gd);(void)!system(c);}}
-        else if(k=='d'){snprintf(c,B,"rm -rf '%s'",R[ri].p);pcmd(c,NULL,0);
-            if(gd[0]){snprintf(c,B,"(git -C '%s' worktree prune;git -C '%s' branch -D 'j-%s')>/dev/null 2>&1 &",gd,gd,R[ri].n);pcmd(c,NULL,0);}}
-        else if(k=='r'){char jc[B];jcmd_fill(jc,1);
+        else if(k=='d'){snprintf(c,B,"rm -rf '%s'",R[ri].p);pcmd(c,NULL,0);}
+        else if(k=='r'){char jc[B];jcmd_fill(jc,1,R[ri].p);
             if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",R[ri].n);tm_new(sn,R[ri].p,jc);tm_go(sn);}
             else{snprintf(c,B,"tmux new-window -n '%s' -c '%s' '%s'",R[ri].n,R[ri].p,jc);(void)!system(c);}}
         if(k=='d'){nr--;memmove(R+ri,R+ri+1,(size_t)(nr-ri)*sizeof(R[0]));if(ri>=nr)ri=nr-1;}
@@ -222,7 +221,7 @@ static int cmd_jobs(int argc, char **argv) {
 /* ── tree ── */
 static int cmd_tree(int argc, char **argv) { AB;
     init_db(); load_cfg(); load_proj();
-    const char *wt = cfget("worktrees_dir"); if (!wt[0]) { char d[P]; snprintf(d,P,"%s/worktrees",AROOT); wt=d; }
+    char fkd[P];snprintf(fkd,P,"%s/forks",AROOT);mkdirp(fkd);
     CWD(cwd);
     const char *proj = cwd;
     if (argc > 2 && argv[2][0]>='0' && argv[2][0]<='9') { int idx=atoi(argv[2]); if(idx<NPJ) proj=PJ[idx].path; }
@@ -233,10 +232,9 @@ static int cmd_tree(int argc, char **argv) { AB;
     int h=t->tm_hour%12; if(!h)h=12;
     char nm[64],wp[P],c[B];
     snprintf(nm,64,"%s-%s-%d%02d%s",bname(proj),ts,h,t->tm_min,t->tm_hour>=12?"pm":"am");
-    for(int i=0;i<2;i++){if(i){size_t l=strlen(nm);char a[3]={nm[l-2],nm[l-1],0};sprintf(nm+l-2,"-%02d%s",t->tm_sec,a);}
-        snprintf(wp,P,"%s/%s",wt,nm);snprintf(c,B,"mkdir -p '%s' && git -C '%s' worktree add -b 'wt-%s' '%s' HEAD 2>/dev/null",wt,proj,nm,wp);
-        if(!system(c)){char sl[B];snprintf(sl,B,"ln -s '%s' '%s/adata' 2>/dev/null",AROOT,wp);(void)!system(sl);break;}
-        if(i){puts("x Failed");return 1;}}
+    snprintf(wp,P,"%s/%s",fkd,nm);
+    snprintf(c,B,"git clone '%s' '%s' >/dev/null 2>&1&&ln -sf '%s' '%s/adata'",proj,wp,AROOT,wp);
+    if(system(c)){puts("x Failed");return 1;}
     printf("\xe2\x9c\x93 %s\n", wp);
     const char *sh = getenv("SHELL"); if (!sh) sh = "/bin/bash";
     if (chdir(wp) == 0) execlp(sh, sh, (char*)NULL);

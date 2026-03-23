@@ -4,8 +4,8 @@ from _common import init_db, load_cfg, db, tm
 
 def run():
     init_db(); cfg = load_cfg(); sel = sys.argv[2] if len(sys.argv) > 2 else None
-    WT_DIR = cfg.get('worktrees_dir', os.path.expanduser("~/a/adata/worktrees")); cwd = os.getcwd()
-    if WT_DIR in cwd and (p := cwd.replace(WT_DIR + '/', '').split('/')) and len(p) >= 2 and tm.has(s := f"{p[0]}-{p[1]}"): tm.go(s)
+    FK_DIR = os.path.expanduser("~/a/adata/forks"); cwd = os.getcwd()
+    if FK_DIR in cwd and (p := cwd.replace(FK_DIR + '/', '').split('/')) and len(p) >= 2 and tm.has(s := f"{p[0]}-{p[1]}"): tm.go(s)
     with db() as c: runs = c.execute("SELECT id, repo FROM multi_runs ORDER BY created_at DESC LIMIT 10").fetchall()
     if not runs: print("No sessions"); return
     if sel and not sel.isdigit() and tm.has(sel): tm.go(sel); return
