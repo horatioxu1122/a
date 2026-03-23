@@ -1,1 +1,1 @@
-C-j/C-k prev/next window bindings live in tmux. Test with Ctrl+J and Ctrl+K.
+hub: fixed load path agents→hub + removed field truncation. 37 jobs showing. -4 tok.

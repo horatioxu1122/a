@@ -6,7 +6,7 @@ static hub_t HJ[MJ]; static int NJ;
 #define DFL(a,b) ((a)?(a):(b))
 static char HD[P];
 static void hub_load(void) {
-    char fp[P];snprintf(HD,P,"%s/agents",SROOT);mkdirp(HD);NJ=0;
+    char fp[P];snprintf(HD,P,"%s/hub",SROOT);mkdirp(HD);NJ=0;
     snprintf(fp,P,"ls -t %s/*.txt 2>/dev/null",HD);FILE*f=popen(fp,"r");if(!f)return;
     while(fgets(fp,P,f)&&NJ<MJ){fp[strcspn(fp,"\n")]=0;
         kvs_t kv=kvfile(fp);const char*nm=kvget(&kv,"Name");if(!nm)continue;
@@ -108,8 +108,8 @@ static int cmd_hub(int argc, char **argv) {
             hub_t *j=&HJ[i]; if(!all&&!j->en) continue;
             int on=hub_on(j); char cp[512]; hub_trunc(cp,512,j->p,cw);
             const char *lr=j->lr[0]?j->lr+5:"-"; sh++;
-            if(m) printf("%-2d%-9.8s%-10.9s%s %s\n",i,j->n,lr,on?"\xe2\x9c\x93":" ",cp);
-            else printf("%-2d%-11.10s%-7.6s%-13.12s%-8.7s%s %s\n",i,j->n,j->s,lr,j->d,on?"\xe2\x9c\x93":" ",cp);
+            if(m) printf("%-2d%-9s%-10s%s %s\n",i,j->n,lr,on?"\xe2\x9c\x93":" ",cp);
+            else printf("%-2d%-11s%-7s%-13s%-8s%s %s\n",i,j->n,j->s,lr,j->d,on?"\xe2\x9c\x93":" ",cp);
         }
         printf(NJ-sh?"\n%d jobs (+%d disabled, a hub all)\n":"\n%d jobs\n",sh,NJ-sh);
         printf("a hub <#>       run job\na hub on/off #  toggle\na hub add|rm    create/delete\na hub all       show disabled\n");
