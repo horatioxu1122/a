@@ -419,7 +419,7 @@ static int cmd_j(int c,char**v){
         snprintf(nm,64,"%s-%s-%d%02d%02d%s",bname(wd),ts,h,t->tm_min,t->tm_sec,t->tm_hour>=12?"pm":"am");
         snprintf(fp,P,"%s/%s",fkd,nm);
         snprintf(gc,B,"git clone '%s' '%s' >/dev/null 2>&1&&ln -sf '%s' '%s/adata'",wd,fp,AROOT,fp);
-        if(!system(gc)){printf("+ %s\n",fp);snprintf(wd,P,"%s",fp);}
+        if(!system(gc)){snprintf(gc,B,"u=$(git -C '%s' config remote.origin.url 2>/dev/null);[ \"$u\" ]&&git -C '%s' remote set-url origin \"$u\"",wd,fp);(void)!system(gc);printf("+ %s\n",fp);snprintf(wd,P,"%s",fp);}
     }
     printf("+ job: %s\n  %.*s\n",bname(wd),80,pr);
     if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: write .a_done with summary + test commands");
