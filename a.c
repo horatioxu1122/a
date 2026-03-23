@@ -269,7 +269,15 @@ exit 0
 #define AB if(getenv("A_BENCH"))return 0
 #define CWD(w) char w[P];if(!getcwd(w,P))snprintf(w,P,"%s",HOME)
 
-/* amalgamation */
+/* amalgamation — LLM index: read this to navigate the codebase from a.c alone
+   globals(paths) init(device,db) util(readf,writef,pcmd,mkdirp,clip) kv(ini config)
+   data(load projects/tasks/notes/sessions) tmux(tm_new/go/send, jcmd_fill, one session "a")
+   git(in_repo,root) fork(clone,rm,merge,run) session(agent launch,send_prefix_bg,crash loop)
+   alog(activity) help(TUI picker) project(by number) config(agent/model/key settings)
+   push(git push+tok diff) hub(multi-device fleet) ls(windows,kill,copy,watch,job review)
+   note(notes+tasks CRUD) ssh(devices) net(sync,backup,email) cal agent(review,scan) file cc
+   perf(benchmark) sess(named sessions c/l/g, fork-on-reopen)
+   a.c below: cmd_freq,cmd_cat,cmd_j/job,cmd_once,cmd_tutorial,CMDS[],perf,main */
 static void mkdirp(const char *p);
 static void alog(const char *cmd, const char *cwd);
 static void perf_disarm(void);
@@ -278,31 +286,31 @@ static int cmd_sess(int, char**);
 typedef struct{char n[64];int c;}FC;
 static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)a)->c;}
 
-#include "lib/globals.c"
-#include "lib/init.c"
-#include "lib/util.c"
-#include "lib/kv.c"
-#include "lib/data.c"
-#include "lib/tmux.c"
-#include "lib/git.c"
-#include "lib/fork.c"
-#include "lib/session.c"
-#include "lib/alog.c"
-#include "lib/help.c"
-#include "lib/project.c"
-#include "lib/config.c"
-#include "lib/push.c"
-#include "lib/hub.c"
-#include "lib/ls.c"
-#include "lib/note.c"
-#include "lib/ssh.c"
-#include "lib/net.c"
-#include "lib/cal.c"
-#include "lib/agent.c"
-#include "lib/file.c"
-#include "lib/cc.c"
-#include "lib/perf.c"
-#include "lib/sess.c"
+#include "lib/globals.c"  /* path globals */
+#include "lib/init.c"     /* paths, device, db */
+#include "lib/util.c"     /* readf,writef,pcmd,mkdirp */
+#include "lib/kv.c"       /* cfget/cfset ini config */
+#include "lib/data.c"     /* load proj/cfg/sess/notes */
+#include "lib/tmux.c"     /* tm_new/go/send, jcmd_fill */
+#include "lib/git.c"      /* git_in_repo, git_root */
+#include "lib/fork.c"     /* fork clone/rm/merge/run */
+#include "lib/session.c"  /* agent launch, send_prefix_bg */
+#include "lib/alog.c"     /* activity logging */
+#include "lib/help.c"     /* help, TUI picker */
+#include "lib/project.c"  /* pick project by number */
+#include "lib/config.c"   /* agent/model/key settings */
+#include "lib/push.c"     /* git push, tok diff */
+#include "lib/hub.c"      /* multi-device agent fleet */
+#include "lib/ls.c"       /* windows, kill, job review */
+#include "lib/note.c"     /* notes+tasks CRUD */
+#include "lib/ssh.c"      /* device ssh setup+exec */
+#include "lib/net.c"      /* sync, backup, email */
+#include "lib/cal.c"      /* calendar */
+#include "lib/agent.c"    /* code review, scan */
+#include "lib/file.c"     /* Downloads open/move */
+#include "lib/cc.c"       /* compiler manager */
+#include "lib/perf.c"     /* benchmark, timing limits */
+#include "lib/sess.c"     /* named sessions c/l/g */
 
 static int cmd_freq(int c,char**v){perf_disarm();
     int verbose=0,n=0;
@@ -571,13 +579,13 @@ int main(int argc, char **argv) {
     fprintf(stderr,"a: unknown '%s'\n",arg);
     return 1;
 }
-/* Repo struture:
-adata: all persistent data
-lab: experimental work
-lib: flat program files
-my: symlink user program files
-a.c: command dispatch, install, env setup
-AGENTS.md: custom ai instructions
-IDEAS.md: explain why project exists
-README.md: new user information
+/* Repo structure:
+a.c: polyglot shell+C — build system (top), command dispatch+main (bottom), see index above
+lib/: flat C files #included into a.c, plus .py for complex commands (job.py, attach.py)
+lab/: experiments, not part of core build
+adata/: all persistent data (local/, git/, forks/, backup/)
+my/: user-symlinked scripts auto-discovered as commands
+AGENTS.md: custom AI agent instructions
+IDEAS.md: project motivation and philosophy
+README.md: new user setup
 */

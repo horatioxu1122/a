@@ -1,1 +1,1 @@
-Removed bwrap from fork run — replaced with chdir+execvp, -61 tokens
+Cut include comments to 4 words max — +429 tok (was +542)
