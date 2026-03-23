@@ -1,5 +1,5 @@
 #if 0
-# ── a.c — agent manager. sh a.c [build|install|analyze|shell|clean]
+# ── a.c — agent manager & human-AI accelerator. sh a.c [build|install|analyze|shell|clean]
 # Polyglot: shell sees # as comments; C preprocessor skips #if 0..#endif.
 # Fixes: fewer tokens, same speed+. Features: cut until it breaks.
 # Read codebase: a cat (1=all 2=core 3=first10+last5, copies to clipboard)
