@@ -1,6 +1,6 @@
-"""a job — full lifecycle: fork → agent (bwrap isolated) → PR → email
+"""a job — full lifecycle: fork → agent → PR → email
 Usage: a job <project|path> <prompt> [--device DEV] [--agent c|g|l]
-Flow: create fork clone, launch agent in bwrap isolation with prompt, wait for completion,
+Flow: create fork clone, launch agent with prompt, wait for completion,
       git add+commit, gh pr create, email PR URL. Works locally or via SSH.
 Logs: two types — tmux visual capture (small, git-synced in adata/git/jobs/*.log)
       and claude JSONL transcripts (large, backed up to adata/backup/{device}/ for rclone)."""

@@ -1,1 +1,1 @@
-Fixed a kill all perf kill: added kill to perf skip list — tmux kill-server exceeds 1s timer
+Removed bwrap from fork run — replaced with chdir+execvp, -61 tokens

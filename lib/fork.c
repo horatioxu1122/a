@@ -1,4 +1,4 @@
-/* fork — independent local clones with bwrap isolation */
+/* fork — independent local clones */
 static int in_fork(const char *p) { return strstr(p, "/adata/forks/") != NULL; }
 
 static int cmd_fork(int argc, char **argv) {
@@ -45,9 +45,8 @@ static int cmd_fork(int argc, char **argv) {
         if(argc<5){fprintf(stderr,"Usage: a fork run <name> <cmd...>\n");return 1;}
         char fp[P]; snprintf(fp,P,"%s/%s",fd,argv[3]);
         struct stat st; if(stat(fp,&st)){fprintf(stderr,"x %s?\n",argv[3]);return 1;}
-        char c[B]; int o=snprintf(c,B,"bwrap --bind / / --dev-bind /dev /dev --proc /proc --ro-bind '%s' '%s' --bind '%s' '%s' --chdir '%s' --",SDIR,SDIR,AROOT,AROOT,fp);
-        for(int i=4;i<argc&&o<B-256;i++) o+=snprintf(c+o,(size_t)(B-o)," '%s'",argv[i]);
-        return system(c)?1:0;
+        if(chdir(fp)){perror(fp);return 1;}
+        execvp(argv[4],argv+4);perror(argv[4]);return 1;
     }
 
     /* a fork <name> — create */
