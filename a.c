@@ -413,11 +413,11 @@ static int cmd_j(int c,char**v){
             printf("+ %s\n",wp);snprintf(wd,P,"%s",wp);}
     }
     printf("+ job: %s\n  %.*s\n",bname(wd),80,pr);
-    if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: git add -A && git commit -m 'job: <summary>', then write .a_done with summary + test commands");
+    if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: write .a_done with summary + test commands");
     tm_ensure_conf();
     char jcmd[B];jcmd_fill(jcmd,0);
     if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",bname(wd));
-        tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);tm_go(sn);}
+        tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);if(isatty(0))tm_go(sn);return 0;}
     char cm[B],pid[64];
     snprintf(cm,B,"tmux new-window -t '%s:' -d -n '%s' -P -F '#{pane_id}' -c '%s' '%s'",TMS,bname(wd),wd,jcmd);
     pcmd(cm,pid,64);pid[strcspn(pid,"\n")]=0;if(pid[0])send_prefix_bg(pid,"claude",wd,pr);

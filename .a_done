@@ -1,1 +1,1 @@
-hub: fixed load path agents→hub + removed field truncation. 37 jobs showing. -4 tok.
+hub: fixed cmd_j popen/no-tty path — isatty guard on tm_go. -7 tok.
