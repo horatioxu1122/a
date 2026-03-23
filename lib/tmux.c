@@ -14,8 +14,8 @@ static void tm_go(const char *w) {
 }
 static int tm_new(const char *w, const char *wd, const char *cmd) {
     tm_ensure_sess();char c[B*2];
-    if(cmd&&*cmd)snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s' '%s'",w,wd,cmd);
-    else snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s'",w,wd);
+    if(cmd&&*cmd)snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s' '%s' \\; set-option -w automatic-rename off",w,wd,cmd);
+    else snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s' \\; set-option -w automatic-rename off",w,wd);
     return system(c);
 }
 static void tm_sk(const char*w,const char*s,int l){char t[256];tm_t(w,t);pid_t p=fork();
