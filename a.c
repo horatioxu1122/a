@@ -398,8 +398,7 @@ static int cmd_j(int c,char**v){
         if(!dexists(wd)){printf("x %s not found\n",wd);return 1;}
         printf("+ resume: %s\n",wd);
         tm_ensure_conf();char jcmd[B];jcmd_fill(jcmd,1,wd);
-        if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",bname(wd));tm_new(sn,wd,jcmd);tm_go(sn);}
-        else{char cm[B],pid[64];snprintf(cm,B,"tmux new-window -t '%s:' -P -F '#{pane_id}' -c '%s' '%s'",TMS,wd,jcmd);pcmd(cm,pid,64);}
+        {char sn[64];snprintf(sn,64,"j-%s",bname(wd));tm_new(sn,wd,jcmd);tm_go(sn);}
         return 0;}
     int si=2,nowt=0;if(c>3&&v[2][0]>='0'&&v[2][0]<='9'){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
     char pr[B]="";int pl=0;for(int i=si;i<c;i++){if(!strcmp(v[i],"--no-wt")){nowt=1;continue;}pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);}
@@ -417,11 +416,9 @@ static int cmd_j(int c,char**v){
     if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: write .a_done with summary + test commands");
     tm_ensure_conf();
     char jcmd[B];jcmd_fill(jcmd,0,wd);
-    if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",bname(wd));
-        tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);if(isatty(0))tm_go(sn);return 0;}
-    char cm[B],pid[64];
-    snprintf(cm,B,"tmux new-window -t '%s:' -d -n '%s' -P -F '#{pane_id}' -c '%s' '%s'",TMS,bname(wd),wd,jcmd);
-    pcmd(cm,pid,64);pid[strcspn(pid,"\n")]=0;if(pid[0])send_prefix_bg(pid,"claude",wd,pr);
+    char sn[64];snprintf(sn,64,"j-%s",bname(wd));
+    tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);
+    tm_go(sn);
     return 0;}
 static int cmd_job(int c,char**v){
     if(c>2&&*v[2]>='0'&&*v[2]<='9')return cmd_jobs(c,v);
