@@ -1,1 +1,1 @@
-Cut include comments to 4 words max — +429 tok (was +542)
+tmux C-w unsave fix verified working. -18 tok. window-closed was invalid hook, moved unsave into C-w binding + close button.
