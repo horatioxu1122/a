@@ -4,7 +4,9 @@ static int cmd_push(int argc, char **argv) { AB;
     char msg[B]="";
     if(argc>2)ajoin(msg,B,argc,argv,2);
     else snprintf(msg, B, "Update %s", bname(cwd));
-    if(in_fork(cwd))fix_fork_origin(cwd);
+    if(in_fork(cwd)){fix_fork_origin(cwd);
+        char u[256],uc[B];snprintf(uc,B,"git -C '%s' config remote.origin.url",cwd);pcmd(uc,u,256);u[strcspn(u,"\n")]=0;
+        printf("fork: %s -> %s\n",bname(cwd),u);}
 
     if (!git_in_repo(cwd)) {
         /* Check for sub-repos */
@@ -36,14 +38,18 @@ static int cmd_push(int argc, char **argv) { AB;
             "{ " PUSHCMD "&&touch '%s'; }||echo fail>'%s'",cwd,msg,ok,ef);
         if(!fork()){setsid();int n=open("/dev/null",O_RDWR);if(n>=0){dup2(n,0);dup2(n,1);dup2(n,2);close(n);}
             execl("/bin/sh","sh","-c",c,(char*)NULL);_exit(1);}
-        printf("%s %s\n",tag,msg);return 0;
+        printf("%s %s (bg push)\n",tag,msg);return 0;
     }
     snprintf(c,B,"git -C '%s' config remote.origin.url 2>/dev/null",cwd);
     if(system(c)){snprintf(c,B,"cd '%s'&&gh repo create --private --source . --push",cwd);(void)!system(c);}
     snprintf(c,sizeof(c),"cd '%s'&&git add -A&&git commit -m '%s' --allow-empty 2>/dev/null&&" PUSHCMD,cwd,msg);
     char out[B];pcmd(c,out,B);
     #undef PUSHCMD
-    if(!strstr(out,"->")&&!strstr(out,"up-to-date")&&!strstr(out,"Everything")){printf("\xe2\x9c\x97 %s\n",out);return 1;}
+    if(!strstr(out,"->")&&!strstr(out,"up-to-date")&&!strstr(out,"Everything")){
+        printf("\xe2\x9c\x97 push failed\n%s\n",out);
+        if(strstr(out,"conflict")||strstr(out,"CONFLICT"))printf("fix: resolve conflicts, git add -A, git commit, then a push\n");
+        else if(strstr(out,"rejected"))printf("fix: git pull --rebase origin main, then a push\n");
+        return 1;}
     mkdirp(DDIR);snprintf(c,B,"%s/logs",DDIR);mkdirp(c);
     {int fd=open(ok,O_CREAT|O_WRONLY|O_TRUNC,0644);if(fd>=0)close(fd);}
     printf("%s %s%s\n",tag,msg,strstr(out,"rebase")?" (rebased)":"");
