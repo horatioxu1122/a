@@ -284,6 +284,8 @@ static void alog(const char *cmd, const char *cwd);
 static void perf_disarm(void);
 static void perf_arm_for(const char *);
 static int cmd_sess(int, char**);
+static int cmd_restore(int, char**);
+static void tm_unsave_win(const char*);
 typedef struct{char n[64];int c;}FC;
 static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)a)->c;}
 
@@ -432,6 +434,8 @@ static int cmd_j(int c,char**v){
 static int cmd_job(int c,char**v){
     if(c>2&&*v[2]>='0'&&*v[2]<='9')return cmd_jobs(c,v);
     return cmd_j(c,v);}
+static int cmd_tm_unsave(int c,char**v){
+    if(c<3)return 1;init_paths();tm_unsave_win(v[2]);return 0;}
 static int cmd_adb(int c,char**v){
     if(c>2&&!strcmp(v[2],"ssh"))return system("for s in $(adb devices|awk '/\\tdevice$/{print$1}');do printf '\\033[36m→ %s\\033[0m ' \"$s\";adb -s \"$s\" shell 'am broadcast -n com.termux/.app.TermuxOpenReceiver -a com.termux.RUN_COMMAND --es com.termux.RUN_COMMAND_PATH /data/data/com.termux/files/usr/bin/sshd --ez com.termux.RUN_COMMAND_BACKGROUND true' 2>&1|tail -1;done");
     execlp("adb","adb","devices","-l",(char*)0);return 1;
@@ -493,13 +497,13 @@ static const cmd_t CMDS[] = {
     {"n",cmd_note},{"note",cmd_note},{"once",cmd_run_once},
     {"p",cmd_push},{"perf",cmd_perf},{"pr",cmd_pr},{"prompt",cmd_prompt},
     {"pull",cmd_pull},{"push",cmd_push},
-    {"remove",cmd_remove},{"repo",cmd_create},{"revert",cmd_revert},{"review",cmd_review},
+    {"remove",cmd_remove},{"repo",cmd_create},{"restore",cmd_restore},{"revert",cmd_revert},{"review",cmd_review},
     {"rm",cmd_remove},{"run",cmd_run},{"scan",cmd_scan},{"send",cmd_send},
     {"set",cmd_set},{"settings",cmd_settings},{"setup",cmd_setup},
     {"ssh",cmd_ssh},{"ssh add",cmd_ssh},{"ssh all",cmd_ssh},{"ssh rm",cmd_ssh},
     {"ssh self",cmd_ssh},{"ssh setup",cmd_ssh},{"ssh start",cmd_ssh},{"ssh stop",cmd_ssh},
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
-    {"tree",cmd_tree},{"tutorial",cmd_tutorial},{"u",cmd_update},  /* ui auto-discovered */
+    {"tm-unsave",cmd_tm_unsave},{"tree",cmd_tree},{"tutorial",cmd_tutorial},{"u",cmd_update},  /* ui auto-discovered */
     {"uninstall",cmd_uninstall},{"update",cmd_update},{"watch",cmd_watch},{"web",cmd_web},
     /* work auto-discovered */
     {"x",cmd_x},

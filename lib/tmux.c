@@ -1,6 +1,16 @@
 /* tmux — one session "a", windows are jobs */
 #define TMS "a"
-static void tm_ensure_sess(void){(void)!system("tmux has-session -t '"TMS"' 2>/dev/null||tmux new-session -d -s '"TMS"'");}
+static void tm_restore(void);
+static void tm_save_win(const char *sn, const char *wd) {
+    char sf[P];snprintf(sf,P,"%s/tmux_wins.txt",DDIR);
+    char*d=readf(sf,NULL);FILE*f=fopen(sf,"w");if(!f){free(d);return;}
+    if(d){int sl=(int)strlen(sn);for(char*l=d;*l;){char*nl=strchr(l,'\n');int ll=nl?(int)(nl-l):(int)strlen(l);
+        if(ll>0&&!(ll>=sl&&l[sl]=='|'&&!memcmp(l,sn,(size_t)sl)))fprintf(f,"%.*s\n",ll,l);
+        l=nl?nl+1:l+ll;}free(d);}
+    fprintf(f,"%s|%s\n",sn,wd);fclose(f);}
+static void tm_ensure_sess(void){
+    if(!system("tmux has-session -t '"TMS"' 2>/dev/null"))return;
+    (void)!system("tmux new-session -d -s '"TMS"'");tm_restore();}
 static int tm_has(const char *w) {
     char c[B];snprintf(c,B,"tmux list-windows -t '"TMS"' -F '#{window_name}' 2>/dev/null|grep -qx '%s'",w);
     return !system(c);
@@ -13,7 +23,7 @@ static void tm_go(const char *w) {
         execlp("tmux","tmux","attach","-t",TMS,(char*)NULL);}
 }
 static int tm_new(const char *w, const char *wd, const char *cmd) {
-    tm_ensure_sess();char c[B*2];
+    tm_ensure_sess();if(tm_has(w))return 1;char c[B*2];
     if(cmd&&*cmd)snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s' '%s'",w,wd,cmd);
     else snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s'",w,wd);
     return system(c);
@@ -48,6 +58,8 @@ static void tm_ensure_conf(void) {
         "set -g visual-bell off\n"
         "set -g bell-action any\n"
         "set-hook -g alert-bell 'run-shell \"osascript -e \\\"display notification \\\\\\\"#{hook_window_name}\\\\\\\" with title \\\\\\\"a: done\\\\\\\"\\\"\"'\n"
+        "set-hook -g session-created 'run-shell \"a restore 2>/dev/null &\"'\n"
+        "set-hook -g window-closed 'run-shell \"a tm-unsave #{hook_window_name} 2>/dev/null &\"'\n"
         "set -g automatic-rename off\n"
         "set -g repeat-time 0\n"
         "set -s extended-keys on\n"
