@@ -1,5 +1,5 @@
-"""a apk [project_path] — build & deploy APKs"""
-import os,subprocess as S,shutil,glob,sys,re
+"""a apk [path]"""
+import os,subprocess as S,shutil,glob,sys
 P="com.aios.a"
 KT=r'''@file:Suppress("DEPRECATION","OVERRIDE_DEPRECATION")
 package com.aios.a
@@ -32,15 +32,19 @@ if not IT:
         if os.path.exists(p):os.environ["JAVA_HOME"]=p;break
 def w(p,s):os.makedirs(os.path.dirname(p),exist_ok=True);open(p,"w").write(s)
 def adb(*a,serial=None):return S.run(["adb"]+(["-s",serial] if serial else [])+list(a),capture_output=True,text=True)
-CP={"0xd03":"cortex-a53","0xd05":"cortex-a55","0xd0b":"cortex-a76","0xd0d":"cortex-a77","0xd41":"cortex-a78","0xd44":"cortex-x1","0xd46":"cortex-a510","0xd47":"cortex-a710","0xd48":"cortex-x2","0xd4d":"cortex-a715","0xd4e":"cortex-x3","0xd80":"cortex-a520","0xd81":"cortex-a720","0xd82":"cortex-x4"}
+def devlist():return[l.split('\t')[0] for l in adb("devices").stdout.strip().split('\n')[1:] if '\tdevice' in l]
+def pick(ds):
+    if len(ds)==1:return ds[0]
+    for i,d in enumerate(ds):print(f"  {i}: {adb('-s',d,'shell','getprop','ro.product.model').stdout.strip() or d} ({d})")
+    return ds[int(input("#: "))]
+CP={0xd03:"a53",0xd05:"a55",0xd0b:"a76",0xd0d:"a77",0xd41:"a78",0xd44:"x1",0xd46:"a510",0xd47:"a710",0xd48:"x2",0xd4d:"a715",0xd4e:"x3",0xd80:"a520",0xd81:"a720",0xd82:"x4"}
 def detect_cpu(serial):
-    r=adb("shell","cat","/proc/cpuinfo",serial=serial)
     best=None
-    for l in r.stdout.splitlines():
+    for l in adb("shell","cat","/proc/cpuinfo",serial=serial).stdout.splitlines():
         if "CPU part" in l:
-            p=l.split(":")[-1].strip();c=CP.get(p)
-            if c:best=c
-    if best:print(f"cpu: {best}")
+            c=CP.get(int(l.split(":")[-1].strip(),16))
+            if c:best="cortex-"+c
+    if best:print("cpu:",best)
     return best
 def run():
     proj=serial=None
@@ -53,10 +57,9 @@ def run():
         if not os.path.exists(proj+"/gradlew"):sys.exit("x No gradlew in "+proj)
         lp=proj+"/local.properties"
         if not os.path.exists(lp) or SDK not in open(lp).read():open(lp,"w").write(f"sdk.dir={SDK}\n")
-        # detect device CPU for NDK builds
         if not serial:
-            devs=[l.split('\t')[0] for l in adb("devices").stdout.strip().split('\n')[1:] if '\tdevice' in l]
-            if devs:serial=devs[0] if len(devs)==1 else None
+            ds=devlist()
+            if ds:serial=ds[0] if len(ds)==1 else pick(ds)
         cpu=detect_cpu(serial) if serial else None
         ga=["./gradlew","assembleDebug"]
         if cpu:ga.append(f"-Pcpu_target={cpu}")
@@ -66,8 +69,7 @@ def run():
         apk=apks[0];pkg=None
         for bf in glob.glob(proj+"/app/build.gradle*"):
             for line in open(bf):
-                m=re.search(r'(?:applicationId|namespace)\s*[=:]\s*"([^"]+)"',line)
-                if m:pkg=m.group(1);break
+                if ("applicationId" in line or "namespace" in line) and '"' in line:pkg=line.split('"')[1];break
     else:
         w(D+"/settings.gradle.kts",GS);w(D+"/app/build.gradle.kts",GB);w(D+"/local.properties",f"sdk.dir={SDK}\n")
         gp="android.useAndroidX=true\norg.gradle.jvmargs=-Xmx4g\n"
@@ -87,12 +89,9 @@ def run():
         if pkg:S.run(["am","start","-n",pkg+"/.M"])
     else:
         if not serial:
-            devs=[l.split('\t')[0] for l in adb("devices").stdout.strip().split('\n')[1:] if '\tdevice' in l]
-            if not devs:sys.exit("No devices")
-            if len(devs)==1:serial=devs[0]
-            else:
-                for i,d in enumerate(devs):print(f"  {i}: {adb('-s',d,'shell','getprop','ro.product.model').stdout.strip() or d} ({d})")
-                serial=devs[int(input("#: "))]
+            ds=devlist()
+            if not ds:sys.exit("No devices")
+            serial=pick(ds)
         r=adb("install","-r",apk,serial=serial)
         if "INSTALL_FAILED" in r.stdout+r.stderr:
             if pkg:adb("uninstall",pkg,serial=serial)
