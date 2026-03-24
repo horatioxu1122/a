@@ -1,9 +1,10 @@
-import sys, subprocess, time
+import sys, subprocess, time, tempfile, os
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
 sys.argv = sys.argv[1:]  # shift: a prepends "book" to argv
-ADATA = Path(__file__).resolve().parent.parent / "adata"
+ROOT = Path(__file__).resolve().parent.parent
+ADATA = ROOT / "adata"
 DATA_DIR = ADATA / "books"
 
 def pick_book():
@@ -140,6 +141,24 @@ if __name__ == "__main__":
         workers = int(args[5]) if len(args) >= 6 else 1
         source = "translations" if from_translation else ("transcriptions" if from_transcription else "pages")
         process_range(book, start, end, explain_page, source, "explanations", "explained", workers, total, nocache=nocache)
+    elif cmd == "chat":
+        book = resolve_book(args[2] if len(args) > 2 else None)
+        out = book / "output"
+        txts = sorted(out.glob("*.txt")) if out.exists() else []
+        if not txts: print(f"No output in {out}. Run 'a book transcribe' first."); sys.exit(1)
+        parts = [f"BOOK: {book.name}\n\n" + "\n\n".join(t.read_text() for t in txts)]
+        for md in [ROOT / "AGENTS.md", ROOT / "IDEAS.md"]:
+            if md.exists(): parts.append(f"\n\n--- {md.name} ---\n\n" + md.read_text())
+        for f in args[3:]:
+            p = Path(f)
+            if p.exists(): parts.append(f"\n\n--- {p.name} ---\n\n" + p.read_text())
+        if not sys.stdin.isatty(): parts.append("\n\n--- PIPED INPUT ---\n\n" + sys.stdin.read())
+        tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.txt', prefix='book_chat_', delete=False)
+        tmp.write("\n".join(parts)); tmp.close()
+        print(f"Context: {os.path.getsize(tmp.name)} bytes from {len(txts)} outputs + extras")
+        tty = os.open('/dev/tty', os.O_RDONLY)
+        os.dup2(tty, 0); os.close(tty)
+        os.execvp("claude", ["claude", "--dangerously-skip-permissions", "--append-system-prompt-file", tmp.name])
     elif cmd == "split":
         book = resolve_book(args[2] if len(args) > 2 else None)
         split_pdf(book, nocache=nocache)
