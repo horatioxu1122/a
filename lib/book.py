@@ -1,0 +1,148 @@
+import sys, subprocess, time
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+
+sys.argv = sys.argv[1:]  # shift: a prepends "book" to argv
+ADATA = Path(__file__).resolve().parent.parent / "adata"
+DATA_DIR = ADATA / "books"
+
+def pick_book():
+    books = sorted(p.parent.name for p in DATA_DIR.glob("*/source.*"))
+    if not books: print("No books in", DATA_DIR); sys.exit(1)
+    for i, b in enumerate(books, 1): print(f"{i}. {b}")
+    return DATA_DIR / books[int(input("Select: ")) - 1]
+
+def resolve_book(name=None):
+    if not name: return pick_book()
+    p = Path(name)
+    if p.is_dir(): return p
+    if (DATA_DIR / name).is_dir(): return DATA_DIR / name
+    print(f"Book not found: {name}"); sys.exit(1)
+
+def process_page(source_path, output_dir, prompt, nocache=False):
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    txt_path = output_dir / f"{Path(source_path).stem}.txt"
+    if not nocache and txt_path.exists(): return txt_path.read_text()
+    for attempt in range(3):
+        try:
+            r = subprocess.run(["claude", "--dangerously-skip-permissions", "--print"], input=f"{prompt}: {source_path}", text=True, capture_output=True, timeout=120)
+            if r.returncode == 0:
+                txt_path.write_text(r.stdout)
+                return r.stdout
+            raise Exception(r.stderr or f"Exit code {r.returncode}")
+        except Exception as e:
+            if attempt < 2: time.sleep(2 ** attempt)
+            else: print(f"Error processing {source_path} after 3 attempts: {e}"); return ""
+
+def transcribe_page(source_path, output_dir, nocache=False):
+    return process_page(source_path, output_dir, "Read this file and transcribe it. Remove headers, footers, page numbers, and section labels like 'INTRODUCTION xix'. For any graphs/charts/images, include a description in the format 'Graph: [description]'. If the page is blank or has no meaningful content, return empty <transcription></transcription> tags. Return ONLY the main body text wrapped in <transcription></transcription> tags", nocache)
+
+def translate_page(source_path, output_dir, target_lang="English", nocache=False):
+    return process_page(source_path, output_dir, f"Translate this document to {target_lang}. Return only the translated text, preserving paragraph structure", nocache)
+
+def explain_page(source_path, output_dir, nocache=False):
+    return process_page(source_path, output_dir, "Reproduce this text verbatim, inserting [bracketed explanations] immediately after obscure terms that require context. Example: 'the Semyonovsky Regiment [elite Russian guard unit] was known for...' Rules: 1) Never rewrite - only insert [brackets] after words needing explanation 2) Skip well-known figures and common terms 3) Only explain what a reader cannot infer from context 4) Keep explanations to a few words 5) Less is more - when in doubt, skip it. Return annotated text only", nocache)
+
+def process_range(book_dir, start, end, page_func, source_subdir, cache_subdir, suffix, workers=1, total_pages=None, **kwargs):
+    book_dir = Path(book_dir)
+    source_dir, cache_dir, output_dir = book_dir / source_subdir, book_dir / cache_subdir, book_dir / "output"
+    output_dir.mkdir(exist_ok=True)
+    ext = ".txt" if source_subdir in ("translations", "transcriptions") else ".pdf"
+    pages = [str(source_dir / f"page_{i:04d}{ext}") for i in range(start, end + 1)]
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        results = list(ex.map(lambda p: page_func(p, str(cache_dir), **kwargs), pages))
+    cleaned = [r.replace("<transcription>", "").replace("</transcription>", "").strip() for r in results]
+    fname = f"{suffix}.txt" if total_pages and start == 1 and end == total_pages else f"{suffix}-pages_{start:04d}-{end:04d}.txt"
+    (output_dir / fname).write_text("\n\n".join(cleaned))
+    print(f"Processed pages {start}-{end}, saved to {output_dir / fname}")
+
+def split_pdf(book_dir, nocache=False):
+    from PyPDF2 import PdfReader, PdfWriter
+    book_dir = Path(book_dir)
+    pages_dir = book_dir / "pages"
+    if not nocache and pages_dir.exists() and list(pages_dir.glob("*.pdf")):
+        print(f"Using cached pages from {pages_dir}"); return
+    pages_dir.mkdir(parents=True, exist_ok=True)
+    reader = PdfReader(str(book_dir / "source.pdf"))
+    def save(args):
+        r, i, d = args
+        try:
+            w = PdfWriter(); w.add_page(r.pages[i])
+            with open(d / f"page_{i+1:04d}.pdf", "wb") as f: w.write(f)
+        except Exception as e: print(f"Skipping page {i+1}: {type(e).__name__}")
+    with ThreadPoolExecutor() as ex: list(ex.map(save, [(reader, i, pages_dir) for i in range(len(reader.pages))]))
+
+def cmd_sync():
+    remote = "a-gdrive"
+    path = f"{remote}:adata/books/"
+    print(f"Syncing {DATA_DIR} -> {path}")
+    subprocess.run(["rclone", "sync", str(DATA_DIR), path, "--progress", "-L"], check=False)
+    print(f"Pulling {path} -> {DATA_DIR}")
+    subprocess.run(["rclone", "copy", path, str(DATA_DIR), "--progress", "-L", "--ignore-existing"], check=False)
+
+def cmd_add(path):
+    p = Path(path)
+    if not p.exists(): print(f"File not found: {path}"); sys.exit(1)
+    slug = p.stem.lower().replace(" ", "-").replace("_", "-")
+    dest = DATA_DIR / slug
+    dest.mkdir(parents=True, exist_ok=True)
+    import shutil; shutil.copy2(str(p), str(dest / f"source{p.suffix}"))
+    print(f"Added: {dest}")
+
+def cmd_list():
+    books = sorted(p.parent.name for p in DATA_DIR.glob("*/source.*"))
+    if not books: print("No books in", DATA_DIR); return
+    for b in books:
+        d = DATA_DIR / b
+        out = list((d / "output").glob("*.txt")) if (d / "output").exists() else []
+        status = f" [{len(out)} outputs]" if out else ""
+        print(f"  {b}{status}")
+
+if __name__ == "__main__":
+    nocache = "--nocache" in sys.argv
+    from_translation = "--from-translation" in sys.argv
+    from_transcription = "--from-transcription" in sys.argv
+    args = [a for a in sys.argv if not a.startswith("--")]
+
+    if len(args) < 2:
+        cmd_list(); sys.exit(0)
+
+    cmd = args[1]
+    if cmd == "list": cmd_list()
+    elif cmd == "sync": cmd_sync()
+    elif cmd == "add":
+        if len(args) < 3: print("Usage: a book add <file>"); sys.exit(1)
+        cmd_add(args[2])
+    elif cmd == "transcribe":
+        from PyPDF2 import PdfReader
+        book = resolve_book(args[2] if len(args) > 2 else None)
+        split_pdf(book, nocache=nocache)
+        total = len(PdfReader(str(book / "source.pdf")).pages)
+        start, end = (int(args[3]), int(args[4])) if len(args) >= 5 else (1, total)
+        workers = int(args[5]) if len(args) >= 6 else 1
+        process_range(book, start, end, transcribe_page, "pages", "transcriptions", "transcript", workers, total, nocache=nocache)
+    elif cmd == "translate":
+        from PyPDF2 import PdfReader
+        book = resolve_book(args[2] if len(args) > 2 else None)
+        lang = args[3] if len(args) > 3 else input("Language [English]: ") or "English"
+        split_pdf(book, nocache=nocache)
+        total = len(PdfReader(str(book / "source.pdf")).pages)
+        start, end = (int(args[4]), int(args[5])) if len(args) >= 6 else (1, total)
+        workers = int(args[6]) if len(args) >= 7 else 1
+        process_range(book, start, end, translate_page, "pages", "translations", f"translation-{lang}", workers, total, target_lang=lang, nocache=nocache)
+    elif cmd == "explain":
+        from PyPDF2 import PdfReader
+        book = resolve_book(args[2] if len(args) > 2 else None)
+        if not (from_translation or from_transcription): split_pdf(book, nocache=nocache)
+        total = len(PdfReader(str(book / "source.pdf")).pages)
+        start, end = (int(args[3]), int(args[4])) if len(args) >= 5 else (1, total)
+        workers = int(args[5]) if len(args) >= 6 else 1
+        source = "translations" if from_translation else ("transcriptions" if from_transcription else "pages")
+        process_range(book, start, end, explain_page, source, "explanations", "explained", workers, total, nocache=nocache)
+    elif cmd == "split":
+        book = resolve_book(args[2] if len(args) > 2 else None)
+        split_pdf(book, nocache=nocache)
+        print(f"Split into {book / 'pages'}/")
+    else:
+        print(f"Unknown: {cmd}"); sys.exit(1)
