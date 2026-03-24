@@ -32,6 +32,16 @@ if not IT:
         if os.path.exists(p):os.environ["JAVA_HOME"]=p;break
 def w(p,s):os.makedirs(os.path.dirname(p),exist_ok=True);open(p,"w").write(s)
 def adb(*a,serial=None):return S.run(["adb"]+(["-s",serial] if serial else [])+list(a),capture_output=True,text=True)
+CP={"0xd03":"cortex-a53","0xd05":"cortex-a55","0xd0b":"cortex-a76","0xd0d":"cortex-a77","0xd41":"cortex-a78","0xd44":"cortex-x1","0xd46":"cortex-a510","0xd47":"cortex-a710","0xd48":"cortex-x2","0xd4d":"cortex-a715","0xd4e":"cortex-x3","0xd80":"cortex-a520","0xd81":"cortex-a720","0xd82":"cortex-x4"}
+def detect_cpu(serial):
+    r=adb("shell","cat","/proc/cpuinfo",serial=serial)
+    best=None
+    for l in r.stdout.splitlines():
+        if "CPU part" in l:
+            p=l.split(":")[-1].strip();c=CP.get(p)
+            if c:best=c
+    if best:print(f"cpu: {best}")
+    return best
 def run():
     proj=serial=None
     for a in sys.argv[2:]:
@@ -43,7 +53,14 @@ def run():
         if not os.path.exists(proj+"/gradlew"):sys.exit("x No gradlew in "+proj)
         lp=proj+"/local.properties"
         if not os.path.exists(lp) or SDK not in open(lp).read():open(lp,"w").write(f"sdk.dir={SDK}\n")
-        os.chdir(proj);S.run(["./gradlew","assembleDebug"],check=True)
+        # detect device CPU for NDK builds
+        if not serial:
+            devs=[l.split('\t')[0] for l in adb("devices").stdout.strip().split('\n')[1:] if '\tdevice' in l]
+            if devs:serial=devs[0] if len(devs)==1 else None
+        cpu=detect_cpu(serial) if serial else None
+        ga=["./gradlew","assembleDebug"]
+        if cpu:ga.append(f"-Pcpu_target={cpu}")
+        os.chdir(proj);S.run(ga,check=True)
         apks=glob.glob(proj+"/**/debug/*.apk",recursive=True)
         if not apks:sys.exit("x No APK")
         apk=apks[0];pkg=None
