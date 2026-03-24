@@ -36,7 +36,7 @@ static int cmd_sess(int argc, char **argv) {
         snprintf(fn,256,"%s-%ld",bname(wd),(long)time(NULL));
         snprintf(fk,P,"%s/%s",fkd,fn);
         snprintf(c,B,"git clone '%s' '%s' >/dev/null 2>&1&&ln -sf '%s' '%s/adata'",wd,fk,AROOT,fk);
-        if(!system(c)){snprintf(wd,P,"%s",fk);snprintf(sn,256,"%s-%s",s->name,fn);}
+        if(!system(c)){fix_fork_origin(fk);snprintf(wd,P,"%s",fk);snprintf(sn,256,"%s-%s",s->name,fn);}
     }}
     /* Inside tmux = new window in same session */
     if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
