@@ -11,6 +11,7 @@ All persistent data lives in adata folder.
 Don't push without approval. 
 The optimal program is maximally short fast and valuable. Edits should converge towards this.
 Issues with environment, ex dependency is not working, should be fixed by modifying a.c to systemically fix issue in code for all users not one off single device fixes.
+You may be working with other agents on the same codebase, if files change mid session be aware this is normal. If it stops your work, stop and use “a done <message>” for the user to intervene.
 
 Contribution rules:
 Initiation:
@@ -35,7 +36,8 @@ Use "sh a.c check" before presenting work to the user (runs all checkers foregro
 Never present code to the user that hasn't passed "sh a.c check".
 
 Human in loop:
+Run debug code before declaring it done.
 Output copy pastable commands for human to run to verify changes are both correct and valuable. Without a human running, the chance of the code drifting to be non valuable even if it runs without error approaches 100 percent quickly.
 Output a diff token change numbers and time of command info.
-Iterate on human feedback in accordance with the above.
+
 
