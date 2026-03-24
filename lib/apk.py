@@ -1,5 +1,5 @@
-"""a apk"""
-import os,subprocess as S,shutil,glob,sys
+"""a apk [project_path] — build & deploy APKs"""
+import os,subprocess as S,shutil,glob,sys,re
 P="com.aios.a"
 KT=r'''@file:Suppress("DEPRECATION","OVERRIDE_DEPRECATION")
 package com.aios.a
@@ -33,24 +33,42 @@ if not IT:
 def w(p,s):os.makedirs(os.path.dirname(p),exist_ok=True);open(p,"w").write(s)
 def adb(*a,serial=None):return S.run(["adb"]+(["-s",serial] if serial else [])+list(a),capture_output=True,text=True)
 def run():
-    w(D+"/settings.gradle.kts",GS);w(D+"/app/build.gradle.kts",GB);w(D+"/local.properties",f"sdk.dir={SDK}\n")
-    gp="android.useAndroidX=true\norg.gradle.jvmargs=-Xmx4g\n"
-    if IT:gp+="android.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2\n"
-    w(D+"/gradle.properties",gp);w(D+"/app/src/main/AndroidManifest.xml",MF);w(D+"/app/src/main/java/com/aios/a/M.kt",KT)
-    if not os.path.exists(D+"/gradlew"):
-        for s in [R+"/lab/android/A",*glob.glob(H+"/androidDev/apks/*")]:
-            if os.path.exists(s+"/gradlew"):
-                shutil.copy(s+"/gradlew",D+"/gradlew");os.chmod(D+"/gradlew",0o755)
-                wd=s+"/gradle/wrapper";os.makedirs(D+"/gradle/wrapper",exist_ok=True)
+    proj=serial=None
+    for a in sys.argv[2:]:
+        for p in [a,H+"/"+a,R+"/adata/git/my/"+a]:
+            if os.path.isdir(p) and glob.glob(p+"/build.gradle*"):proj=os.path.abspath(p);break
+        if proj:break
+        elif not serial:serial=a
+    if proj:
+        if not os.path.exists(proj+"/gradlew"):sys.exit("x No gradlew in "+proj)
+        lp=proj+"/local.properties"
+        if not os.path.exists(lp) or SDK not in open(lp).read():open(lp,"w").write(f"sdk.dir={SDK}\n")
+        os.chdir(proj);S.run(["./gradlew","assembleDebug"],check=True)
+        apks=glob.glob(proj+"/**/debug/*.apk",recursive=True)
+        if not apks:sys.exit("x No APK")
+        apk=apks[0];pkg=None
+        for bf in glob.glob(proj+"/app/build.gradle*"):
+            for line in open(bf):
+                m=re.search(r'(?:applicationId|namespace)\s*[=:]\s*"([^"]+)"',line)
+                if m:pkg=m.group(1);break
+    else:
+        w(D+"/settings.gradle.kts",GS);w(D+"/app/build.gradle.kts",GB);w(D+"/local.properties",f"sdk.dir={SDK}\n")
+        gp="android.useAndroidX=true\norg.gradle.jvmargs=-Xmx4g\n"
+        if IT:gp+="android.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2\n"
+        w(D+"/gradle.properties",gp);w(D+"/app/src/main/AndroidManifest.xml",MF);w(D+"/app/src/main/java/com/aios/a/M.kt",KT)
+        if not os.path.exists(D+"/gradlew"):
+            for s in glob.glob(H+"/*/gradlew"):
+                d=os.path.dirname(s);shutil.copy(s,D+"/gradlew");os.chmod(D+"/gradlew",0o755)
+                wd=d+"/gradle/wrapper";os.makedirs(D+"/gradle/wrapper",exist_ok=True)
                 for f in os.listdir(wd):shutil.copy(wd+"/"+f,D+"/gradle/wrapper/")
                 break
-        else:sys.exit("x No gradlew")
-    os.chdir(D);S.run(["./gradlew","--no-configuration-cache","assembleDebug"],check=True)
-    apk="app/build/outputs/apk/debug/app-debug.apk"
+            else:sys.exit("x No gradlew")
+        os.chdir(D);S.run(["./gradlew","--no-configuration-cache","assembleDebug"],check=True)
+        apk=D+"/app/build/outputs/apk/debug/app-debug.apk";pkg=P
     if IT:
-        S.run(["cp",apk,"/storage/emulated/0/Download/a.apk"],check=True);S.run(["am","start","-n","com.example.installer/.MainActivity","--es","apk_path","/storage/emulated/0/Download/a.apk"])
+        S.run(["cp",apk,"/storage/emulated/0/Download/"+os.path.basename(apk)],check=True)
+        if pkg:S.run(["am","start","-n",pkg+"/.M"])
     else:
-        serial=sys.argv[2] if len(sys.argv)>2 and sys.argv[2]!="apk" else None
         if not serial:
             devs=[l.split('\t')[0] for l in adb("devices").stdout.strip().split('\n')[1:] if '\tdevice' in l]
             if not devs:sys.exit("No devices")
@@ -59,8 +77,10 @@ def run():
                 for i,d in enumerate(devs):print(f"  {i}: {adb('-s',d,'shell','getprop','ro.product.model').stdout.strip() or d} ({d})")
                 serial=devs[int(input("#: "))]
         r=adb("install","-r",apk,serial=serial)
-        if "INSTALL_FAILED" in r.stdout+r.stderr:print("Reinstalling...");adb("uninstall",P,serial=serial);r=adb("install",apk,serial=serial)
+        if "INSTALL_FAILED" in r.stdout+r.stderr:
+            if pkg:adb("uninstall",pkg,serial=serial)
+            r=adb("install",apk,serial=serial)
         if r.returncode:print(r.stderr);sys.exit(1)
-        adb("shell","am","start","-n",P+"/.M",serial=serial)
-    print("✓ "+P)
+        if pkg:adb("shell","am","start","-n",pkg+"/.M",serial=serial)
+    print("✓ "+(pkg or os.path.basename(apk)))
 run()

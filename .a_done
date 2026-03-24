@@ -1,1 +1,1 @@
-tmux C-w unsave fix verified working. -18 tok. window-closed was invalid hook, moved unsave into C-w binding + close button.
+TL fixed: added CMakeLists.txt + externalNativeBuild to compile launcher.c NDK lib. Built and deployed.
