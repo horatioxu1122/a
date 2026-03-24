@@ -28,7 +28,7 @@ Use "a diff" to compare against main before pushing — token count must be lowe
 Time all command runs the fix must be faster or same time.
 
 Feature additions:
-For feature additions, once code works, cut it aggressively, verify cuts are shorter with "a diff", and output is correct, until it cannot be cut more. Lab is exempt from cuts.
+For feature additions, once code works, cut it aggressively, verify cuts are shorter with "a diff", and output is correct, until it cannot be cut more. This should be done by cuts that halve the new tokens or more each time. If the user says "crunch" they want it halved with same functionality until it breaks. Lab is exempt from cuts.
 
 Build workflow:
 Use "sh a.c" for fast iteration (instant O0 build, checkers run async in background).
