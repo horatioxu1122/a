@@ -40,6 +40,6 @@ Run debug code before declaring it done.
 Output copy pastable commands for human to run to verify changes are both correct and valuable. Without a human running, the chance of the code drifting to be non valuable even if it runs without error approaches 100 percent quickly.
 Output a diff token change numbers and time of command info.
 If main has advanced in the time since you started working, merge in the main changes to your code before delaring a done. 
-WHen human approves, use "a push" over git directly, it will handle parallel work better.
+WHen human approves, use "a push" over git directly, it will handle parallel work better. Use "a done" to get human if there is a push issue.
 
 
