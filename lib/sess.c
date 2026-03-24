@@ -1,7 +1,6 @@
 /* ── session (c, l, g, co, cp, etc.) ── */
 static int cmd_sess(int argc, char **argv) {
     perf_disarm();
-    {int r=system("timeout 1 tmux info >/dev/null 2>&1");if(WIFEXITED(r)&&WEXITSTATUS(r)==124){fputs("tmux: server hung\n",stderr);return 1;}}
     init_db(); load_cfg(); load_proj(); load_apps(); load_sess();
     const char *key = argv[1];
     sess_t *s = find_sess(key);
@@ -66,8 +65,8 @@ static int cmd_sess(int argc, char **argv) {
         tm_go(sn);
         return 0;
     }
-    create_sess(sn, wd, s->cmd);
-    send_prefix_bg(sn, s->name, wd, is_prompt ? prompt : NULL);
+    if(!create_sess(sn, wd, s->cmd))
+        send_prefix_bg(sn, s->name, wd, is_prompt ? prompt : NULL);
     tm_go(sn);
     return 0;
 }
@@ -130,13 +129,12 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
     tcsetattr(STDIN_FILENO,TCSANOW,&raw_t);write(STDOUT_FILENO,"\033[?1000h\033[?1006h",16);
     char buf[256]="";int blen=0,sel=0;char prefix[256]="";
     #define IRST tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);(void)!system("clear");free(raw);free(wraw)
-    printf("Filter (↑↓/Tab, Enter=run, Esc=quit)\n");
     while (1) {
         /* Search */
         fqm_t fm[1024]; int nm = 0; int plen = (int)strlen(prefix);
         for (int i=0;i<n&&nm<1024;i++) {
             if (plen && strncmp(lines[i], prefix, (size_t)plen)) continue;
-            if(!blen&&strstr(lines[i],"\tdir"))continue;
+            if(!blen&&(strstr(lines[i],"\tdir")||!strncmp(lines[i],"web ",4)))continue;
             if(blen){char*s=lines[i]+plen,b2[256],*w;snprintf(b2,256,"%s",buf);int ok=1;
                 for(w=strtok(b2," ");w&&ok;w=strtok(0," "))if(!strcasestr(s,w))ok=0;if(!ok)continue;}
             fm[nm].p=lines[i];fm[nm].sc=blen?fq_get(lines[i]):0;nm++;
@@ -164,11 +162,11 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             if(seq[0]=='['){if(read(0,seq+1,1)!=1)break;
                 if(seq[1]=='A'){if(sel>0)sel--;}
                 else if(seq[1]=='B'){int mx=nm?nm-1:blen?1:0;if(sel<mx)sel++;}
-                else if(seq[1]=='<'){int mb=0,mx=0,my=0;char mc;
+                else if(seq[1]=='<'){int mb=0,my=0;char mc;
                     while(read(0,&mc,1)==1&&mc!=';')mb=mb*10+mc-'0';
-                    while(read(0,&mc,1)==1&&mc!=';')mx=mx*10+mc-'0';
+                    while(read(0,&mc,1)==1&&mc!=';'){}
                     while(read(0,&mc,1)==1&&mc!='M'&&mc!='m')my=my*10+mc-'0';
-                    (void)mx;if(mc=='M'&&mb==0){int ci=my-2+top;if(ci>=0&&ci<nm){sel=ci;do_pick=1;}}
+                    if(mc=='M'&&mb==0){int ci=my-2+top;if(ci>=0&&ci<nm){sel=ci;do_pick=1;}}
                     else if(mc=='M'&&(mb==64||mb==65)){if(mb==64&&sel>0)sel--;if(mb==65&&sel<nm-1)sel++;}}
             } else if(prefix[0]){prefix[0]=0;buf[0]=0;blen=0;sel=0;} else break;
         } else if(ch=='\t'){int mx=nm?nm-1:blen?1:0;if(sel<mx)sel++;}

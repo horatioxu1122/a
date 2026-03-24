@@ -28,8 +28,8 @@ static int cmd_ls(int argc, char **argv) {
 static int cmd_kill(int argc, char **argv) {
     const char *sel = argc > 2 ? argv[2] : NULL;
     if ((sel && !strcmp(sel, "all")) || (argc > 1 && !strcmp(argv[1], "killall"))) {
-        (void)!system("tmux kill-server 2>/dev/null"); (void)!system("clear");
-        puts("\xe2\x9c\x93"); return 0;
+        (void)!system("pkill -9 tmux 2>/dev/null; sleep 1");
+        (void)!system("clear"); puts("\xe2\x9c\x93"); return 0;
     }
     char out[B]; char *lines[64]; int n=tm_list(out,lines,64);
     if (!n) { puts("No windows"); return 0; }

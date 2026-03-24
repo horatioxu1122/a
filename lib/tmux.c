@@ -9,6 +9,8 @@ static void tm_save_win(const char *sn, const char *wd) {
         l=nl?nl+1:l+ll;}free(d);}
     fprintf(f,"%s|%s\n",sn,wd);fclose(f);}
 static void tm_ensure_sess(void){
+    {int r=system("timeout 1 tmux info >/dev/null 2>&1");
+    if(WIFEXITED(r)&&WEXITSTATUS(r)==124){(void)!system("pkill -9 tmux 2>/dev/null; sleep 1");}}
     if(!system("tmux has-session -t '"TMS"' 2>/dev/null"))return;
     (void)!system("tmux new-session -d -s '"TMS"'");tm_restore();}
 static int tm_has(const char *w) {
