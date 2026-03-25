@@ -19,6 +19,7 @@ __pycache__/
 .local/
 
 .aider*
+.a_done
 .a_job
 /my
 
