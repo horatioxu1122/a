@@ -465,8 +465,29 @@ static int cmd_run_once(int c,char**v){
         sleep(1);}
     fprintf(stderr,"\n\033[31m✗ TIMEOUT\033[0m: a once >%us\n",tl);
     kill(ch,SIGKILL);waitpid(ch,NULL,0);return 124;}
-static int cmd_my(int c,char**v){(void)c;(void)v;char d[P];snprintf(d,P,"%s/my",SROOT);
-    execlp("ls","ls","--color",d,(char*)0);return 1;}
+static void url_name(const char*u,char*nm,int sz){const char*s=strrchr(u,'/');snprintf(nm,sz,"%s",s?s+1:"repo");char*d=strrchr(nm,'.');if(d&&!strcmp(d,".git"))*d=0;}
+static int cmd_my(int c,char**v){
+    char rf[P],rd[P];snprintf(rf,P,"%s/repos.txt",SROOT);snprintf(rd,P,"%s/repos",AROOT);
+    const char*sub=c>2?v[2]:NULL;
+    if(sub&&!strcmp(sub,"add")&&c>3){const char*u=v[3];mkdirp(rd);
+        char nm[64],gc[B];url_name(u,nm,64);
+        snprintf(gc,B,"grep -qxF '%s' '%s' 2>/dev/null||echo '%s'>>'%s'",u,rf,u,rf);(void)!system(gc);
+        char rp[P];snprintf(rp,P,"%s/%s",rd,nm);
+        if(!dexists(rp)){snprintf(gc,B,"git clone '%s' '%s'",u,rp);if(system(gc))return 1;}
+        sync_bg();printf("\xe2\x9c\x93 %s\n",nm);return 0;}
+    if(sub&&!strcmp(sub,"rm")&&c>3){char gc[B];
+        snprintf(gc,B,"sed -i '/%s/d' '%s' 2>/dev/null;rm -rf '%s/%s'",v[3],rf,rd,v[3]);
+        (void)!system(gc);sync_bg();printf("\xe2\x9c\x93 rm %s\n",v[3]);return 0;}
+    if(sub&&!strcmp(sub,"sync")){mkdirp(rd);
+        char*dat=readf(rf,NULL);if(!dat){puts("No repos.txt");return 0;}
+        for(char*l=dat;*l;){char*nl=strchr(l,'\n');if(nl)*nl=0;if(*l){
+            char nm[64],rp[P];url_name(l,nm,64);snprintf(rp,P,"%s/%s",rd,nm);
+            if(!dexists(rp)){char gc[B];snprintf(gc,B,"git clone '%s' '%s'",l,rp);(void)!system(gc);printf("+ %s\n",nm);}
+            else printf("\xe2\x9c\x93 %s\n",nm);}
+        if(nl)l=nl+1;else break;}free(dat);return 0;}
+    char d[P],gc[B];snprintf(d,P,"%s/my",SROOT);snprintf(gc,B,"ls --color '%s' 2>/dev/null",d);printf("my/\n");(void)!system(gc);
+    if(dexists(rd)){printf("\nrepos/\n");snprintf(gc,B,"ls --color '%s'",rd);(void)!system(gc);}
+    printf("\na my add <url>  a my rm <name>  a my sync\n");return 0;}
 static int cmd_tutorial(int c,char**v){(void)c;
     char*fv[]={v[0],"a","You are a friendly guide for 'a', an AI agent manager that helps you accomplish your projects and goals faster. Introduce it in one sentence, say you can ask me anything about commands or how things work, then ask: what project are you working on or want to start? Recommend they pick a real one so you can walk them through it hands-on. Run 'a help' and read README.md IDEAS.md as reference but teach naturally as the user needs it, don't dump. Note: 'scream' in the workcycle just means focus on what's most essential.",NULL};
     return cmd_a_default(3,fv);}
@@ -582,7 +603,12 @@ int main(int argc, char **argv) {
     if(tm_has(arg)){tm_go(arg);return 0;}
     {char mf[P];static const char*X[]={"",".py",".c",".sh",".html",0};
      for(int i=0;X[i];i++){snprintf(mf,P,"%s/my/%s%s",SROOT,arg,X[i]);
-      if(fexists(mf)){perf_disarm();char md[P];snprintf(md,P,"%s/my",SROOT);(void)!chdir(md);argv[1]=mf;return cmd_dir_file(argc,argv);}}}
+      if(fexists(mf)){perf_disarm();char md[P];snprintf(md,P,"%s/my",SROOT);(void)!chdir(md);argv[1]=mf;return cmd_dir_file(argc,argv);}}
+     /* search adata/repos for scripts */
+     {char rd[P];snprintf(rd,P,"%s/repos",AROOT);DIR*d=opendir(rd);struct dirent*e;
+      if(d){while((e=readdir(d))){if(e->d_name[0]=='.')continue;
+        for(int j=0;X[j];j++){snprintf(mf,P,"%s/%s/%s%s",rd,e->d_name,arg,X[j]);
+         if(fexists(mf)){closedir(d);perf_disarm();char md[P];snprintf(md,P,"%s/%s",rd,e->d_name);(void)!chdir(md);argv[1]=mf;return cmd_dir_file(argc,argv);}}}closedir(d);}}}
     fprintf(stderr,"a: unknown '%s'\n",arg);
     return 1;
 }

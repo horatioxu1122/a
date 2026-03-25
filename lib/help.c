@@ -55,13 +55,22 @@ static void gen_icache(void) {
         FILE*pf=fopen(fp,"r");if(pf){char h[256];if(fgets(h,256,pf)){
             char*s=strstr(h," - ");if(s){s+=3;s[strcspn(s,"\"\n")]=0;snprintf(desc,128,"%s",s);}}fclose(pf);}
         fprintf(f,"%s\t%s\n",e->d_name,desc[0]?desc:"cmd");}closedir(d);}}
-    /* auto-discover my + lab scripts */
+    /* auto-discover my + lab + repos scripts */
     {const char*sd[]={SROOT,SDIR};const char*sl[]={"my","lab"};
     for(int si=0;si<2;si++){char md[P];snprintf(md,P,"%s/%s",sd[si],sl[si]);DIR*d=opendir(md);struct dirent*e;
     if(d){while((e=readdir(d))){if(e->d_name[0]=='.'||e->d_name[0]=='_')continue;
         char nm[64];snprintf(nm,64,"%s",e->d_name);char*dot=strrchr(nm,'.');
         if(si&&(!dot||(strcmp(dot,".py")&&strcmp(dot,".c")&&strcmp(dot,".sh")&&strcmp(dot,".html"))))continue;if(!si&&dot)*dot=0;
-        fprintf(f,"%s\t%s\n",nm,sl[si]);}closedir(d);}}}
+        fprintf(f,"%s\t%s\n",nm,sl[si]);}closedir(d);}}
+    /* repos: scan adata/repos/ scripts */
+    {char rd[P];snprintf(rd,P,"%s/repos",AROOT);DIR*d=opendir(rd);struct dirent*re;
+    if(d){while((re=readdir(d))){if(re->d_name[0]=='.')continue;
+        char rp[P];snprintf(rp,P,"%s/%s",rd,re->d_name);DIR*sd=opendir(rp);struct dirent*se;
+        if(sd){while((se=readdir(sd))){if(se->d_name[0]=='.'||se->d_name[0]=='_')continue;
+            char*dot=strrchr(se->d_name,'.');
+            if(dot&&(!strcmp(dot,".py")||!strcmp(dot,".c")||!strcmp(dot,".sh"))){
+                char nm[64];snprintf(nm,64,"%s",se->d_name);*strrchr(nm,'.')=0;
+                fprintf(f,"%s\t%s · repo\n",nm,re->d_name);}}closedir(sd);}}closedir(d);}}}
     /* subcommands not discoverable from filenames */
     fputs("diff\tgit diff\ncat\tcodebase dump\nfreq\tusage frequency\n"
     "jobs\tlist jobs\ndash\tdashboard\nperf\tperformance\n"
