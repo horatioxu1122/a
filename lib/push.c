@@ -53,6 +53,9 @@ static int cmd_push(int argc, char **argv) { AB;
     mkdirp(DDIR);snprintf(c,B,"%s/logs",DDIR);mkdirp(c);
     {int fd=open(ok,O_CREAT|O_WRONLY|O_TRUNC,0644);if(fd>=0)close(fd);}
     printf("%s %s%s\n",tag,msg,strstr(out,"rebase")?" (rebased)":"");
+    /* verify push: check our diff actually landed on origin */
+    {snprintf(c,B,"cd '%s'&&git fetch origin -q 2>/dev/null&&git diff HEAD origin/HEAD --name-only 2>/dev/null",cwd);
+    char vf[B];pcmd(c,vf,B);if(vf[0])printf("\xe2\x9c\x97 WARN: push succeeded but origin differs:\n%s  Another agent may have overwritten. Re-run: a push\n",vf);}
     return 0;
 }
 
