@@ -84,7 +84,7 @@ static void tm_ensure_conf(void) {
         "bind-key -n C-t new-window\n"
         "bind-key -n C-y split-window -fh\n"
         "bind-key -n C-a run-shell 'tmux new-window \"a\"'\n"
-        "bind-key -n C-w run-shell 'a tm-unsave \"#{window_name}\" 2>/dev/null;tmux kill-window'\n"
+        "bind-key -n C-w run-shell 'w=#{window_id};a tm-unsave \"#{window_name}\";tmux next-window 2>/dev/null;tmux kill-window -t $w'\n"
         "bind-key -n C-q detach\n"
         "bind-key -n C-x kill-session\n"
         "bind-key -T root MouseDown1Status if -F '#{==:#{mouse_status_range},window}' "
@@ -93,7 +93,7 @@ static void tm_ensure_conf(void) {
         "aa) tmux new-window \"a\";; "
         "agent) tmux new-window \"a j a\";; "
         "win) tmux new-window;; new) if [ $(tmux display -p \"#{window_panes}\") -gt 1 ];then tmux kill-pane;else tmux split-window;fi;; "
-        "close) a tm-unsave \"#{window_name}\" 2>/dev/null;tmux kill-window;; "
+        "close) w=#{window_id};a tm-unsave \"#{window_name}\";tmux next-window 2>/dev/null;tmux kill-window -t $w;; "
         "menu) tmux display-menu Pane 1 \"split-window -fh\" Zoom 2 \"resize-pane -Z\" Sync 3 \"set synchronize-panes\" Rename 4 \"command-prompt \\\"rename-window %%\\\"\" Quit 5 detach Kill 6 kill-session;; "
         "kbd) tmux set -g mouse off; tmux display-message \"Mouse off 3s\"; "
         "(sleep 3; tmux set -g mouse on) &;; esac' }\n", f);
