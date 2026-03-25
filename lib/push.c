@@ -4,9 +4,6 @@ static int cmd_push(int argc, char **argv) { AB;
     char msg[B]="";
     if(argc>2)ajoin(msg,B,argc,argv,2);
     else snprintf(msg, B, "Update %s", bname(cwd));
-    if(in_fork(cwd)){fix_fork_origin(cwd);
-        char u[256],uc[B];snprintf(uc,B,"git -C '%s' config remote.origin.url",cwd);pcmd(uc,u,256);u[strcspn(u,"\n")]=0;
-        printf("fork: %s -> %s\n",bname(cwd),u);}
 
     if (!git_in_repo(cwd)) {
         /* Check for sub-repos */

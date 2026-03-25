@@ -23,7 +23,6 @@ static void fallback_py(const char *mod, int argc, char **argv) {
 static int create_sess(const char *sn, const char *wd, const char *cmd) {
     int ai = cmd && (strstr(cmd,"claude") || strstr(cmd,"codex") || strstr(cmd,"gemini") || strstr(cmd,"aider"));
     char acmd[B];snprintf(acmd,B,"%s",cmd?cmd:"");
-    if(ai&&in_fork(wd)){const char*fk=strstr(wd,"/adata/forks/")+13;snprintf(acmd,B,"a fork run %s %s",fk,cmd);}
     char wcmd[B*2],ctxf[P]="",csuf[256]="";
     if(ai&&strstr(acmd,"claude")){snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());snprintf(csuf,256," --append-system-prompt-file %s",ctxf);}
     if (ai) snprintf(wcmd, sizeof(wcmd),

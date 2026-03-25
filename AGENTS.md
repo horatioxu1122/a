@@ -11,7 +11,8 @@ All persistent data lives in adata folder.
 Don't push without approval. 
 The optimal program is maximally short fast and valuable. Edits should converge towards this.
 Issues with environment, ex dependency is not working, should be fixed by modifying a.c to systemically fix issue in code for all users not one off single device fixes.
-You may be working with other agents on the same codebase, if files change mid session be aware this is normal. If it stops your work, stop and use “a done <message>” for the user to intervene.
+Multiple agents work on the same directory simultaneously on main. Files may change as you work. If this blocks work, use "a done" to get user to help resolve.
+Push only YOUR changes: git add <your files> not git add -A. If push conflicts, stop and use “a done <message describing conflict>” for the human to intervene. Do not attempt to resolve merge conflicts yourself.
 
 Contribution rules:
 Initiation:
@@ -40,6 +41,6 @@ Run debug code before declaring it done.
 Output copy pastable commands for human to run to verify changes are both correct and valuable. Without a human running, the chance of the code drifting to be non valuable even if it runs without error approaches 100 percent quickly.
 Output a diff token change numbers and time of command info.
 If main has advanced in the time since you started working, merge in the main changes to your code before delaring a done. 
-When human approves, use "a push" over git directly, it will handle parallel work better. Use "a done" to get human if there is a push issue.
+When human approves, push your changes only. Use "a done" to get human if there is a push issue.
 
 

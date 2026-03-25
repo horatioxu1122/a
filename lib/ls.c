@@ -107,8 +107,6 @@ static int cmd_send(int argc, char **argv) {
 }
 
 /* ── jobs ── active panes (local+remote) + review worktrees */
-typedef struct{char n[64],p[256];time_t mt;}wtr_t;
-static int wtr_cmp(const void*a,const void*b){time_t d=((const wtr_t*)b)->mt-((const wtr_t*)a)->mt;return d>0?1:d<0?-1:0;}
 typedef struct{char sn[64],pid[32],cmd[32],p[128],dev[32];}jpane_t;
 static int cmd_jobs(int argc, char **argv) {
     const char *sel=NULL,*rm=NULL;
@@ -158,85 +156,21 @@ static int cmd_jobs(int argc, char **argv) {
                 if(re){rp=re+1;}else break;}}
         if(fo){fclose(fo);rename(tmp,cf);}
         _exit(0);}}
-    /* Review forks */
-    char wd[P];snprintf(wd,P,"%s/forks",AROOT);
-    wtr_t R[32];int nr=0;
-    if(dexists(wd)){DIR*d=opendir(wd);struct dirent*de;if(d){while((de=readdir(d))&&nr<32){
-        if(de->d_name[0]=='.')continue;char fp[P];snprintf(fp,P,"%s/%s",wd,de->d_name);
-        if(!dexists(fp))continue;
-        char df[P];snprintf(df,P,"%s/.a_done",fp);int done=fexists(df);
-        int act=0;if(!done)for(int i=0;i<na;i++)if(A[i].pid[0]&&!strcmp(bname(fp),A[i].p)){act=1;break;}if(act)continue;
-        snprintf(R[nr].n,64,"%s",de->d_name);snprintf(R[nr].p,256,"%s",fp);
-        struct stat st;R[nr].mt=(!stat(fp,&st))?st.st_mtime:0;
-        nr++;}closedir(d);}
-    qsort(R,(size_t)nr,sizeof(wtr_t),wtr_cmp);}
-    if(rm&&!strcmp(rm,"all")){for(int i=0;i<nr;i++){char c[B];snprintf(c,B,"rm -rf '%s'",R[i].p);(void)!system(c);}
-        printf("\xe2\x9c\x93 %d worktrees\n",nr);return 0;}
     if(rm&&*rm>='0'&&*rm<='9'){int x=atoi(rm);
         if(x<na&&A[x].pid[0]){char c[B];snprintf(c,B,"tmux kill-window -t '%s'",A[x].pid);(void)!system(c);printf("\xe2\x9c\x93 %s\n",A[x].sn);}
-        else if(x-na>=0&&x-na<nr){char c[B];snprintf(c,B,"rm -rf '%s'",R[x-na].p);(void)!system(c);printf("\xe2\x9c\x93 %s\n",R[x-na].n);}
         return 0;}
     if(sel&&*sel>='0'&&*sel<='9'){int x=atoi(sel);
         if(x<na&&A[x].pid[0]){char c[B];snprintf(c,B,"tmux select-window -t '%s'",A[x].pid);(void)!system(c);tm_go(A[x].sn);}
-        else if(x<na){perf_disarm();execlp("a","a","ssh",A[x].dev,"tmux","attach","-t",A[x].sn,(char*)NULL);/*foot terminal can fail here; ptyxis works*/}
-        else if(x-na<nr){perf_disarm();if(chdir(R[x-na].p)==0){const char*sh=getenv("SHELL");execlp(sh?sh:"/bin/bash",sh?sh:"bash",(char*)NULL);}}
+        else if(x<na){perf_disarm();execlp("a","a","ssh",A[x].dev,"tmux","attach","-t",A[x].sn,(char*)NULL);}
         return 0;}
     hub_load();
-    if(!na&&!nr&&!NJ){puts("No jobs");return 0;}
+    if(!na&&!NJ){puts("No jobs");return 0;}
     if(na){puts("ACTIVE");for(int i=0;i<na;i++)printf(" %d %-12s %-5s %-5s %s\n",i,A[i].sn,A[i].cmd,A[i].p,A[i].dev);}
     if(NJ){hub_sort();hub_timers();
         if(na)puts("");printf("SCHEDULED\n  %-10s %-6s %-8s  %s\n","Name","Sched","Dev","Cmd");for(int i=0;i<NJ;i++){
         hub_t*j=&HJ[i];char cp[128];hub_trunc(cp,128,j->p,50);
         printf("  %-10s %-6s %-8.7s%s %s\n",j->n,j->s,j->d,hub_on(j)?"\xe2\x9c\x93":" ",cp);}}
-    if(na||NJ)puts("");printf("REVIEW\n  %-4s %-16s %s\n","#","Project","Branch");
-    if(nr)for(int i=0;i<nr;i++){
-        char*d=R[i].n,*s=strrchr(d,'-'),*s2=NULL;if(s){for(char*p=s-1;p>=d;p--)if(*p=='-'){s2=p;break;}}
-        if(s2)printf("  %-4d%-16.*s %s\n",na+i,(int)(s2-d),d,s2+1);
-        else printf("  %-4d%s\n",na+i,d);}
-    else puts("  (none)");
-    printf("\n  a j \"prompt\"  new job    a j a  agent    a job #  attach    a job rm #|all\n  a hub add <name> <sched> <cmd>  schedule recurring    a hub  manage\n  e %s/common/prompts/job.txt\n",SROOT);
-    if(!nr||!isatty(STDIN_FILENO))return 0;
-    for(int ri=0;ri>=0&&ri<nr;){
-        printf("\n\033[1m\xe2\x94\x81\xe2\x94\x81\xe2\x94\x81 %d/%d %s\033[0m\n",ri+1,nr,R[ri].n);
-        {char c[B];snprintf(c,B,"cd '%s'&&a diff 2>/dev/null",R[ri].p);(void)!system(c);
-        snprintf(c,B,"%s/.a_done",R[ri].p);char*d=readf(c,NULL);if(d){printf("%s\n",d);free(d);}}
-        raw_enter();printf("\n  [m]erge [r]esume [d]el [j/k/q]  ");fflush(stdout);
-        int k=raw_key();raw_exit();putchar('\n');char gd[B]="",c[B];
-        if(k=='m'||k=='d'){snprintf(c,B,"git -C '%s' rev-parse --path-format=absolute --git-common-dir 2>/dev/null",R[ri].p);pcmd(c,gd,B);gd[strcspn(gd,"\n")]=0;{char*s=strrchr(gd,'/');if(s)*s=0;}}
-        if(k=='m'&&gd[0]){
-            snprintf(c,B,"cd '%s'&&git add -A&&(git diff --cached --quiet||git commit -m 'job: auto-commit')",R[ri].p);pcmd(c,NULL,0);
-            char cc[B];snprintf(cc,B,"claude \"Merge j-%s into main. Resolve conflicts. Show diff --stat when done.\"",R[ri].n);
-            if(!getenv("TMUX")){tm_new("merge",gd,cc);snprintf(c,B,"tmux split-window -v -p 50 -t merge -c '%s'",gd);(void)!system(c);tm_go("merge");}
-            else{snprintf(c,B,"tmux new-window -n merge -c '%s' '%s'",gd,cc);(void)!system(c);
-                snprintf(c,B,"tmux split-window -v -p 50 -c '%s'",gd);(void)!system(c);}}
-        else if(k=='d'){snprintf(c,B,"rm -rf '%s'",R[ri].p);pcmd(c,NULL,0);}
-        else if(k=='r'){char jc[B];jcmd_fill(jc,1,R[ri].p);
-            if(!getenv("TMUX")){char sn[64];snprintf(sn,64,"j-%s",R[ri].n);tm_new(sn,R[ri].p,jc);tm_go(sn);}
-            else{snprintf(c,B,"tmux new-window -n '%s' -c '%s' '%s'",R[ri].n,R[ri].p,jc);(void)!system(c);}}
-        if(k=='d'){nr--;memmove(R+ri,R+ri+1,(size_t)(nr-ri)*sizeof(R[0]));if(ri>=nr)ri=nr-1;}
-        else if(k=='k'){if(ri>0)ri--;}else if(k=='q'||k==3||k==27)break;else if(k=='j')ri++;
-    }return 0;
-}
-
-/* ── tree ── */
-static int cmd_tree(int argc, char **argv) { AB;
-    init_db(); load_cfg(); load_proj();
-    char fkd[P];snprintf(fkd,P,"%s/forks",AROOT);mkdirp(fkd);
-    CWD(cwd);
-    const char *proj = cwd;
-    if (argc > 2 && argv[2][0]>='0' && argv[2][0]<='9') { int idx=atoi(argv[2]); if(idx<NPJ) proj=PJ[idx].path; }
-    if (!git_in_repo(proj)) { puts("x Not a git repo"); return 1; }
-    time_t now = time(NULL); struct tm *t = localtime(&now);
-    char ts[32]; strftime(ts, 32, "%b%d", t);
-    for(char*p=ts;*p;p++) *p=(*p>='A'&&*p<='Z')?*p+32:*p;
-    int h=t->tm_hour%12; if(!h)h=12;
-    char nm[64],wp[P],c[B];
-    snprintf(nm,64,"%s-%s-%d%02d%s",bname(proj),ts,h,t->tm_min,t->tm_hour>=12?"pm":"am");
-    snprintf(wp,P,"%s/%s",fkd,nm);
-    snprintf(c,B,"git clone '%s' '%s' >/dev/null 2>&1&&ln -sf '%s' '%s/adata'",proj,wp,AROOT,wp);
-    if(system(c)){puts("x Failed");return 1;}
-    printf("\xe2\x9c\x93 %s\n", wp);
-    const char *sh = getenv("SHELL"); if (!sh) sh = "/bin/bash";
-    if (chdir(wp) == 0) execlp(sh, sh, (char*)NULL);
+    printf("\n  a j \"prompt\"  new job    a j a  agent    a job #  attach    a job rm #\n  a hub add <name> <sched> <cmd>  schedule recurring    a hub  manage\n  e %s/common/prompts/job.txt\n",SROOT);
     return 0;
 }
+

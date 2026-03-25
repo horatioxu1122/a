@@ -34,15 +34,6 @@ static void ensure_git_id(void) {
     snprintf(c,B,"git config --global user.name '%s'&&git config --global user.email '%s'",n,e);
     (void)!system(c);printf("\xe2\x9c\x93 git id: %s <%s>\n",n,e);
 }
-/* fix fork origin: chase local clones to find real (https/ssh) URL */
-static void fix_fork_origin(const char *fp) {
-    char u[512],c[B],p[512];snprintf(p,512,"%s",fp);
-    for(int i=0;i<5;i++){snprintf(c,B,"git -C '%s' config remote.origin.url 2>/dev/null",p);
-        u[0]=0;pcmd(c,u,512);u[strcspn(u,"\n")]=0;
-        if(!u[0]||!strncmp(u,"http",4)||!strncmp(u,"git@",4))break;
-        snprintf(p,512,"%s",u);}/* u is now real URL or empty */
-    if(u[0]&&strncmp(u,"/",(size_t)1)){snprintf(c,B,"git -C '%s' remote set-url origin '%s'",fp,u);(void)!system(c);}
-}
 /* sync */
 static void sync_repo(void) {
     ensure_git_id();
