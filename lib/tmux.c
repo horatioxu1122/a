@@ -1,5 +1,6 @@
 /* tmux — one session "a", windows are jobs */
 #define TMS "a"
+#define ACAT "s=$(git ls-files -z 2>/dev/null|wc -c);m=1;[ \"$s\" -gt 2000000 ]&&m=3;a cat $m"
 static void tm_restore(void);
 static void tm_save_win(const char *sn, const char *wd) {
     char sf[P];snprintf(sf,P,"%s/tmux_wins.txt",DDIR);
@@ -39,7 +40,7 @@ static void tm_sk(const char*w,const char*s,int l){char t[256];tm_t(w,t);pid_t p
 static int tm_read(const char*w,char*buf,int len){char t[256];tm_t(w,t);
     char c[B];snprintf(c,B,"tmux capture-pane -t '%s' -p 2>/dev/null",t);return pcmd(c,buf,len);}
 /* job cmd */
-static void jcmd_fill(char*b,int cont,const char*wd){(void)wd;char ctxf[P];snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;a cat 1 >%s 2>/dev/null;while :;do claude --dangerously-skip-permissions --append-system-prompt-file %s%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",ctxf,ctxf,cont?" --continue":"",LOGDIR);}
+static void jcmd_fill(char*b,int cont,const char*wd){(void)wd;char ctxf[P];snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;" ACAT " >%s 2>/dev/null;while :;do claude --dangerously-skip-permissions --append-system-prompt-file %s%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",ctxf,ctxf,cont?" --continue":"",LOGDIR);}
 
 static void tm_ensure_conf(void) {
     if (strcmp(cfget("tmux_conf"), "y") != 0) return;
@@ -78,8 +79,8 @@ static void tm_ensure_conf(void) {
         "bind-key -n M-Right next-window\n"
         "bind-key -n M-Left previous-window\n"
         /* C-Tab/C-S-Tab won't work: Tab=0x09=C-i, so C-Tab is indistinguishable from Tab */
-        "bind-key -n C-k next-window\n"
-        "bind-key -n C-j previous-window\n"
+        "bind -n C-k if-shell 'ps -o comm= -t #{pane_tty} 2>/dev/null|grep -qE \"^ssh\"' 'send C-k' 'next-window'\n"
+        "bind -n C-j if-shell 'ps -o comm= -t #{pane_tty} 2>/dev/null|grep -qE \"^ssh\"' 'send C-j' 'previous-window'\n"
         "bind-key -n C-n new-window\n"
         "bind-key -n C-t new-window\n"
         "bind-key -n C-y split-window -fh\n"
