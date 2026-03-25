@@ -3,3 +3,4 @@ Fixed jcmd_fill /tmp hardcode→TMP, was silently failing on Termux so job agent
 =======
 my/ now supports external git repos. a my add <url>/rm/sync. Index in adata/git/repos.txt syncs across devices, clones in adata/repos/ local. Scripts discoverable flat via a <name> and TUI. +676 tok new feature. All checkers pass.
 >>>>>>> 92a8206 (repos discovery + TCC comment fix)
+test
