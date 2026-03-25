@@ -1,1 +1,1 @@
-APK built and installed via self wireless adb on Termux. Fixed: (1) skip NDK/cmake on Termux (cmake binary is x86, cant run), (2) use simple WebView-only KT, (3) self-adb install works. Open the 'a apk' app on your phone to test.
+Fixed jcmd_fill /tmp hardcode→TMP, was silently failing on Termux so job agents never got codebase context via --append-system-prompt-file
