@@ -1,6 +1,6 @@
 /* tmux — one session "a", windows are jobs */
 #define TMS "a"
-#define ACAT "s=$(git ls-files -z 2>/dev/null|wc -c);m=1;[ \"$s\" -gt 2000000 ]&&m=3;a cat $m"
+#define ACAT "a cat 0"
 static void tm_restore(void);
 static void tm_save_win(const char *sn, const char *wd) {
     char sf[P];snprintf(sf,P,"%s/tmux_wins.txt",DDIR);

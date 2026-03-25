@@ -2,7 +2,7 @@
 # ── a.c — agent manager & human-AI accelerator. sh a.c [build|install|analyze|shell|clean]
 # Polyglot: shell sees # as comments; C preprocessor skips #if 0..#endif.
 # Fixes: fewer tokens, same speed+. Features: cut until it breaks.
-# Read codebase: a cat (1=all 2=core 3=first10+last5, copies to clipboard)
+# Read codebase: a cat (1=all 2=core 3=first100+last30, copies to clipboard)
 # Context: a c/j preloads a cat 1 into claude's system prompt via --append-system-prompt-file
 # TERMUX: set CLAUDE_CODE_TMPDIR=$HOME/.tmp; build with clang directly.
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
@@ -353,17 +353,18 @@ static int cmd_freq(int c,char**v){perf_disarm();
     return 0;}
 static int cmd_cat(int c,char**v){perf_disarm();
     char m=0;int di=2;
-    if(c>2&&v[2][0]>='1'&&v[2][0]<='3'&&!v[2][1]){m=v[2][0];di=3;}
+    if(c>2&&v[2][0]>='0'&&v[2][0]<='3'&&!v[2][1]){m=v[2][0];di=3;}
     if(c>di&&chdir(v[di]))return 1;
-    if(!m){puts("1 all files, all lines\n2 all files, all lines (skip lab/)\n3 all files, first 10 lines + last 5 lines (skip lab/)");
+    if(!m){puts("0 auto (1 or 3 by repo size)\n1 all files, all lines\n2 all files, all lines (skip lab/)\n3 all files, first 100 lines + last 30 lines (skip lab/)");
         printf("> ");fflush(stdout);char ch[4];if(!fgets(ch,4,stdin))return 0;m=ch[0];}
-    const char*ex=m!='1'?" -- ':!lab/'":"";
+    const char*ex=m=='1'?"":" -- ':!lab/'";
     #define GA(p,n) if(l+(n)>=cap){cap=(l+(n)+8192)*2;d=realloc(d,cap);}memcpy(d+l,p,n);l+=(n)
     {char cm[B];snprintf(cm,B,"git grep -lI ''%s",ex);
     size_t l=0,cap=0;char*d=NULL,b[8192];size_t n;int nf=0,skf=0;
     FILE*fl=popen(cm,"r");char fb[65536];size_t fl2=0;
     if(fl){while((n=fread(b,1,8192,fl))>0){if(fl2+n<65536){memcpy(fb+fl2,b,n);fl2+=n;}}pclose(fl);}
     fb[fl2]=0;
+    if(m=='0'){int fc=0;for(size_t i=0;i<fl2;i++)if(fb[i]=='\n')fc++;m=fc>500?'3':'1';}
     for(char*p=fb;p<fb+fl2;){char*e=memchr(p,'\n',(size_t)(fb+fl2-p));if(!e)break;*e=0;
         if(m=='3'&&l>131072&&strchr(p,'/')){skf++;p=e+1;continue;}
         FILE*f=fopen(p,"r");if(!f){p=e+1;continue;}
@@ -371,10 +372,10 @@ static int cmd_cat(int c,char**v){perf_disarm();
         rewind(f);nf++;
         char hdr[600];size_t hl=(size_t)snprintf(hdr,600,"\n==> %s (%d lines) <==\n",p,tl);
         GA(hdr,hl);
-        int hd=m=='3'?(strchr(p,'/')?10:1000):tl;
+        int hd=m=='3'?(strchr(p,'/')?100:1000):tl;
         int i=0;while(fgets(ln,512,f)){size_t sl=strlen(ln);
-            if(i<hd||(tl>hd+5&&i>=tl-5)){GA(ln,sl);}
-            if(i==hd&&tl>hd+5){GA("  ...\n",6);}
+            if(i<hd||(tl>hd+30&&i>=tl-30)){GA(ln,sl);}
+            if(i==hd&&tl>hd+30){GA("  ...\n",6);}
             i++;}
         fclose(f);p=e+1;}
     if(!d)return 1;d[l]=0;
