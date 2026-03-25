@@ -55,7 +55,8 @@ static int cmd_push(int argc, char **argv) { AB;
     printf("%s %s%s\n",tag,msg,strstr(out,"rebase")?" (rebased)":"");
     /* verify push: check our diff actually landed on origin */
     {snprintf(c,B,"cd '%s'&&git fetch origin -q 2>/dev/null&&git diff HEAD origin/HEAD --name-only 2>/dev/null",cwd);
-    char vf[B];pcmd(c,vf,B);if(vf[0])printf("\xe2\x9c\x97 WARN: push succeeded but origin differs:\n%s  Another agent may have overwritten. Re-run: a push\n",vf);}
+    char vf[B];pcmd(c,vf,B);if(vf[0]){printf("\xe2\x9c\x97 WARN: push succeeded but origin differs:\n%s  Another agent may have overwritten. Re-run: a push\n",vf);
+    system("a done 'push verify FAILED — changes lost on origin, re-push needed'");}}
     return 0;
 }
 
