@@ -1,1 +1,1 @@
-Fixed a c crash on Termux: /tmp not writable, context file now uses TMP (from TMPDIR). +1 tok, all checkers pass. Test with 'a c' to confirm.
+APK built and installed via self wireless adb on Termux. Fixed: (1) skip NDK/cmake on Termux (cmake binary is x86, cant run), (2) use simple WebView-only KT, (3) self-adb install works. Open the 'a apk' app on your phone to test.
