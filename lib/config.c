@@ -187,6 +187,6 @@ static int cmd_move(int argc, char **argv) {
             if(!nl){if(strncmp(p,"Order:",6))ol+=snprintf(out+ol,(size_t)(B-ol),"%s\n",p);break;}
             if(strncmp(p,"Order:",6))ol+=snprintf(out+ol,(size_t)(B-ol),"%.*s\n",(int)(nl-p),p);p=nl+1;}
         free(d);(void)snprintf(out+ol,(size_t)(B-ol),"Order: %d\n",i);writef(PJ[i].file,out);}
-    sync_repo(); load_proj(); list_all(1,0); printf("\xe2\x9c\x93 %d -> %d\n",fr,to); return 0;
+    sync_bg(); printf("\xe2\x9c\x93 %d -> %d\n",fr,to); return 0;
 }
 
