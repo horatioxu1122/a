@@ -25,7 +25,7 @@ static int create_sess(const char *sn, const char *wd, const char *cmd) {
     char acmd[B];snprintf(acmd,B,"%s",cmd?cmd:"");
     if(ai&&in_fork(wd)){const char*fk=strstr(wd,"/adata/forks/")+13;snprintf(acmd,B,"a fork run %s %s",fk,cmd);}
     char wcmd[B*2],ctxf[P]="",csuf[256]="";
-    if(ai&&strstr(acmd,"claude")){snprintf(ctxf,P,"/tmp/a_ctx_%d.txt",(int)getpid());snprintf(csuf,256," --append-system-prompt-file %s",ctxf);}
+    if(ai&&strstr(acmd,"claude")){snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());snprintf(csuf,256," --append-system-prompt-file %s",ctxf);}
     if (ai) snprintf(wcmd, sizeof(wcmd),
         "unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT;%s%s%swhile :;do %s%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo -e \"\\n! crash $e [R]estart/[Q]uit:\";read -n1 k;[[ $k =~ [Rr] ]]||break;done", ctxf[0]?"a cat 1 >":"",ctxf,ctxf[0]?" 2>/dev/null;":"",acmd,csuf,LOGDIR);
     else snprintf(wcmd, sizeof(wcmd), "%s", cmd ? cmd : "");
