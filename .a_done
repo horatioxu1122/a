@@ -1,1 +1,1 @@
-Fork push fix complete. 3 sites fixed: cmd_j, cmd_sess, a push (fallback). +124 tok. All checkers pass. Tested e2e: local origin auto-resolves to GitHub on push.
+Fixed a c crash on Termux: /tmp not writable, context file now uses TMP (from TMPDIR). +1 tok, all checkers pass. Test with 'a c' to confirm.
