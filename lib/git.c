@@ -34,11 +34,11 @@ static void ensure_git_id(void) {
     snprintf(c,B,"git config --global user.name '%s'&&git config --global user.email '%s'",n,e);
     (void)!system(c);printf("\xe2\x9c\x93 git id: %s <%s>\n",n,e);
 }
-/* sync */
+/* sync — flock serializes concurrent git ops */
 static void sync_repo(void) {
     ensure_git_id();
     char c[B];
-    snprintf(c,B,"D='%s';rm -f $D/.git/index.lock $D/.git/refs/remotes/origin/*.lock;git -C $D add -A&&git -C $D commit -qm sync&&git -C $D pull --rebase -q origin main 2>/dev/null;git -C $D push -q origin main 2>/dev/null",SROOT);
+    snprintf(c,B,"flock /tmp/.a_git.lock sh -c \"D='%s';rm -f \\$D/.git/index.lock \\$D/.git/refs/remotes/origin/*.lock;git -C \\$D add -A&&git -C \\$D commit -qm sync&&git -C \\$D pull --rebase -q origin main 2>/dev/null;git -C \\$D push -q origin main 2>/dev/null\"",SROOT);
     (void)!system(c);
 }
 static void sync_bg(void) {

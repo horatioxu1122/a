@@ -1,4 +1,4 @@
-/* hub */
+/* hub — concurrent jobs flock'd in git.c; warn on schedule overlap */
 #define MJ 64
 typedef struct { char n[64],s[16],p[512],d[64],lr[24]; int en; } hub_t;
 static hub_t HJ[MJ]; static int NJ;
@@ -121,6 +121,8 @@ static int cmd_hub(int argc, char **argv) {
         hub_t j={.en=1}; snprintf(j.n,64,"%s",argv[3]); snprintf(j.s,16,"%s",argv[4]);
         char cmd[B]=""; ajoin(cmd,B,argc,argv,5);
         snprintf(j.p,512,"%s",cmd); snprintf(j.d,64,"%s",DEV);
+        for(int i=0;i<NJ;i++)if(strcmp(HJ[i].n,j.n)&&!strcmp(HJ[i].s,j.s)&&HJ[i].en)
+            fprintf(stderr,"! %s also at %s\n",HJ[i].n,j.s);
         hub_save(&j); sync_repo(); hub_timer(&j,1);
         printf("\xe2\x9c\x93 %s @ %s\n",j.n,j.s); return 0;
     }
