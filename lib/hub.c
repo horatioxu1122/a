@@ -136,10 +136,11 @@ static int cmd_hub(int argc, char **argv) {
             else snprintf(cmd,B,"%s",j->p);
             printf("Running %s...\n",j->n);fflush(stdout);
             char lf[P];snprintf(lf,P,"%s/hub.log",DDIR);
-            FILE *fp=popen(cmd,"r"); char out[B*4]=""; int ol=0; int rc=-1;
-            if(fp) { char b[B]; while(fgets(b,B,fp)&&ol<(int)sizeof(out)-B) { fputs(b,stdout); ol+=sprintf(out+ol,"%s",b); } rc=pclose(fp); }
-            int fail=(!fp||rc!=0);
-            if(fail){sleep(2);fp=popen(cmd,"r");ol=0;if(fp){char b[B];while(fgets(b,B,fp)&&ol<(int)sizeof(out)-B){fputs(b,stdout);ol+=sprintf(out+ol,"%s",b);}fail=pclose(fp)!=0;}}
+            char out[B*4]="";int ol=0,fail=1;
+            for(int try=0;try<2&&fail;try++){if(try)sleep(2);
+                FILE*fp=popen(cmd,"r");ol=0;if(!fp)continue;char b[B];
+                while(fgets(b,B,fp)&&ol<(int)sizeof(out)-B){fputs(b,stdout);ol+=sprintf(out+ol,"%s",b);}
+                fail=pclose(fp)!=0;}
             time_t now=time(NULL); struct tm *t=localtime(&now); char ts[32];
             strftime(ts,32,"%Y-%m-%d %I:%M:%S%p",t); strftime(j->lr,24,"%Y-%m-%d %H:%M",t);
             hub_save(j); sync_bg();
