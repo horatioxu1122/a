@@ -30,11 +30,18 @@ static int cmd_sess(int argc, char **argv) {
         is_prompt = 1;
     }
     char sn[256]; snprintf(sn, 256, "%s-%s", s->name, bname(wd));
+    {char fkd[P];snprintf(fkd,P,"%s/forks",AROOT);
+    if (tm_has(sn)||strstr(wd,fkd)) {
+        char fn[256],fk[P];
+        snprintf(fn,256,"%s-%ld",bname(wd),(long)time(NULL));
+        snprintf(fk,P,"%s/%s",fkd,fn);
+        if(!fork_cp(wd,fk)){snprintf(wd,P,"%s",fk);snprintf(sn,256,"%s-%s",s->name,fn);}
+    }}
     /* Inside tmux = new window in same session */
     if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
-        char ac[B];snprintf(ac,B,"%s",s->cmd);
+        char ac[B];if(in_fork(wd)){const char*fk=strstr(wd,"/adata/forks/")+13;snprintf(ac,B,"a fork run %s %s",fk,s->cmd);}else snprintf(ac,B,"%s",s->cmd);
         char ctxf[P]="",csuf[256]="",cpfx[256]="";
-        if(strstr(ac,"claude")){snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());snprintf(cpfx,256,ACAT " >%s 2>/dev/null;",ctxf);snprintf(csuf,256," --append-system-prompt-file %s",ctxf);}
+        if(strstr(ac,"claude")){snprintf(ctxf,P,"/tmp/a_ctx_%d.txt",(int)getpid());snprintf(cpfx,256,"a cat 1 >%s 2>/dev/null;",ctxf);snprintf(csuf,256," --append-system-prompt-file %s",ctxf);}
         char c[B]; snprintf(c, B, "tmux new-window -P -F '#{pane_id}' -c '%s' 'unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT;%s %s%s'", wd, cpfx, ac, csuf);
         char pid[64]; pcmd(c, pid, 64); pid[strcspn(pid,"\n")] = 0;
         if (pid[0]) {
@@ -64,6 +71,12 @@ static int cmd_sess(int argc, char **argv) {
     tm_go(sn);
     return 0;
 }
+
+/* ── worktree ++ ── */
+static int cmd_wt_plus(int argc, char **argv) { fallback_py("wt_plus", argc, argv); }
+
+/* ── worktree w* ── */
+static int cmd_wt(int argc, char **argv) { fallback_py("wt", argc, argv); }
 
 /* ── dir_file ── */
 static int cmd_dir_file(int argc, char **argv) { (void)argc;

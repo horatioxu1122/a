@@ -2,7 +2,7 @@
 # ── a.c — agent manager & human-AI accelerator. sh a.c [build|install|analyze|shell|clean]
 # Polyglot: shell sees # as comments; C preprocessor skips #if 0..#endif.
 # Fixes: fewer tokens, same speed+. Features: cut until it breaks.
-# Read codebase: a cat (1=all 2=core 3=first100+last30, copies to clipboard)
+# Read codebase: a cat (1=all 2=core 3=first10+last5, copies to clipboard)
 # Context: a c/j preloads a cat 1 into claude's system prompt via --append-system-prompt-file
 # TERMUX: set CLAUDE_CODE_TMPDIR=$HOME/.tmp; build with clang directly.
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
@@ -44,7 +44,7 @@ _shell_funcs() {
         touch "$RC" 2>/dev/null || { warn "can't write $RC (skip)"; continue; }
         grep -q '.local/bin' "$RC" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$RC"
         sed -i.bak '/^_ADD=/d;/^a() {/,/^}/d;/^aio() /d;/^ai() /d;/aios/d' "$RC";rm "$RC.bak"
-        _R="$D"
+        _R="${D%%/adata/worktrees/*}"; _R="${_R%%/adata/forks/*}"
         echo "_ADD=\"$_R/adata/local\"" >> "$RC"
         cat >> "$RC" << 'AFUNC'
 a() {
@@ -98,7 +98,8 @@ _checkers() {
 case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
 build) _PT=${EPOCHREALTIME/./}
-    ABIN="$D/adata/local"
+    # forks/worktrees: compile locally, skip global symlink — bare "a" runs main binary, "./a" runs fork binary
+    R="${D%%/adata/worktrees/*}"; R="${R%%/adata/forks/*}"; if [[ "$D" == *"/adata/worktrees/"* || "$D" == *"/adata/forks/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
     BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
     rm -f "$ABIN/.chk"
     printf '%s' $$ > "$ABIN/.bld"
@@ -113,7 +114,7 @@ build) _PT=${EPOCHREALTIME/./}
     else
         _ensure_cc; E=$($CC $_Q -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { _build_fix "$E"; exit 1; }
     fi
-    ln -sf "$ABIN/a" "$BIN/a"; tmux source-file ~/.a/tmux.conf 2>/dev/null; _perf_chk build
+    [[ "$D" != *"/adata/worktrees/"* && "$D" != *"/adata/forks/"* ]] && ln -sf "$ABIN/a" "$BIN/a"; _perf_chk build
     [[ -d /data/data/com.termux ]]&&/system/bin/cmd package query-activities --brief --user 0 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER 2>/dev/null|awk '/\//{gsub(/^ +/,"");p=$0;sub(/\/.*/,"",p);sub(/.*\./,"",p);printf"open %s\t%s · app\n",$0,p}'>$ABIN/apps.txt&
     (
         T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\""
@@ -132,10 +133,10 @@ build) _PT=${EPOCHREALTIME/./}
 # sh a.c check — build + run all checkers foreground, exit 0 on pass.
 # Use 'sh a.c' for fast iteration, 'sh a.c check' before presenting to user.
 check) _PT=${EPOCHREALTIME/./}
-    ABIN="$D/adata/local"
+    R="${D%%/adata/worktrees/*}"; R="${R%%/adata/forks/*}"; if [[ "$D" == *"/adata/worktrees/"* || "$D" == *"/adata/forks/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
     BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
     _ensure_cc; E=$($CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { echo "$E"; exit 1; }
-    ln -sf "$ABIN/a" "$BIN/a"
+    [[ "$D" != *"/adata/worktrees/"* && "$D" != *"/adata/forks/"* ]] && ln -sf "$ABIN/a" "$BIN/a"
     T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\"";_warn_flags
     _checkers
     if ls "$T"/[0-9].f "$T"/1[0-9].f &>/dev/null 2>&1;then cat "$T"/[0-9] "$T"/1[0-9] 2>/dev/null; exit 1
@@ -274,13 +275,12 @@ exit 0
 /* amalgamation — LLM index: read this to navigate the codebase from a.c alone
    globals(paths) init(device,db) util(readf,writef,pcmd,mkdirp,clip) kv(ini config)
    data(load projects/tasks/notes/sessions) tmux(tm_new/go/send, jcmd_fill, one session "a")
-   git(in_repo,root) session(agent launch,send_prefix_bg,crash loop)
+   git(in_repo,root) fork(copy,rm,run) session(agent launch,send_prefix_bg,crash loop)
    alog(activity) help(TUI picker) project(by number) config(agent/model/key settings)
    push(git push+tok diff) hub(multi-device fleet) ls(windows,kill,copy,watch,job review)
    note(notes+tasks CRUD) ssh(devices) net(sync,backup,email) cal agent(review,scan) file cc
-   perf(benchmark) sess(named sessions c/l/g)
-   a.c below: cmd_freq,cmd_cat,cmd_j/job,cmd_once,cmd_tutorial,CMDS[],perf,main
-   All agents work same dir same main. No forks/worktrees. Push only own changes. */
+   perf(benchmark) sess(named sessions c/l/g, fork-on-reopen)
+   a.c below: cmd_freq,cmd_cat,cmd_j/job,cmd_once,cmd_tutorial,CMDS[],perf,main */
 static void mkdirp(const char *p);
 static void alog(const char *cmd, const char *cwd);
 static void perf_disarm(void);
@@ -298,6 +298,7 @@ static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)
 #include "lib/data.c"     /* load proj/cfg/sess/notes */
 #include "lib/tmux.c"     /* tm_new/go/send, jcmd_fill */
 #include "lib/git.c"      /* git_in_repo, git_root */
+#include "lib/fork.c"     /* fork copy/rm/run */
 #include "lib/session.c"  /* agent launch, send_prefix_bg */
 #include "lib/alog.c"     /* activity logging */
 #include "lib/help.c"     /* help, TUI picker */
@@ -353,18 +354,17 @@ static int cmd_freq(int c,char**v){perf_disarm();
     return 0;}
 static int cmd_cat(int c,char**v){perf_disarm();
     char m=0;int di=2;
-    if(c>2&&v[2][0]>='0'&&v[2][0]<='3'&&!v[2][1]){m=v[2][0];di=3;}
+    if(c>2&&v[2][0]>='1'&&v[2][0]<='3'&&!v[2][1]){m=v[2][0];di=3;}
     if(c>di&&chdir(v[di]))return 1;
-    if(!m){puts("0 auto (1 or 3 by repo size)\n1 all files, all lines\n2 all files, all lines (skip lab/)\n3 all files, first 100 lines + last 30 lines (skip lab/)");
+    if(!m){puts("1 all files, all lines\n2 all files, all lines (skip lab/)\n3 all files, first 10 lines + last 5 lines (skip lab/)");
         printf("> ");fflush(stdout);char ch[4];if(!fgets(ch,4,stdin))return 0;m=ch[0];}
-    const char*ex=m=='1'?"":" -- ':!lab/'";
+    const char*ex=m!='1'?" -- ':!lab/'":"";
     #define GA(p,n) if(l+(n)>=cap){cap=(l+(n)+8192)*2;d=realloc(d,cap);}memcpy(d+l,p,n);l+=(n)
     {char cm[B];snprintf(cm,B,"git grep -lI ''%s",ex);
     size_t l=0,cap=0;char*d=NULL,b[8192];size_t n;int nf=0,skf=0;
     FILE*fl=popen(cm,"r");char fb[65536];size_t fl2=0;
     if(fl){while((n=fread(b,1,8192,fl))>0){if(fl2+n<65536){memcpy(fb+fl2,b,n);fl2+=n;}}pclose(fl);}
     fb[fl2]=0;
-    if(m=='0'){int fc=0;for(size_t i=0;i<fl2;i++)if(fb[i]=='\n')fc++;m=fc>500?'3':'1';}
     for(char*p=fb;p<fb+fl2;){char*e=memchr(p,'\n',(size_t)(fb+fl2-p));if(!e)break;*e=0;
         if(m=='3'&&l>131072&&strchr(p,'/')){skf++;p=e+1;continue;}
         FILE*f=fopen(p,"r");if(!f){p=e+1;continue;}
@@ -372,10 +372,10 @@ static int cmd_cat(int c,char**v){perf_disarm();
         rewind(f);nf++;
         char hdr[600];size_t hl=(size_t)snprintf(hdr,600,"\n==> %s (%d lines) <==\n",p,tl);
         GA(hdr,hl);
-        int hd=m=='3'?(strchr(p,'/')?100:1000):tl;
+        int hd=m=='3'?(strchr(p,'/')?10:1000):tl;
         int i=0;while(fgets(ln,512,f)){size_t sl=strlen(ln);
-            if(i<hd||(tl>hd+30&&i>=tl-30)){GA(ln,sl);}
-            if(i==hd&&tl>hd+30){GA("  ...\n",6);}
+            if(i<hd||(tl>hd+5&&i>=tl-5)){GA(ln,sl);}
+            if(i==hd&&tl>hd+5){GA("  ...\n",6);}
             i++;}
         fclose(f);p=e+1;}
     if(!d)return 1;d[l]=0;
@@ -413,8 +413,17 @@ static int cmd_j(int c,char**v){
         tm_ensure_conf();char jcmd[B];jcmd_fill(jcmd,1,wd);
         {char sn[64];snprintf(sn,64,"j-%s",bname(wd));tm_new(sn,wd,jcmd);tm_go(sn);}
         return 0;}
-    int si=2;if(c>3&&v[2][0]>='0'&&v[2][0]<='9'){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
-    char pr[B]="";int pl=0;for(int i=si;i<c;i++)pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);
+    int si=2,nowt=0;if(c>3&&v[2][0]>='0'&&v[2][0]<='9'){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
+    char pr[B]="";int pl=0;for(int i=si;i<c;i++){if(!strcmp(v[i],"--no-wt")){nowt=1;continue;}pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);}
+    if(!nowt&&git_in_repo(wd)){
+        char fkd[P];snprintf(fkd,P,"%s/forks",AROOT);mkdirp(fkd);
+        time_t now=time(NULL);struct tm*t=localtime(&now);char ts[16];
+        strftime(ts,16,"%b%d",t);for(char*p=ts;*p;p++)*p=(*p>='A'&&*p<='Z')?*p+32:*p;
+        int h=t->tm_hour%12;if(!h)h=12;char nm[64],fp[P];
+        snprintf(nm,64,"%s-%s-%d%02d%02d%s",bname(wd),ts,h,t->tm_min,t->tm_sec,t->tm_hour>=12?"pm":"am");
+        snprintf(fp,P,"%s/%s",fkd,nm);
+        if(!fork_cp(wd,fp)){printf("+ %s\n",fp);snprintf(wd,P,"%s",fp);}
+    }
     printf("+ job: %s\n  %.*s\n",bname(wd),80,pr);
     if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: write .a_done with summary + test commands");
     tm_ensure_conf();
@@ -455,29 +464,8 @@ static int cmd_run_once(int c,char**v){
         sleep(1);}
     fprintf(stderr,"\n\033[31m✗ TIMEOUT\033[0m: a once >%us\n",tl);
     kill(ch,SIGKILL);waitpid(ch,NULL,0);return 124;}
-static void url_name(const char*u,char*nm,int sz){const char*s=strrchr(u,'/');snprintf(nm,sz,"%s",s?s+1:"repo");char*d=strrchr(nm,'.');if(d&&!strcmp(d,".git"))*d=0;}
-static int cmd_my(int c,char**v){
-    char rf[P],rd[P];snprintf(rf,P,"%s/repos.txt",SROOT);snprintf(rd,P,"%s/repos",AROOT);
-    const char*sub=c>2?v[2]:NULL;
-    if(sub&&!strcmp(sub,"add")&&c>3){const char*u=v[3];mkdirp(rd);
-        char nm[64],gc[B];url_name(u,nm,64);
-        snprintf(gc,B,"grep -qxF '%s' '%s' 2>/dev/null||echo '%s'>>'%s'",u,rf,u,rf);(void)!system(gc);
-        char rp[P];snprintf(rp,P,"%s/%s",rd,nm);
-        if(!dexists(rp)){snprintf(gc,B,"git clone '%s' '%s'",u,rp);if(system(gc))return 1;}
-        sync_bg();printf("\xe2\x9c\x93 %s\n",nm);return 0;}
-    if(sub&&!strcmp(sub,"rm")&&c>3){char gc[B];
-        snprintf(gc,B,"sed -i '/%s/d' '%s' 2>/dev/null;rm -rf '%s/%s'",v[3],rf,rd,v[3]);
-        (void)!system(gc);sync_bg();printf("\xe2\x9c\x93 rm %s\n",v[3]);return 0;}
-    if(sub&&!strcmp(sub,"sync")){mkdirp(rd);
-        char*dat=readf(rf,NULL);if(!dat){puts("No repos.txt");return 0;}
-        for(char*l=dat;*l;){char*nl=strchr(l,'\n');if(nl)*nl=0;if(*l){
-            char nm[64],rp[P];url_name(l,nm,64);snprintf(rp,P,"%s/%s",rd,nm);
-            if(!dexists(rp)){char gc[B];snprintf(gc,B,"git clone '%s' '%s'",l,rp);(void)!system(gc);printf("+ %s\n",nm);}
-            else printf("\xe2\x9c\x93 %s\n",nm);}
-        if(nl)l=nl+1;else break;}free(dat);return 0;}
-    char d[P],gc[B];snprintf(d,P,"%s/my",SROOT);snprintf(gc,B,"ls --color '%s' 2>/dev/null",d);printf("my/\n");(void)!system(gc);
-    if(dexists(rd)){printf("\nrepos/\n");snprintf(gc,B,"ls --color '%s'",rd);(void)!system(gc);}
-    printf("\na my add <url>  a my rm <name>  a my sync\n");return 0;}
+static int cmd_my(int c,char**v){(void)c;(void)v;char d[P];snprintf(d,P,"%s/my",SROOT);
+    execlp("ls","ls","--color",d,(char*)0);return 1;}
 static int cmd_tutorial(int c,char**v){(void)c;
     char*fv[]={v[0],"a","You are a friendly guide for 'a', an AI agent manager that helps you accomplish your projects and goals faster. Introduce it in one sentence, say you can ask me anything about commands or how things work, then ask: what project are you working on or want to start? Recommend they pick a real one so you can walk them through it hands-on. Run 'a help' and read README.md IDEAS.md as reference but teach naturally as the user needs it, don't dump. Note: 'scream' in the workcycle just means focus on what's most essential.",NULL};
     return cmd_a_default(3,fv);}
@@ -502,7 +490,7 @@ static const cmd_t CMDS[] = {
     {"cal",cmd_cal},{"cat",cmd_cat},{"cc",cmd_cc},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},
     {"d",cmd_diff},{"deps",cmd_deps},{"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
-    {"e",cmd_e},{"email",cmd_email},{"file",cmd_get},{"freq",cmd_freq},
+    {"e",cmd_e},{"email",cmd_email},{"file",cmd_get},{"fork",cmd_fork},{"freq",cmd_freq},
     {"help",cmd_help_full},{"hi",cmd_hi},{"hub",cmd_hub},{"i",cmd_i},
     {"install",cmd_install},{"j",cmd_j},{"job",cmd_job},{"jobs",cmd_job},
     {"kill",cmd_kill},{"log",cmd_log},{"login",cmd_login},{"ls",cmd_ls},
@@ -516,7 +504,7 @@ static const cmd_t CMDS[] = {
     {"ssh",cmd_ssh},{"ssh add",cmd_ssh},{"ssh all",cmd_ssh},{"ssh rm",cmd_ssh},
     {"ssh self",cmd_ssh},{"ssh setup",cmd_ssh},{"ssh start",cmd_ssh},{"ssh stop",cmd_ssh},
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
-    {"tm-unsave",cmd_tm_unsave},{"tutorial",cmd_tutorial},{"u",cmd_update},  /* ui auto-discovered */
+    {"tm-unsave",cmd_tm_unsave},{"tree",cmd_tree},{"tutorial",cmd_tutorial},{"u",cmd_update},  /* ui auto-discovered */
     {"uninstall",cmd_uninstall},{"update",cmd_update},{"watch",cmd_watch},{"web",cmd_web},
     /* work auto-discovered */
     {"x",cmd_x},
@@ -534,7 +522,7 @@ static void perf_arm_for(const char *cmd) {
 }
 static void perf_arm(const char *cmd) {
     if(getenv("A_BENCH")||isdigit(*cmd))return;
-    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|review|kill|",sk))return;}
+    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|review|fork|kill|",sk))return;}
     perf_arm_for(cmd);
 }
 static void perf_disarm(void) { struct itimerval z={{0,0},{0,0}};setitimer(ITIMER_REAL,&z,NULL);signal(SIGALRM,SIG_DFL); }
@@ -584,6 +572,8 @@ int main(int argc, char **argv) {
        if(ld){while((le=readdir(ld))){if(le->d_name[0]=='.')continue;
         for(int i=0;X[i];i++){snprintf(pf,P,"%s/lab/%s/%s%s",SDIR,le->d_name,arg,X[i]);
          if(fexists(pf)){closedir(ld);int r=run_lab(pf,argc,argv);if(r>=0)return r;}}}closedir(ld);}}}}
+    {size_t l=strlen(arg);if(l>=3&&arg[l-1]=='+'&&arg[l-2]=='+'&&*arg!='w')return cmd_wt_plus(argc,argv);}
+    if(*arg=='w'&&arg[1]&&!fexists(arg))return cmd_wt(argc,argv);
     {init_db();load_cfg();load_sess();if(find_sess(arg))return cmd_sess(argc,argv);}
     if(dexists(arg)||fexists(arg))return cmd_dir_file(argc,argv);
     {char ep[P];snprintf(ep,P,"%s%s",HOME,arg);if(*arg=='/'&&dexists(ep))return cmd_dir_file(argc,argv);}
@@ -591,12 +581,7 @@ int main(int argc, char **argv) {
     if(tm_has(arg)){tm_go(arg);return 0;}
     {char mf[P];static const char*X[]={"",".py",".c",".sh",".html",0};
      for(int i=0;X[i];i++){snprintf(mf,P,"%s/my/%s%s",SROOT,arg,X[i]);
-      if(fexists(mf)){perf_disarm();char md[P];snprintf(md,P,"%s/my",SROOT);(void)!chdir(md);argv[1]=mf;return cmd_dir_file(argc,argv);}}
-     /* search adata/repos for scripts */
-     {char rd[P];snprintf(rd,P,"%s/repos",AROOT);DIR*d=opendir(rd);struct dirent*e;
-      if(d){while((e=readdir(d))){if(e->d_name[0]=='.')continue;
-        for(int j=0;X[j];j++){snprintf(mf,P,"%s/%s/%s%s",rd,e->d_name,arg,X[j]);
-         if(fexists(mf)){closedir(d);perf_disarm();char md[P];snprintf(md,P,"%s/%s",rd,e->d_name);(void)!chdir(md);argv[1]=mf;return cmd_dir_file(argc,argv);}}}closedir(d);}}}
+      if(fexists(mf)){perf_disarm();char md[P];snprintf(md,P,"%s/my",SROOT);(void)!chdir(md);argv[1]=mf;return cmd_dir_file(argc,argv);}}}
     fprintf(stderr,"a: unknown '%s'\n",arg);
     return 1;
 }
@@ -604,7 +589,7 @@ int main(int argc, char **argv) {
 a.c: polyglot shell+C — build system (top), command dispatch+main (bottom), see index above
 lib/: flat C files #included into a.c, plus .py for complex commands (job.py, attach.py)
 lab/: experiments, not part of core build
-adata/: all persistent data (local/, git/, backup/)
+adata/: all persistent data (local/, git/, forks/, backup/)
 my/: user-symlinked scripts auto-discovered as commands
 AGENTS.md: custom AI agent instructions
 IDEAS.md: project motivation and philosophy
