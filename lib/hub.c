@@ -92,28 +92,27 @@ static hub_t *hub_find(const char *s) {
     for(int i=0;i<NJ;i++) if(!strcmp(HJ[i].n,s)) return &HJ[i];
     return NULL;
 }
+static int hub_list(int all,const char*q){
+    hub_timers();int tw=80,sh=0;struct winsize ws;if(ioctl(STDOUT_FILENO,TIOCGWINSZ,&ws)==0)tw=ws.ws_col;
+    int m=tw<60,cw=tw-(m?32:48);
+    printf(m?"# %-8s %-9s On Cmd\n":"# %-10s %-6s %-12s %-8s On Cmd\n","Name",m?"Last":"Sched","Last","Dev");
+    for(int i=0;i<NJ;i++){hub_t*j=&HJ[i];
+        if(!all&&!q&&!j->en)continue;
+        if(q&&!strcasestr(j->n,q)&&!strcasestr(j->p,q)&&!strcasestr(j->d,q))continue;
+        int on=hub_on(j);char cp[512];hub_trunc(cp,512,j->p,cw);
+        const char*lr=j->lr[0]?j->lr+5:"-";sh++;
+        if(m)printf("%-2d%-9s%-10s%s %s\n",i,j->n,lr,on?"\xe2\x9c\x93":" ",cp);
+        else printf("%-2d%-11s%-7s%-13s%-8s%s %s\n",i,j->n,j->s,lr,j->d,on?"\xe2\x9c\x93":" ",cp);}
+    if(q)printf("\n%d/%d match '%s'\n",sh,NJ,q);
+    else printf(NJ-sh?"\n%d jobs (+%d disabled, a hub all)\n":"\n%d jobs\n",sh,NJ-sh);
+    printf("a hub <#>       run job\na hub on/off #  toggle\na hub add|rm    create/delete\na hub all       show disabled\na hub <query>   search\n");
+    return 0;}
 
 static int cmd_hub(int argc, char **argv) {
     init_db(); hub_load();
     const char *sub=argc>2?argv[2]:NULL;
 
-    if(!sub||!strcmp(sub,"all")) {
-        int all=sub&&!strcmp(sub,"all");
-        hub_timers();
-        int tw=80,sh=0; struct winsize ws; if(ioctl(STDOUT_FILENO,TIOCGWINSZ,&ws)==0) tw=ws.ws_col;
-        int m=tw<60, cw=tw-(m?32:48);
-        printf(m?"# %-8s %-9s On Cmd\n":"# %-10s %-6s %-12s %-8s On Cmd\n","Name",m?"Last":"Sched","Last","Dev");
-        for(int i=0;i<NJ;i++) {
-            hub_t *j=&HJ[i]; if(!all&&!j->en) continue;
-            int on=hub_on(j); char cp[512]; hub_trunc(cp,512,j->p,cw);
-            const char *lr=j->lr[0]?j->lr+5:"-"; sh++;
-            if(m) printf("%-2d%-9s%-10s%s %s\n",i,j->n,lr,on?"\xe2\x9c\x93":" ",cp);
-            else printf("%-2d%-11s%-7s%-13s%-8s%s %s\n",i,j->n,j->s,lr,j->d,on?"\xe2\x9c\x93":" ",cp);
-        }
-        printf(NJ-sh?"\n%d jobs (+%d disabled, a hub all)\n":"\n%d jobs\n",sh,NJ-sh);
-        printf("a hub <#>       run job\na hub on/off #  toggle\na hub add|rm    create/delete\na hub all       show disabled\n");
-        return 0;
-    }
+    if(!sub||!strcmp(sub,"all"))return hub_list(sub&&!strcmp(sub,"all"),NULL);
 
     if(!strcmp(sub,"add")) {
         if(argc<6) { fprintf(stderr,"Usage: a hub add <name> <sched> <cmd...>\n"); return 1; }
@@ -176,5 +175,5 @@ static int cmd_hub(int argc, char **argv) {
         char c[B]; snprintf(c,B,"tail -40 '%s'",lf); (void)!system(c); return 0;
     }
 
-    fprintf(stderr,"Usage: a hub [add|run|on|off|rm|sync|log]\n"); return 1;
+    return hub_list(1,sub); /* unknown sub = search */
 }
