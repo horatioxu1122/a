@@ -91,14 +91,41 @@ def cmd_add(path):
     import shutil; shutil.copy2(str(p), str(dest / f"source{p.suffix}"))
     print(f"Added: {dest}")
 
-def cmd_list():
+def _gdrive_info():
+    from _common import get_rclone, _configured_remotes
+    rc=get_rclone();remotes=_configured_remotes() if rc else []
+    if not remotes: return None
+    return f"gdrive ({remotes[0]}): https://drive.google.com/drive/search?q=adata%2Fbooks"
+
+def cmd_list(show_all=False):
     books = sorted(p.parent.name for p in DATA_DIR.glob("*/source.*"))
     if not books: print("No books in", DATA_DIR); return
-    for b in books:
+    limit=len(books) if show_all else 4
+    for b in books[:limit]:
         d = DATA_DIR / b
         out = list((d / "output").glob("*.txt")) if (d / "output").exists() else []
         status = f" [{len(out)} outputs]" if out else ""
         print(f"  {b}{status}")
+    if not show_all and len(books)>4: print(f"  ... +{len(books)-4} more (a book list)")
+    gi=_gdrive_info()
+    if gi: print(f"\n  {gi}")
+    print("\na book <name>  show book menu\na book add <file>  import PDF\na book sync  cloud sync")
+
+def cmd_show(name):
+    book = resolve_book(name)
+    from PyPDF2 import PdfReader
+    total = len(PdfReader(str(book / "source.pdf")).pages)
+    stages = {"pages":"split","transcriptions":"transcribe","translations":"translate","explanations":"explain","output":"output"}
+    print(f"\n{book.name}  ({total} pages)\n")
+    for d,label in stages.items():
+        p = book / d; n = len(list(p.glob("*"))) if p.exists() else 0
+        print(f"  {label:<12} {n or '-'}")
+    print(f"\n  a book split {name}                    split PDF into pages")
+    print(f"  a book transcribe {name} [s e] [w]     OCR pages to text")
+    print(f"  a book translate {name} [lang] [s e w]  translate pages")
+    print(f"  a book explain {name} [s e] [w]        annotate obscure terms")
+    print(f"  a book chat {name} [files...]           interactive Q&A")
+    print(f"\n  s=start e=end page  w=parallel workers  --nocache to redo")
 
 if __name__ == "__main__":
     nocache = "--nocache" in sys.argv
@@ -110,7 +137,7 @@ if __name__ == "__main__":
         cmd_list(); sys.exit(0)
 
     cmd = args[1]
-    if cmd == "list": cmd_list()
+    if cmd == "list": cmd_list(show_all=True)
     elif cmd == "sync": cmd_sync()
     elif cmd == "add":
         if len(args) < 3: print("Usage: a book add <file>"); sys.exit(1)
@@ -164,4 +191,6 @@ if __name__ == "__main__":
         split_pdf(book, nocache=nocache)
         print(f"Split into {book / 'pages'}/")
     else:
-        print(f"Unknown: {cmd}"); sys.exit(1)
+        p = DATA_DIR / cmd
+        if p.is_dir() and list(p.glob("source.*")): cmd_show(cmd)
+        else: print(f"Unknown: {cmd}"); sys.exit(1)

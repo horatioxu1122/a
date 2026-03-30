@@ -367,6 +367,7 @@ static int cmd_cat(int c,char**v){perf_disarm();
     if(fl){while((n=fread(b,1,8192,fl))>0){if(fl2+n<65536){memcpy(fb+fl2,b,n);fl2+=n;}}pclose(fl);}
     fb[fl2]=0;
     for(char*p=fb;p<fb+fl2;){char*e=memchr(p,'\n',(size_t)(fb+fl2-p));if(!e)break;*e=0;
+        if(l>6*1024*1024){GA("\n(too large to continue)\n",25);skf++;break;}
         if(m=='3'&&l>131072&&strchr(p,'/')){skf++;p=e+1;continue;}
         FILE*f=fopen(p,"r");if(!f){p=e+1;continue;}
         int tl=0;char ln[512];while(fgets(ln,512,f))tl++;

@@ -52,7 +52,7 @@ static void hub_timer(hub_t *j, int on) {
 #else
     char sd[P]; snprintf(sd,P,"%s/.config/systemd/user",HOME); mkdirp(sd);
     if(on) {
-        snprintf(buf,B,"[Unit]\nDescription=%s\n[Service]\nType=oneshot\nExecStart=/bin/bash -c '%s/.local/bin/a hub run %s'\n",j->n,HOME,j->n);
+        snprintf(buf,B,"[Unit]\nDescription=%s\n[Service]\nType=oneshot\nEnvironment=PATH=%s\nExecStart=/bin/bash -c '%s/.local/bin/a hub run %s'\n",j->n,getenv("PATH"),HOME,j->n);
         char svc[P]; snprintf(svc,P,"%s/a-%s.service",sd,j->n); writef(svc,buf);
         snprintf(buf,B,"[Unit]\nDescription=%s\n[Timer]\nOnCalendar=%s\nAccuracySec=1s\nPersistent=true\n[Install]\nWantedBy=timers.target\n",j->n,j->s);
         char tmr[P]; snprintf(tmr,P,"%s/a-%s.timer",sd,j->n); writef(tmr,buf);
@@ -84,9 +84,7 @@ static int hub_on(hub_t*j){char p[96];
     snprintf(p,96,"a-%s.timer",j->n);
 #endif
     return(!strcmp(j->d,DEV))?j->en&&strstr(HUB_TL,p)!=NULL:j->en;}
-static void hub_trunc(char*o,int sz,const char*s,int cw){int l=(int)strlen(s);
-    if(l>cw&&cw>5){int h=cw/2-1;snprintf(o,(size_t)sz,"%.*s..%s",h,s,s+l-(cw-h-2));}
-    else snprintf(o,(size_t)sz,"%s",s);}
+static void hub_trunc(char*o,int sz,const char*s,int cw){snprintf(o,(size_t)sz,"%.*s",cw,s);}
 static hub_t *hub_find(const char *s) {
     if(s[0]>='0'&&s[0]<='9') { int i=atoi(s); return i<NJ?&HJ[i]:NULL; }
     for(int i=0;i<NJ;i++) if(!strcmp(HJ[i].n,s)) return &HJ[i];
@@ -171,9 +169,7 @@ static int cmd_hub(int argc, char **argv) {
     }
 
     if(!strcmp(sub,"log")) {
-        char lf[P]; snprintf(lf,P,"%s/hub.log",DDIR);
-        if(!fexists(lf)) { puts("No logs"); return 0; }
-        char c[B]; snprintf(c,B,"tail -40 '%s'",lf); (void)!system(c); return 0;
+        char c[P];snprintf(c,P,"tail -40 '%s/hub.log'",DDIR);(void)!system(c);return 0;
     }
 
     return hub_list(1,sub); /* unknown sub = search */
