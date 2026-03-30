@@ -153,8 +153,8 @@ static int cmd_hub(int argc, char **argv) {
             j->en=sub[1]=='n'; hub_save(j); sync_repo(); hub_timer(j,j->en);
             printf("\xe2\x9c\x93 %s %s\n",j->n,sub); return 0;
         }
-        hub_timer(j,0);/* rm all versions */
-        {char c[B];snprintf(c,B,"rm -f '%s'/%s*.txt",HD,j->n);(void)!system(c);}
+        hub_timer(j,0);
+        {char c[B];snprintf(c,B,"git -C '%s' rm -qf %s*.txt %s_*.txt 2>/dev/null",HD,j->n,j->n);(void)!system(c);}
         sync_repo(); printf("\xe2\x9c\x93 rm %s\n",j->n); return 0;
     }
 
