@@ -85,7 +85,7 @@ static void tm_ensure_conf(void) {
         "bind-key -n C-t new-window\n"
         "bind-key -n C-y split-window -fh\n"
         "bind-key -n C-a run-shell 'tmux new-window \"a\"'\n"
-        "bind-key -n C-w run-shell 'w=#{window_id};a tm-unsave \"#{window_name}\";tmux next-window 2>/dev/null;tmux kill-window -t $w'\n"
+        "bind -n C-w if-shell 'ps -o comm= -t #{pane_tty} 2>/dev/null|grep -qE \"^ssh\"' 'send C-w' 'run-shell \"w=#{window_id};a tm-unsave \\\"#{window_name}\\\";tmux next-window 2>/dev/null;tmux kill-window -t $w\"'\n"
         "bind-key -n C-q detach\n"
         "bind-key -n C-x kill-session\n"
         "bind-key -T root MouseDown1Status if -F '#{==:#{mouse_status_range},window}' "
