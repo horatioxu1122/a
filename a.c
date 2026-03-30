@@ -315,6 +315,7 @@ static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)
 #include "lib/file.c"     /* Downloads open/move */
 #include "lib/cc.c"       /* compiler manager */
 #include "lib/perf.c"     /* benchmark, timing limits */
+#include "lib/work.c"     /* workcycle habits */
 #include "lib/sess.c"     /* named sessions c/l/g */
 
 static int cmd_freq(int c,char**v){perf_disarm();
@@ -505,8 +506,8 @@ static const cmd_t CMDS[] = {
     {"ssh self",cmd_ssh},{"ssh setup",cmd_ssh},{"ssh start",cmd_ssh},{"ssh stop",cmd_ssh},
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
     {"tm-unsave",cmd_tm_unsave},{"tutorial",cmd_tutorial},{"u",cmd_update},  /* ui auto-discovered */
-    {"uninstall",cmd_uninstall},{"update",cmd_update},{"watch",cmd_watch},{"web",cmd_web},
-    /* work auto-discovered */
+    {"uninstall",cmd_uninstall},{"update",cmd_update},
+    {"w",cmd_w},{"watch",cmd_watch},{"web",cmd_web},{"work",cmd_w},
     {"x",cmd_x},
 };
 #define NCMDS (sizeof(CMDS)/sizeof(*CMDS))
