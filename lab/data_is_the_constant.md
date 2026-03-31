@@ -43,3 +43,21 @@ Three blockers that all lifted at once:
 3. **LLMs collapse the knowledge problem.** An LLM can hold apt repo keyring handling, brew cask artifact detection, and macOS defaults export all in context simultaneously and wire them together in one file. A human team would need 3-4 platform specialists who'd never agree on an architecture. An LLM treats it as one problem because it doesn't have the human specialization boundary. The cross-platform complexity that was organizationally impossible for a company to staff is trivial when knowledge isn't siloed in different people's heads.
 
 Dropbox in 2015 would have needed a team of 10 platform specialists arguing for a year. One person and an LLM did it in an evening. The problem didn't get easier — the tool for solving it finally exists.
+
+## Files Were Always the Universal Interface
+
+Bill Gates wrote in *The Road Ahead* (1995) that there is partial compatibility across all platforms because OSes all read files, which are generic. The leap is: everything *is* a file, including personalization. Your brew list, your dock settings, your app configs — these are all just data, but each OS buries them in platform-specific formats and locations. `a migrate save` literally makes the Gates leap: it turns personalization into portable files — JSON in adata. Your environment *is* a file now, readable on any platform, same as a document or a photo.
+
+The `if platform do x` messiness in a.c is the honest cost. `brew` vs `apt` vs `pacman`, `defaults write` vs `dconf`, `.plist` vs `.ini` — the impurity is real. But the mess lives in one place (a.c and migrate.py), not in your head. You write the cross-platform glue once, ugly as it is, and everything above it is clean portable files. The mess is the bridge, not the architecture.
+
+Gates had the insight in 1995. It took 30 years because the cross-platform glue requires knowing all the platforms simultaneously, and no human or team could hold it all at once until LLMs.
+
+## The Platform Matrix Is Smaller Than It Looks
+
+The "cross-platform is impossibly hard" narrative comes from people who've only ever worked on one OS and assume the others are alien. The actual platforms that matter: macOS, Windows, Linux Debian, Linux Fedora, Linux Arch, Android, iOS. That's 7 — and half share a kernel (Linux), iOS and macOS share Darwin. The real differences collapse to:
+
+- **Package install:** brew / apt / pacman / dnf / pkg (Termux) — 5 commands
+- **Config format:** plist / dconf / ini/dotfiles — 3 formats
+- **Shell:** bash/zsh everywhere, basically identical
+
+The platforms are 90% the same. The 10% difference is what a.c's if-platform blocks handle — maybe 50 lines of branching total. The perceived impossibility was never technical complexity. It was knowledge fragmentation across human specialists who each knew one OS. LLMs see them all as one problem because they are.
