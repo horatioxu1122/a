@@ -76,12 +76,13 @@ static void load_proj(void) {
     for (int i = 0; i < n && NPJ < MP; i++) {
         kvs_t kv = kvfile(paths[i]);
         const char *nm = kvget(&kv, "Name"); if (!nm) continue;
-        const char *pa = kvget(&kv, "Path"), *re = kvget(&kv, "Repo");
+        const char *pa = kvget(&kv, "Path"), *re = kvget(&kv, "Repo"), *gd = kvget(&kv, "Gdrive");
         proj_t *p=&PJ[NPJ];
         snprintf(p->name, 128, "%s", nm); snprintf(p->file, P, "%s", paths[i]);
         {char*pp=p->path;snprintf(pp,512,"%s/%s",HOME,nm);
         if(!dexists(pp)&&pa){if(pa[0]=='~')snprintf(pp,512,"%s%s",HOME,pa+1);else if(dexists(pa))snprintf(pp,512,"%s",pa);}}
         snprintf(p->repo, 512, "%s", re ? re : "");
+        snprintf(p->gdrive, 512, "%s", gd ? gd : "");
         {const char *o=kvget(&kv,"Order");p->order=o?atoi(o):strcmp(p->path,SDIR)?9999:-1;}
         NPJ++;
     }
