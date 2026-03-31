@@ -105,7 +105,7 @@ build) _PT=${EPOCHREALTIME/./}
     printf '%s' $$ > "$ABIN/.bld"
     _build_fix() {
         warn "Build failed. Attempting agent fix..."
-        command -v a &>/dev/null && { a j --no-wt "a.c failed to compile. Error: $1. Fix the build error and run 'sh a.c' to verify."; return; }
+        command -v a &>/dev/null && { a j "a.c failed to compile. Error: $1. Fix the build error and run 'sh a.c' to verify."; return; }
         echo -e "\nCould not auto-fix. Contact Sean Patten: spatten2@fordham.edu github:seanpattencode"
     }
     _Q=-DSRC="\"$D\""
@@ -392,7 +392,7 @@ static int cmd_cat(int c,char**v){perf_disarm();
 static int cmd_j(int c,char**v){
     if(c<3||!strcmp(v[2],"rm")||!strcmp(v[2],"watch")||!strcmp(v[2],"-r")||(c==3&&isdigit(*v[2])))return cmd_jobs(c,v);
     if(c>2&&v[2][1]=='q'){char ln[B];for(fputs("j> ",stdout);fgets(ln,B,stdin);fputs("j> ",stdout)){
-        ln[strcspn(ln,"\n")]=0;if(!*ln)continue;char*a[]={"a","j","--no-wt",ln,0};cmd_j(4,a);}return 0;}
+        ln[strcspn(ln,"\n")]=0;if(!*ln)continue;char*a[]={"a","j",ln,0};cmd_j(3,a);}return 0;}
     if(c==3&&!strcmp(v[2],"a")){if(!getenv("TMUX")){puts("x Needs tmux");return 1;}
         char cf[P],pr[B],cm[B],pid[64];snprintf(cf,P,"%s/job_context.txt",DDIR);
         {char nd[P];FILE*f=fopen(cf,"w");if(f){
@@ -415,17 +415,8 @@ static int cmd_j(int c,char**v){
         tm_ensure_conf();char jcmd[B];jcmd_fill(jcmd,1,wd);
         {char sn[64];snprintf(sn,64,"j-%s",bname(wd));tm_new(sn,wd,jcmd);tm_go(sn);}
         return 0;}
-    int si=2,nowt=0;if(c>3&&v[2][0]>='0'&&v[2][0]<='9'){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
-    char pr[B]="";int pl=0;for(int i=si;i<c;i++){if(!strcmp(v[i],"--no-wt")){nowt=1;continue;}pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);}
-    if(!nowt&&git_in_repo(wd)){
-        char fkd[P];snprintf(fkd,P,"%s/forks",AROOT);mkdirp(fkd);
-        time_t now=time(NULL);struct tm*t=localtime(&now);char ts[16];
-        strftime(ts,16,"%b%d",t);for(char*p=ts;*p;p++)*p=(*p>='A'&&*p<='Z')?*p+32:*p;
-        int h=t->tm_hour%12;if(!h)h=12;char nm[64],fp[P];
-        snprintf(nm,64,"%s-%s-%d%02d%02d%s",bname(wd),ts,h,t->tm_min,t->tm_sec,t->tm_hour>=12?"pm":"am");
-        snprintf(fp,P,"%s/%s",fkd,nm);
-        if(!fork_cp(wd,fp)){printf("+ %s\n",fp);snprintf(wd,P,"%s",fp);}
-    }
+    int si=2;if(c>3&&v[2][0]>='0'&&v[2][0]<='9'){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
+    char pr[B]="";int pl=0;for(int i=si;i<c;i++)pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);
     printf("+ job: %s\n  %.*s\n",bname(wd),80,pr);
     if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: write .a_done with summary + test commands");
     tm_ensure_conf();
