@@ -1,4 +1,9 @@
 """a migrate - save/restore system state across OSes"""
+# Limitation: app login sessions (Claude, Codex, browsers) can't be portably
+# backed up — cookies are encrypted with macOS Keychain keys tied to Secure
+# Enclave per-install. Only Time Machine full restore preserves these because
+# it restores the exact Keychain + encryption keys. On nuke-and-pave you
+# re-login (~60s each). Browser bookmarks/passwords restore via cloud sync.
 import subprocess, sys, json, os, shutil, platform
 from pathlib import Path
 
