@@ -108,16 +108,21 @@ static int cmd_ssh(int argc,char**argv){
             snprintf(port,8,"2222");
             /* ensure sshd running */
             (void)!system("pgrep -x sshd >/dev/null||sudo service ssh start");
-            /* check/setup port forward */
-            char pf[B];pcmd("powershell.exe -c 'netsh interface portproxy show all' 2>/dev/null",pf,B);
+            /* check/setup port forward + logon task */
+            char pf[B],wu[128]="";pcmd("powershell.exe -NoProfile -c 'netsh interface portproxy show all' 2>/dev/null",pf,B);
+            pcmd("cmd.exe /c \"echo %USERNAME%\" 2>/dev/null",wu,128);wu[strcspn(wu,"\r\n")]=0;
             if(!strstr(pf,"2222")){
                 char wip[128];pcmd("hostname -I 2>/dev/null|awk '{printf $1}'",wip,128);
-                puts("Setting up Windows port forward (UAC)...");
-                char c[B*2];snprintf(c,B*2,"powershell.exe -c \"Start-Process powershell -Verb RunAs -ArgumentList '-c',"
+                if(wu[0]){char ps[P];snprintf(ps,P,"/mnt/c/Users/%s/.wsl-ssh.ps1",wu);
+                    writef(ps,"$ip='';for($i=0;$i -lt 30 -and !$ip;$i++){Start-Sleep 2;try{$ip=(wsl hostname -I).Trim().Split()[0]}catch{}}\nif($ip){netsh interface portproxy delete v4tov4 listenport=2222 listenaddress=0.0.0.0 2>$null;netsh interface portproxy add v4tov4 listenport=2222 listenaddress=0.0.0.0 connectport=22 connectaddress=$ip}\n");}
+                puts("Setting up Windows port forward + logon task (UAC)...");
+                char c[B*2];int n=snprintf(c,B*2,"powershell.exe -NoProfile -c \"Start-Process powershell -Verb RunAs -ArgumentList '-c',"
                     "'netsh interface portproxy delete v4tov4 listenport=2222 listenaddress=0.0.0.0 2>\\$null;"
                     "netsh interface portproxy add v4tov4 listenport=2222 listenaddress=0.0.0.0 connectport=22 connectaddress=%s;"
                     "netsh advfirewall firewall delete rule name=\\\"WSL SSH\\\" 2>\\$null;"
-                    "netsh advfirewall firewall add rule name=\\\"WSL SSH\\\" dir=in action=allow protocol=tcp localport=2222'\"",wip);
+                    "netsh advfirewall firewall add rule name=\\\"WSL SSH\\\" dir=in action=allow protocol=tcp localport=2222",wip);
+                if(wu[0])n+=snprintf(c+n,(size_t)(B*2-n),";schtasks /create /tn \\\"WSL SSH Forward\\\" /sc onlogon /rl highest /f /tr \\\"powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File C:/Users/%s/.wsl-ssh.ps1\\\"",wu);
+                snprintf(c+n,(size_t)(B*2-n),"'\"");
                 (void)!system(c);printf("Press Enter after admin window completes...");(void)getchar();}
             printf("\xe2\x9c\x93 WSL port forward\n");
 #ifdef __APPLE__
