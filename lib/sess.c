@@ -187,9 +187,20 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             IRST;
             if(dexists(cmd)){char tf[P];snprintf(tf,P,"%s/cd_target",DDIR);writef(tf,cmd);return 0;}
             {int wo=!strncmp(cmd,"open ",5)?5:!strncmp(cmd,"web ",4)?4:0;
-            if(wo){alog(cmd,"");if(wo==5){char ac[256];
-                if(getenv("SWAYSOCK"))snprintf(ac,256,"swaymsg exec '%s'",cmd+5);
-                else snprintf(ac,256,APP_CMD " '%s'",cmd+5);
+            if(wo){alog(cmd,"");if(wo==5){char ac[512];const char*app=cmd+5;
+                if(getenv("SWAYSOCK")){
+                    /* find Exec= from .desktop, strip %U etc, run via swaymsg */
+                    char df[P]="";snprintf(df,P,"/usr/share/applications/%s.desktop",app);
+                    if(!fexists(df))snprintf(df,P,"/usr/local/share/applications/%s.desktop",app);
+                    if(fexists(df)){char*d=readf(df,NULL);char*ex=d?strstr(d,"Exec="):NULL;
+                        if(ex){ex+=5;char*nl=strchr(ex,'\n');if(nl)*nl=0;
+                            char*pct=strchr(ex,'%');if(pct)*pct=0;
+                            while(ex[strlen(ex)-1]==' ')ex[strlen(ex)-1]=0;
+                            snprintf(ac,512,"swaymsg 'exec %s'",ex);}
+                        else snprintf(ac,512,"swaymsg 'exec %s'",app);
+                        free(d);
+                    } else snprintf(ac,512,"swaymsg 'exec %s'",app);
+                } else snprintf(ac,512,APP_CMD " '%s'",app);
                 (void)!system(ac);}
                 else bg_exec(OPENER,cmd+4);return 0;}}
             printf("Running: a %s\n",cmd);
