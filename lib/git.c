@@ -38,10 +38,10 @@ static void ensure_git_id(void) {
 static void sync_repo(void) {
     ensure_git_id();
     char c[B];
-    snprintf(c,B,"flock /tmp/.a_git.lock sh -c \"D='%s';[ -s \\$D/.git/index ]||git -C \\$D read-tree HEAD;git -C \\$D add -A;git -C \\$D commit -qm sync;git -C \\$D pull --no-rebase --no-edit -X ours -q origin main&&git -C \\$D push -q origin main||(git -C \\$D fetch -q origin;git -C \\$D reset --hard origin/main) 2>/dev/null\"",SROOT);
+    snprintf(c,B,"flock /tmp/.a_git.lock sh -c \"D='%s';[ -s \\$D/.git/index ]||git -C \\$D read-tree HEAD;git -C \\$D add -A;git -C \\$D commit -qm sync;git -C \\$D pull --rebase -q origin main 2>/dev/null&&git -C \\$D push -q origin main 2>/dev/null||(git -C \\$D fetch -q origin;git -C \\$D reset --hard origin/main) 2>/dev/null\"",SROOT);
     (void)!system(c);
 }
 static void sync_bg(void) {
     pid_t p=fork();if(p<0)return;if(p>0){waitpid(p,NULL,WNOHANG);return;}
-    if(fork()>0)_exit(0);setsid();freopen("/dev/null","w",stdout);sync_repo();_exit(0);
+    if(fork()>0)_exit(0);setsid();freopen("/dev/null","w",stdout);freopen("/dev/null","w",stderr);sync_repo();_exit(0);
 }

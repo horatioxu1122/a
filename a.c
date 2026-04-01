@@ -40,7 +40,6 @@ _warn_flags() {
 }
 _shell_funcs() {
     for RC in "$HOME/.bashrc" "$HOME/.zshrc"; do
-        # skip unwritable RC files
         touch "$RC" 2>/dev/null || { warn "can't write $RC (skip)"; continue; }
         grep -q '.local/bin' "$RC" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$RC"
         sed -i.bak '/^_ADD=/d;/^a() {/,/^}/d;/^aio() /d;/^ai() /d;/aios/d' "$RC";rm "$RC.bak"
@@ -83,6 +82,9 @@ _perf_lim() { local f="$D/adata/git/perf/$(cat "$D/adata/local/device.txt" 2>/de
 _perf_chk() { local e=$(( ${EPOCHREALTIME/./} - _PT )) l=$(_perf_lim "$1")
     [[ $l -gt 0 && $e -gt $l ]] && { echo -e "\033[31m✗ PERF KILL\033[0m: sh a.c $1 ${e}us > ${l}us" >&2; exit 1; }
     echo -e "${e}us" >&2;}
+_Q=-DSRC="\"$D\""
+_abin() { [[ "$D" == *"/adata/worktrees/"*||"$D" == *"/adata/forks/"* ]]&&ABIN="$D"||ABIN="$D/adata/local"
+    BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN";}
 _checkers() {
     _c(){ n=$1;shift;{ ! command -v "$1" &>/dev/null||"$@";}>"$T/$n" 2>&1||touch "$T/$n.f";}
     _rgcc(){ command -v gcc &>/dev/null&&! gcc --version 2>&1|grep -q clang;}
@@ -98,26 +100,22 @@ _checkers() {
 case "${1:-build}" in
 node) N="$HOME/.local/bin/node"; [[ -x "$N" ]] && V="$("$N" -v)" && [[ "$V" == v2[2-9]* || "$V" == v[3-9]* ]] && { ok "node $V"; exit 0; }; _install_node ;;
 build) _PT=${EPOCHREALTIME/./}
-    # forks/worktrees: compile locally, skip global symlink — bare "a" runs main binary, "./a" runs fork binary
-    R="${D%%/adata/worktrees/*}"; R="${R%%/adata/forks/*}"; if [[ "$D" == *"/adata/worktrees/"* || "$D" == *"/adata/forks/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
-    BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
-    rm -f "$ABIN/.chk"
+    _abin; rm -f "$ABIN/.chk"
     printf '%s' $$ > "$ABIN/.bld"
     _build_fix() {
-        warn "Build failed. Attempting agent fix..."
-        command -v a &>/dev/null && { a j "a.c failed to compile. Error: $1. Fix the build error and run 'sh a.c' to verify."; return; }
-        echo -e "\nCould not auto-fix. Contact Sean Patten: spatten2@fordham.edu github:seanpattencode"
+        warn "Build failed, attempting fix..."
+        command -v a &>/dev/null && { a j --no-wt "a.c compile error: $1. Fix and run 'sh a.c'."; return; }
+        echo "Couldn't auto-fix. github:seanpattencode"
     }
-    _Q=-DSRC="\"$D\""
     if command -v tcc &>/dev/null; then
         TCT=${EPOCHREALTIME/./};tcc $_Q -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||{ _build_fix "$(tcc $_Q -w -o /dev/null "$D/a.c" 2>&1)"; exit 1; };TCT=$(( ${EPOCHREALTIME/./} - TCT ))000
     else
         _ensure_cc; E=$($CC $_Q -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { _build_fix "$E"; exit 1; }
     fi
-    [[ "$D" != *"/adata/worktrees/"* && "$D" != *"/adata/forks/"* ]] && ln -sf "$ABIN/a" "$BIN/a"; _perf_chk build
+    [[ "$ABIN" == */adata/local ]] && ln -sf "$ABIN/a" "$BIN/a"; _perf_chk build
     [[ -d /data/data/com.termux ]]&&/system/bin/cmd package query-activities --brief --user 0 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER 2>/dev/null|awk '/\//{gsub(/^ +/,"");p=$0;sub(/\/.*/,"",p);sub(/.*\./,"",p);printf"open %s\t%s · app\n",$0,p}'>$ABIN/apps.txt&
     (
-        T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\""
+        T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="$_Q"
         if [[ -n "$TCT" ]]; then
             PYT=$(date +%s%N);python3 -c 'import subprocess;subprocess.run(["echo","hello world"],capture_output=True)';PYT=$(( $(date +%s%N)-PYT ))
             [[ $TCT -gt $PYT ]] && { echo "PERF KILL: tcc ${TCT}ns > python ${PYT}ns" >"$ABIN/.chk"; touch "$T/0.f"; }
@@ -130,20 +128,16 @@ build) _PT=${EPOCHREALTIME/./}
         fi
     ) >&- 2>&- &
     ;;
-# sh a.c check — build + run all checkers foreground, exit 0 on pass.
-# Use 'sh a.c' for fast iteration, 'sh a.c check' before presenting to user.
 check) _PT=${EPOCHREALTIME/./}
-    R="${D%%/adata/worktrees/*}"; R="${R%%/adata/forks/*}"; if [[ "$D" == *"/adata/worktrees/"* || "$D" == *"/adata/forks/"* ]]; then ABIN="$D"; else ABIN="$R/adata/local"; fi
-    BIN="$HOME/.local/bin";mkdir -p "$ABIN" "$BIN"
-    _ensure_cc; E=$($CC -DSRC="\"$D\"" -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { echo "$E"; exit 1; }
-    [[ "$D" != *"/adata/worktrees/"* && "$D" != *"/adata/forks/"* ]] && ln -sf "$ABIN/a" "$BIN/a"
-    T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="-DSRC=\"$D\"";_warn_flags
+    _abin; _ensure_cc; E=$($CC $_Q -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { echo "$E"; exit 1; }
+    [[ "$ABIN" == */adata/local ]] && ln -sf "$ABIN/a" "$BIN/a"
+    T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="$_Q";_warn_flags
     _checkers
     if ls "$T"/[0-9].f "$T"/1[0-9].f &>/dev/null 2>&1;then cat "$T"/[0-9] "$T"/1[0-9] 2>/dev/null; exit 1
     else ok "all checkers passed"; _perf_chk check; $CC $A -O3 -march=native -flto -w -o "$ABIN/a.opt" "$F"&&mv "$ABIN/a.opt" "$ABIN/a" 2>&-;rm -f "$ABIN/a.opt" & fi
     ;;
 analyze) _ensure_cc;_warn_flags
-    $CC $WARN -DSRC="\"$D\"" --analyze -Xanalyzer -analyzer-output=text -Xanalyzer -analyzer-checker=security,unix,nullability,optin.portability.UnixAPI -Xanalyzer -analyzer-disable-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling "$D/a.c"
+    $CC $WARN $_Q --analyze -Xanalyzer -analyzer-output=text -Xanalyzer -analyzer-checker=security,unix,nullability,optin.portability.UnixAPI -Xanalyzer -analyzer-disable-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling "$D/a.c"
     find "$D" -maxdepth 1 -name '*.plist' -delete;;
 shell) _shell_funcs;;
 clean) rm -f "$D/adata/local/a";;
@@ -202,8 +196,7 @@ install)
         [[ -n "$p" ]] && warn "$cmd ($p) is Windows"; info "Installing $cmd..."
         local ns=""; [[ "$OS" == termux && -z "$3" ]] && ns="--ignore-scripts"
         if ! command -v npm &>/dev/null; then warn "$cmd skipped (no npm)"
-        elif [[ -n "$SUDO" || $EUID -eq 0 ]]; then $SUDO npm install -g $ns "$pkg"&&ok "$cmd"||warn "$cmd failed"
-        else mkdir -p "$HOME/.local/lib"&&npm install -g $ns --prefix="$HOME/.local" "$pkg"&&ok "$cmd"||warn "$cmd failed"; fi
+        else [[ -z "$SUDO" && $EUID -ne 0 ]] && { mkdir -p "$HOME/.local/lib";ns="$ns --prefix=$HOME/.local";}; $SUDO npm install -g $ns "$pkg"&&ok "$cmd"||warn "$cmd failed"; fi
     }
     command -v claude &>/dev/null&&ok "claude"||{ info "Installing claude...";curl -fsSL https://claude.ai/install.sh|bash&&ok "claude"||warn "claude failed";}
     install_cli "@openai/codex" "codex"
@@ -216,7 +209,7 @@ install)
         [[ -n "$PY" ]]&&{ [[ -f "$VENV/bin/python" ]]&&ok "venv"||{ $PY -m venv "$VENV"&&ok "venv"||warn "venv failed";}
         [[ -f "$VENV/bin/pip" ]]&&$VENV/bin/pip install -q pexpect prompt_toolkit aiohttp 2>/dev/null&&ok "python deps"||warn "pip failed";}
     fi
-    if ! python3 -c "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); p.chromium.launch(headless=True).close(); p.stop()" 2>/dev/null; then
+    if ! python3 -c "from playwright.sync_api import sync_playwright;sync_playwright().start().chromium.launch(headless=True).close()" 2>/dev/null; then
         info "Installing playwright browser deps..."
         if command -v pacman &>/dev/null; then sudo pacman -S --noconfirm --needed libxcomposite gtk3 alsa-lib nss 2>/dev/null && ok "playwright deps" || warn "playwright deps"
         elif command -v apt-get &>/dev/null; then sudo apt-get install -y libxcomposite1 libgtk-3-0t64 libasound2t64 libnss3 2>/dev/null && ok "playwright deps" || warn "playwright deps"; fi
@@ -272,15 +265,7 @@ exit 0
 #define AB if(getenv("A_BENCH"))return 0
 #define CWD(w) char w[P];if(!getcwd(w,P))snprintf(w,P,"%s",HOME)
 
-/* amalgamation — LLM index: read this to navigate the codebase from a.c alone
-   globals(paths) init(device,db) util(readf,writef,pcmd,mkdirp,clip) kv(ini config)
-   data(load projects/tasks/notes/sessions) tmux(tm_new/go/send, jcmd_fill, one session "a")
-   git(in_repo,root) fork(copy,rm,run) session(agent launch,send_prefix_bg,crash loop)
-   alog(activity) help(TUI picker) project(by number) config(agent/model/key settings)
-   push(git push+tok diff) hub(multi-device fleet) ls(windows,kill,copy,watch,job review)
-   note(notes+tasks CRUD) ssh(devices) net(sync,backup,email) cal agent(review,scan) file cc
-   perf(benchmark) sess(named sessions c/l/g, fork-on-reopen)
-   a.c below: cmd_freq,cmd_cat,cmd_j/job,cmd_once,cmd_tutorial,CMDS[],perf,main */
+/* a.c: cmd_freq,cmd_cat,cmd_j,cmd_once,cmd_tutorial,CMDS[],perf,main */
 static void mkdirp(const char *p);
 static void alog(const char *cmd, const char *cwd);
 static void perf_disarm(void);
@@ -290,6 +275,7 @@ static int cmd_restore(int, char**);
 static void tm_unsave_win(const char*);
 typedef struct{char n[64];int c;}FC;
 static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)a)->c;}
+static const char*EXT[]={"",".py",".c",".sh",".html",0};
 
 #include "lib/globals.c"  /* path globals */
 #include "lib/init.c"     /* paths, device, db */
@@ -319,8 +305,8 @@ static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)
 #include "lib/sess.c"     /* named sessions c/l/g */
 
 static int cmd_freq(int c,char**v){perf_disarm();
-    int verbose=0,n=0;
-    for(int i=2;i<c;i++){if(!strcmp(v[i],"-v"))verbose=1;else if(*v[i]>='0'&&*v[i]<='9')n=atoi(v[i]);}
+    int vb=0,n=0;
+    for(int i=2;i<c;i++){if(!strcmp(v[i],"-v"))vb=1;else if(*v[i]>='0'&&*v[i]<='9')n=atoi(v[i]);}
     char ad[P];snprintf(ad,P,"%s/git/activity",AROOT);
     DIR*d=opendir(ad);if(!d){puts("x no activity log");return 1;}
     FC ct[1024];int nc=0;
@@ -333,31 +319,31 @@ static int cmd_freq(int c,char**v){perf_disarm();
         char*end=p;while(*end&&*end!='\n')end++;*end=0;
         if(!*p)continue;
         end=p;while(*end&&*end!=' ')end++;
-        if(verbose&&*end){end++;while(*end&&*end!=' '&&*end!='\n')end++;}
+        if(vb&&*end){end++;while(*end&&*end!=' '&&*end!='\n')end++;}
         *end=0;
         int j;for(j=0;j<nc;j++)if(!strcmp(ct[j].n,p)){ct[j].c++;break;}
         if(j==nc&&nc<1024){snprintf(ct[nc].n,64,"%s",p);ct[nc].c=1;nc++;}}
     closedir(d);
     qsort(ct,(size_t)nc,sizeof(ct[0]),ctcmp);
     if(!n||n>nc)n=nc;
-    long total_uses=0,total_kb=0;
+    long tu=0,tk=0;
     printf("%6s %5s %5s %s\n","USES","FILE","USE/K","CMD");
     for(int i=0;i<n;i++){struct stat st;char sf[P];long kb=0;
-        const char*cn=ct[i].n;static const struct{const char*a,*f;}AL[]={{"task","note"},{"t","note"},{"n","note"},{"i","ls"},{"diff","push"},{"d","push"},{"kill","ls"},{"j","sess"},{"jobs","sess"},{0,0}};
-        for(int a=0;AL[a].a;a++)if(!strcmp(cn,AL[a].a)){cn=AL[a].f;break;}
+        const char*cn=ct[i].n;static const char*AL[]={"task","note","t","note","n","note","i","ls","diff","push","d","push","kill","ls","j","sess","jobs","sess",0};
+        for(int a=0;AL[a];a+=2)if(!strcmp(cn,AL[a])){cn=AL[a+1];break;}
         static const char*X[]={".c",".py",NULL};
         for(int x=0;X[x];x++){snprintf(sf,P,"%s/lib/%s%s",SDIR,cn,X[x]);if(!stat(sf,&st)){kb=(st.st_size+512)/1024;break;}}
-        total_uses+=ct[i].c;if(kb)total_kb+=kb;
+        tu+=ct[i].c;if(kb)tk+=kb;
         if(kb)printf("%6d %4ldK %5ld %s\n",ct[i].c,kb,ct[i].c/kb,ct[i].n);
         else printf("%6d             %s\n",ct[i].c,ct[i].n);}
-    if(total_kb)printf("\n%ld uses, %ldK code, %ld u/K overall\n",total_uses,total_kb,total_kb?total_uses/total_kb:0);
-    puts("\033[33m! counts include bot/automated use\033[0m");
+    if(tk)printf("\n%ld uses, %ldK code, %ld u/K overall\n",tu,tk,tk?tu/tk:0);
+    puts("\033[33m! includes bot/auto use\033[0m");
     return 0;}
 static int cmd_cat(int c,char**v){perf_disarm();
     char m=0;int di=2;
     if(c>2&&v[2][0]>='1'&&v[2][0]<='3'&&!v[2][1]){m=v[2][0];di=3;}
     if(c>di&&chdir(v[di]))return 1;
-    if(!m){puts("1 all files, all lines\n2 all files, all lines (skip lab/)\n3 all files, first 10 lines + last 5 lines (skip lab/)");
+    if(!m){puts("1 all\n2 all (skip lab/)\n3 first10+last5 (skip lab/)");
         printf("> ");fflush(stdout);char ch[4];if(!fgets(ch,4,stdin))return 0;m=ch[0];}
     const char*ex=m!='1'?" -- ':!lab/'":"";
     #define GA(p,n) if(l+(n)>=cap){cap=(l+(n)+8192)*2;d=realloc(d,cap);}memcpy(d+l,p,n);l+=(n)
@@ -383,7 +369,7 @@ static int cmd_cat(int c,char**v){perf_disarm();
     if(!d)return 1;d[l]=0;
     char tf[P];snprintf(tf,P,"%s/local/a_cat.txt",AROOT);writef(tf,d);
     {int lc=0;for(size_t i=0;i<l;i++)if(d[i]=='\n')lc++;
-    dprintf(1,"AI Agent: Please read the file located at %s (%d lines) section by section fully if your tool doesn't support one shot read\n\n",tf,lc);}
+    dprintf(1,"Read %s (%d lines) in full\n\n",tf,lc);}
     (void)!write(1,d,l);to_clip(d);
     fprintf(stderr,"✓ %d files %zub%s cat %s\n",nf,l,skf?" (skipped)":"",tf);
     free(d);}
@@ -407,7 +393,7 @@ static int cmd_j(int c,char**v){
         if(pid[0])send_prefix_bg(pid,"claude",SDIR,pr);return 0;}
     {char nb[16]="";pcmd("pgrep -xc claude 2>/dev/null||echo 0",nb,16);
     int nj=atoi(nb)-1;if(nj<0)nj=0;
-    if(nj>=100&&!(c>2&&!strcmp(v[2],"--resume"))){printf("x %d/100 job slots full — use 'a job' to see running\n",nj);return 1;}}
+    if(nj>=100&&!(c>2&&!strcmp(v[2],"--resume"))){printf("x %d/100 slots full, see: a job\n",nj);return 1;}}
     init_db();load_cfg();load_proj();CWD(wd);
     if(c>3&&!strcmp(v[2],"--resume")){snprintf(wd,P,"%s",v[3]);
         if(!dexists(wd)){printf("x %s not found\n",wd);return 1;}
@@ -415,8 +401,17 @@ static int cmd_j(int c,char**v){
         tm_ensure_conf();char jcmd[B];jcmd_fill(jcmd,1,wd);
         {char sn[64];snprintf(sn,64,"j-%s",bname(wd));tm_new(sn,wd,jcmd);tm_go(sn);}
         return 0;}
-    int si=2;if(c>3&&v[2][0]>='0'&&v[2][0]<='9'){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
-    char pr[B]="";int pl=0;for(int i=si;i<c;i++)pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);
+    int si=2,nowt=0;if(c>3&&isdigit(*v[2])){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
+    char pr[B]="";int pl=0;for(int i=si;i<c;i++){if(!strcmp(v[i],"--no-wt")){nowt=1;continue;}pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);}
+    if(!nowt&&git_in_repo(wd)){
+        char fkd[P];snprintf(fkd,P,"%s/forks",AROOT);mkdirp(fkd);
+        time_t now=time(NULL);struct tm*t=localtime(&now);char ts[16];
+        strftime(ts,16,"%b%d",t);for(char*p=ts;*p;p++)*p=(char)tolower(*p);
+        int h=t->tm_hour%12;if(!h)h=12;char nm[64],fp[P];
+        snprintf(nm,64,"%s-%s-%d%02d%02d%s",bname(wd),ts,h,t->tm_min,t->tm_sec,t->tm_hour>=12?"pm":"am");
+        snprintf(fp,P,"%s/%s",fkd,nm);
+        if(!fork_cp(wd,fp)){printf("+ %s\n",fp);snprintf(wd,P,"%s",fp);}
+    }
     printf("+ job: %s\n  %.*s\n",bname(wd),80,pr);
     if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: write .a_done with summary + test commands");
     tm_ensure_conf();
@@ -425,11 +420,9 @@ static int cmd_j(int c,char**v){
     tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);
     tm_go(sn);
     return 0;}
-static int cmd_job(int c,char**v){
-    if(c>2&&*v[2]>='0'&&*v[2]<='9')return cmd_jobs(c,v);
-    return cmd_j(c,v);}
+static int cmd_job(int c,char**v){return(c>2&&isdigit(*v[2]))?cmd_jobs(c,v):cmd_j(c,v);}
 static int cmd_tm_unsave(int c,char**v){
-    if(c<3)return 1;init_paths();tm_unsave_win(v[2]);return 0;}
+    if(c<3)return 1;tm_unsave_win(v[2]);return 0;}
 static int cmd_adb(int c,char**v){
     if(c>2&&!strcmp(v[2],"ssh"))return system("for s in $(adb devices|awk '/\\tdevice$/{print$1}');do printf '\\033[36m→ %s\\033[0m ' \"$s\";adb -s \"$s\" shell 'am broadcast -n com.termux/.app.TermuxOpenReceiver -a com.termux.RUN_COMMAND --es com.termux.RUN_COMMAND_PATH /data/data/com.termux/files/usr/bin/sshd --ez com.termux.RUN_COMMAND_BACKGROUND true' 2>&1|tail -1;done");
     execlp("adb","adb","devices","-l",(char*)0);return 1;
@@ -460,26 +453,23 @@ static int cmd_run_once(int c,char**v){
 static int cmd_my(int c,char**v){(void)c;(void)v;char d[P];snprintf(d,P,"%s/my",SROOT);
     execlp("ls","ls","--color",d,(char*)0);return 1;}
 static int cmd_tutorial(int c,char**v){(void)c;
-    char*fv[]={v[0],"a","You are a friendly guide for 'a', an AI agent manager that helps you accomplish your projects and goals faster. Introduce it in one sentence, say you can ask me anything about commands or how things work, then ask: what project are you working on or want to start? Recommend they pick a real one so you can walk them through it hands-on. Run 'a help' and read README.md IDEAS.md as reference but teach naturally as the user needs it, don't dump. Note: 'scream' in the workcycle just means focus on what's most essential.",NULL};
+    char*fv[]={v[0],"a","Guide 'a'. Use 'a help'+README.md, teach as needed. scream=most essential.",NULL};
     return cmd_a_default(3,fv);}
 static int run_lab(const char*pf,int argc,char**argv){
-    const char*dx=strrchr(pf,'.');perf_disarm();
-    if(dx&&!strcmp(dx,".py")){argv[1]=(char*)pf;argv[0]="python3";execvp("python3",argv);}
-    if(dx&&!strcmp(dx,".c")){char ob[P],cm[B];const char*sl=strrchr(pf,'/');const char*bn=sl?sl+1:pf;
+    const char*dx=strrchr(pf,'.');perf_disarm();if(!dx)return -1;
+    char*x=NULL;if(!strcmp(dx,".py"))x="python3";else if(!strcmp(dx,".sh"))x="sh";
+    if(x){argv[1]=(char*)pf;argv[0]=x;execvp(x,argv);}
+    if(!strcmp(dx,".c")){char ob[P],cm[B];const char*bn=bname(pf);
      snprintf(ob,P,"%s/lab_%.*s",TMP,(int)(dx-bn),bn);
      snprintf(cm,B,"cc -w -o '%s' '%s'&&'%s'",ob,pf,ob);return system(cm);}
-    if(dx&&!strcmp(dx,".sh")){argv[1]=(char*)pf;argv[0]="sh";execvp("sh",argv);}
-    if(dx&&!strcmp(dx,".html"))execlp("xdg-open","xdg-open",pf,(char*)0);
+    if(!strcmp(dx,".html"))execlp("xdg-open","xdg-open",pf,(char*)0);
     return -1;}
 typedef struct { const char *n; int (*fn)(int, char**); } cmd_t;
 static int cmd_cmp(const void*a,const void*b){return strcmp(((const cmd_t*)a)->n,((const cmd_t*)b)->n);}
-/* dispatch: C logic+aliases here; lib .py and my scripts auto-discovered.
-   TUI (a i) shows every command you can type — it must let you do anything
-   you can do without it. gen_icache() is the single source for TUI entries. */
 static const cmd_t CMDS[] = {
     {"--help",cmd_help_full},{"-h",cmd_help_full},
     {"a",cmd_a_default},{"adb",cmd_adb},{"add",cmd_add},{"agent",cmd_agent},{"ai",cmd_all},
-    {"all",cmd_all},  /* apk,ask,attach,cleanup auto-discovered */
+    {"all",cmd_all},
     {"cal",cmd_cal},{"cat",cmd_cat},{"cc",cmd_cc},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},
     {"d",cmd_diff},{"deps",cmd_deps},{"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
@@ -494,10 +484,9 @@ static const cmd_t CMDS[] = {
     {"remove",cmd_remove},{"repo",cmd_create},{"restore",cmd_restore},{"revert",cmd_revert},{"review",cmd_review},
     {"rm",cmd_remove},{"run",cmd_run},{"scan",cmd_scan},{"send",cmd_send},
     {"set",cmd_set},{"settings",cmd_settings},{"setup",cmd_setup},
-    {"ssh",cmd_ssh},{"ssh add",cmd_ssh},{"ssh all",cmd_ssh},{"ssh rm",cmd_ssh},
-    {"ssh self",cmd_ssh},{"ssh setup",cmd_ssh},{"ssh start",cmd_ssh},{"ssh stop",cmd_ssh},
+    {"ssh",cmd_ssh},
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
-    {"tm-unsave",cmd_tm_unsave},{"tutorial",cmd_tutorial},{"u",cmd_update},  /* ui auto-discovered */
+    {"tm-unsave",cmd_tm_unsave},{"tutorial",cmd_tutorial},{"u",cmd_update},
     {"uninstall",cmd_uninstall},{"update",cmd_update},
     {"w",cmd_w},{"watch",cmd_watch},{"web",cmd_web},{"work",cmd_w},
     {"x",cmd_x},
@@ -551,20 +540,20 @@ int main(int argc, char **argv) {
       const cmd_t *c = bsearch(&key, CMDS, NCMDS, sizeof(*CMDS), cmd_cmp);
       if (c) return c->fn(argc, argv); }
 
-    /* auto-discover lib .py, lib pkg, and lab .py */
     {char pf[P];snprintf(pf,P,"%s/lib/%s.py",SDIR,arg);
      if(fexists(pf))fallback_py(arg,argc,argv);
      snprintf(pf,P,"%s/lib/%s/__init__.py",SDIR,arg);
      if(fexists(pf)){char m[P];snprintf(m,P,"%s/__init__",arg);fallback_py(m,argc,argv);}
+     #define RL {int r=run_lab(pf,argc,argv);if(r>=0)return r;}
      snprintf(pf,P,"%s/lab/%s",SDIR,arg);
-     if(strrchr(arg,'.')&&fexists(pf)){int r=run_lab(pf,argc,argv);if(r>=0)return r;}
-     {static const char*X[]={".py",".c",".sh",".html",0};
-      for(int i=0;X[i];i++){snprintf(pf,P,"%s/lab/%s%s",SDIR,arg,X[i]);
-       if(fexists(pf)){int r=run_lab(pf,argc,argv);if(r>=0)return r;}}
-      {DIR*ld;struct dirent*le;snprintf(pf,P,"%s/lab",SDIR);ld=opendir(pf);
-       if(ld){while((le=readdir(ld))){if(le->d_name[0]=='.')continue;
-        for(int i=0;X[i];i++){snprintf(pf,P,"%s/lab/%s/%s%s",SDIR,le->d_name,arg,X[i]);
-         if(fexists(pf)){closedir(ld);int r=run_lab(pf,argc,argv);if(r>=0)return r;}}}closedir(ld);}}}}
+     if(strrchr(arg,'.')&&fexists(pf))RL
+     for(int i=1;EXT[i];i++){snprintf(pf,P,"%s/lab/%s%s",SDIR,arg,EXT[i]);if(fexists(pf))RL}
+     DIR*ld;struct dirent*le;snprintf(pf,P,"%s/lab",SDIR);ld=opendir(pf);
+     if(ld){while((le=readdir(ld))){if(le->d_name[0]=='.')continue;
+      for(int i=1;EXT[i];i++){snprintf(pf,P,"%s/lab/%s/%s%s",SDIR,le->d_name,arg,EXT[i]);
+       if(fexists(pf)){closedir(ld);RL}}}closedir(ld);}
+     #undef RL
+     }
     {size_t l=strlen(arg);if(l>=3&&arg[l-1]=='+'&&arg[l-2]=='+'&&*arg!='w')return cmd_wt_plus(argc,argv);}
     if(*arg=='w'&&arg[1]&&!fexists(arg))return cmd_wt(argc,argv);
     {init_db();load_cfg();load_sess();if(find_sess(arg))return cmd_sess(argc,argv);}
@@ -572,19 +561,9 @@ int main(int argc, char **argv) {
     {char ep[P];snprintf(ep,P,"%s%s",HOME,arg);if(*arg=='/'&&dexists(ep))return cmd_dir_file(argc,argv);}
     if(strlen(arg)<=3&&islower(*arg))return cmd_sess(argc,argv);
     if(tm_has(arg)){tm_go(arg);return 0;}
-    {char mf[P];static const char*X[]={"",".py",".c",".sh",".html",0};
-     for(int i=0;X[i];i++){snprintf(mf,P,"%s/my/%s%s",SROOT,arg,X[i]);
+    {char mf[P];
+     for(int i=0;EXT[i];i++){snprintf(mf,P,"%s/my/%s%s",SROOT,arg,EXT[i]);
       if(fexists(mf)){perf_disarm();char md[P];snprintf(md,P,"%s/my",SROOT);(void)!chdir(md);argv[1]=mf;return cmd_dir_file(argc,argv);}}}
     fprintf(stderr,"a: unknown '%s'\n",arg);
     return 1;
 }
-/* Repo structure:
-a.c: polyglot shell+C — build system (top), command dispatch+main (bottom), see index above
-lib/: flat C files #included into a.c, plus .py for complex commands (job.py, attach.py)
-lab/: experiments, not part of core build
-adata/: all persistent data (local/, git/, forks/, backup/)
-my/: user-symlinked scripts auto-discovered as commands
-AGENTS.md: custom AI agent instructions
-IDEAS.md: project motivation and philosophy
-README.md: new user setup
-*/

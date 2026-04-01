@@ -22,8 +22,8 @@ static void tm_t(const char*w,char*t){if(*w=='%')snprintf(t,256,"%s",w);else snp
 static void tm_go(const char *w) {
     perf_disarm();char t[256];tm_t(w,t);
     if(getenv("TMUX"))execlp("tmux","tmux","select-window","-t",t,(char*)NULL);
-    else{char c[B];snprintf(c,B,"tmux select-window -t '%s' 2>/dev/null",t);(void)!system(c);
-        execlp("tmux","tmux","attach","-t",TMS,(char*)NULL);}
+    else{char g[64];snprintf(g,64,TMS"-%d",(int)getpid());
+        execlp("tmux","tmux","new-session","-t",TMS,"-s",g,";","select-window","-t",t,(char*)NULL);}
 }
 static int tm_new(const char *w, const char *wd, const char *cmd) {
     tm_ensure_sess();if(tm_has(w))return 1;char c[B*2];
