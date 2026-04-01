@@ -187,7 +187,10 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
             IRST;
             if(dexists(cmd)){char tf[P];snprintf(tf,P,"%s/cd_target",DDIR);writef(tf,cmd);return 0;}
             {int wo=!strncmp(cmd,"open ",5)?5:!strncmp(cmd,"web ",4)?4:0;
-            if(wo){alog(cmd,"");if(wo==5){char ac[256];snprintf(ac,256,APP_CMD " '%s'",cmd+5);(void)!system(ac);}
+            if(wo){alog(cmd,"");if(wo==5){char ac[256];
+                if(getenv("SWAYSOCK"))snprintf(ac,256,"swaymsg exec '%s'",cmd+5);
+                else snprintf(ac,256,APP_CMD " '%s'",cmd+5);
+                (void)!system(ac);}
                 else bg_exec(OPENER,cmd+4);return 0;}}
             printf("Running: a %s\n",cmd);
             char*args[32];int ac=0;args[ac++]="a";
