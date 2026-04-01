@@ -3,7 +3,7 @@
 # Polyglot: shell sees # as comments; C preprocessor skips #if 0..#endif.
 # Fixes: fewer tokens, same speed+. Features: cut until it breaks.
 # Read codebase: a cat (1=all 2=core 3=first10+last5, copies to clipboard)
-# Context: a c/j preloads a cat 1 into claude's system prompt via --append-system-prompt-file
+# Context: a c/j preloads a cat 3 into claude's system prompt via --append-system-prompt-file
 # TERMUX: set CLAUDE_CODE_TMPDIR=$HOME/.tmp; build with clang directly.
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
     set -e; A="$HOME/a"

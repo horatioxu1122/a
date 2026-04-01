@@ -1,6 +1,6 @@
 /* tmux — one session "a", windows are jobs */
 #define TMS "a"
-#define ACAT "a cat 0"
+#define ACAT "a cat 3"
 static void tm_restore(void);
 static void tm_save_win(const char *sn, const char *wd) {
     char sf[P];snprintf(sf,P,"%s/tmux_wins.txt",DDIR);
