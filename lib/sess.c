@@ -38,7 +38,7 @@ static int cmd_sess(int argc, char **argv) {
     if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
         char ac[B];if(in_fork(wd)){const char*fk=strstr(wd,"/adata/forks/")+13;snprintf(ac,B,"a fork run %s %s",fk,s->cmd);}else snprintf(ac,B,"%s",s->cmd);
         char ctxf[P]="",csuf[256]="",cpfx[256]="";
-        if(strstr(ac,"claude")){snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());snprintf(cpfx,256,"a cat 3 >%s 2>/dev/null;",ctxf);snprintf(csuf,256," --append-system-prompt-file %s",ctxf);}
+        if(strstr(ac,"claude")){snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());snprintf(cpfx,256,"a cat >%s 2>/dev/null;",ctxf);snprintf(csuf,256," --append-system-prompt-file %s",ctxf);}
         char c[B]; snprintf(c, B, "tmux new-window -P -F '#{pane_id}' -c '%s' 'unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT;%s %s%s'", wd, cpfx, ac, csuf);
         char pid[64]; pcmd(c, pid, 64); pid[strcspn(pid,"\n")] = 0;
         if (pid[0]) {
