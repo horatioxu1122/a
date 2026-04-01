@@ -360,10 +360,10 @@ static int cmd_cat(int c,char**v){perf_disarm();
         rewind(f);nf++;
         char hdr[600];size_t hl=(size_t)snprintf(hdr,600,"\n==> %s (%d lines) <==\n",p,tl);
         GA(hdr,hl);
-        int hd=m=='3'?(strchr(p,'/')?10:1000):tl;
+        int hd=m=='3'?(strchr(p,'/')?100:1000):tl;int tl2=m=='3'?30:5;
         int i=0;while(fgets(ln,512,f)){size_t sl=strlen(ln);
-            if(i<hd||(tl>hd+5&&i>=tl-5)){GA(ln,sl);}
-            if(i==hd&&tl>hd+5){GA("  ...\n",6);}
+            if(i<hd||(tl>hd+tl2&&i>=tl-tl2)){GA(ln,sl);}
+            if(i==hd&&tl>hd+tl2){GA("  ...\n",6);}
             i++;}
         fclose(f);p=e+1;}
     if(!d)return 1;d[l]=0;
