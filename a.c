@@ -370,9 +370,13 @@ static int cmd_cat(int c,char**v){perf_disarm();
     CWD(cd);const char*actx=getenv("A_CTX");char ctd[P];
     if(actx&&actx[0]=='/')snprintf(ctd,P,"%s",actx);else snprintf(ctd,P,"%s/context/%s",AROOT,actx&&actx[0]?actx:bname(cd));
     {DIR*dd=opendir(ctd);if(dd){struct dirent*de;while((de=readdir(dd))){if(de->d_name[0]=='.')continue;
-        char fp2[P];snprintf(fp2,P,"%s/%s",ctd,de->d_name);FILE*cf=fopen(fp2,"r");if(!cf)continue;
-        char hdr[256];size_t hl=(size_t)snprintf(hdr,256,"\n==> context: %s <==\n",de->d_name);
-        GA(hdr,hl);char ln2[512];while(fgets(ln2,512,cf)){size_t sl=strlen(ln2);GA(ln2,sl);}fclose(cf);nf++;}closedir(dd);}}
+        char fp2[P];snprintf(fp2,P,"%s/%s",ctd,de->d_name);
+        const char*ext=strrchr(de->d_name,'.');int pdf=ext&&(!strcmp(ext,".pdf")||!strcmp(ext,".djvu"));
+        if(pdf){char ref[P];size_t rl=(size_t)snprintf(ref,P,"\n==> context: %s (PDF — read with Read tool: %s) <==\n",de->d_name,fp2);GA(ref,rl);}
+        else{FILE*cf=fopen(fp2,"r");if(!cf)continue;
+            char hdr[256];size_t hl=(size_t)snprintf(hdr,256,"\n==> context: %s <==\n",de->d_name);
+            GA(hdr,hl);char ln2[512];while(fgets(ln2,512,cf)){size_t sl=strlen(ln2);GA(ln2,sl);}fclose(cf);}
+        nf++;}closedir(dd);}}
     if(!d)return 1;d[l]=0;
     char tf[P];snprintf(tf,P,"%s/local/a_cat.txt",AROOT);writef(tf,d);
     {int lc=0;for(size_t i=0;i<l;i++)if(d[i]=='\n')lc++;dprintf(1,"Read %s (%d lines) in full\n\n",tf,lc);}
@@ -467,7 +471,9 @@ static int cmd_ref(int c,char**v){
         char op[P];snprintf(op,P,"%s/%s/output",bd,e->d_name);DIR*od=opendir(op);int has=0;
         if(od){struct dirent*f;while((f=readdir(od)))if(strstr(f->d_name,".txt")){has=1;break;}closedir(od);}
         if(has){snprintf(nm[n],128,"%s",e->d_name);snprintf(pa[n],P,"%s",op);n++;}else nb++;}if(dd)closedir(dd);}
-    if(c<3){for(int i=0;i<n;i++)printf("  %d. %s %s\n",i,nm[i],strstr(pa[i],"/books/")?"(book)":"");if(!n)puts("  (none)");
+    if(c<3){for(int i=0;i<n;i++){int hp=0;DIR*sd=opendir(pa[i]);struct dirent*f;
+        if(sd){while((f=readdir(sd))){const char*x=strrchr(f->d_name,'.');if(x&&!strcmp(x,".pdf")){hp=1;break;}}closedir(sd);}
+        printf("  %d. %s%s%s\n",i,nm[i],strstr(pa[i],"/books/")?" (book)":"",hp?" +pdf":"");}if(!n)puts("  (none)");
         if(nb)printf("\n  %d books need: a book transcribe <name>\n",nb);
         printf("\na ref <#|name>\nadd: mkdir %s/<name>/\n",d);return 0;}
     const char*sel=v[2];int si=-1;
