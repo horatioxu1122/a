@@ -467,7 +467,7 @@ static int cmd_ref(int c,char**v){
         char op[P];snprintf(op,P,"%s/%s/output",bd,e->d_name);DIR*od=opendir(op);int has=0;
         if(od){struct dirent*f;while((f=readdir(od)))if(strstr(f->d_name,".txt")){has=1;break;}closedir(od);}
         if(has){snprintf(nm[n],128,"%s",e->d_name);snprintf(pa[n],P,"%s",op);n++;}else nb++;}if(dd)closedir(dd);}
-    if(c<3){for(int i=0;i<n;i++)printf("  %d. %s\n",i,nm[i]);if(!n)puts("  (none)");
+    if(c<3){for(int i=0;i<n;i++)printf("  %d. %s %s\n",i,nm[i],strstr(pa[i],"/books/")?"(book)":"");if(!n)puts("  (none)");
         if(nb)printf("\n  %d books need: a book transcribe <name>\n",nb);
         printf("\na ref <#|name>\nadd: mkdir %s/<name>/\n",d);return 0;}
     const char*sel=v[2];int si=-1;
