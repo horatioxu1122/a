@@ -22,8 +22,13 @@ static int vcdp(const char*js,char*out,int osz){
     writef("/mnt/c/tmp/v_js.txt",js); /* write JS to file, avoids all escaping */
     if(vwsl()){return vps(
         "$t=Invoke-RestMethod 'http://localhost:9222/json'\n"
+        "$sw=Get-Content C:/tmp/v_cdp_ws.txt -EA 0\n"
+        "if($sw){$p=$t|Where-Object{$_.webSocketDebuggerUrl -eq $sw}|Select-Object -First 1}\n"
+        "if(-not $p){$p=$t|Where-Object{$_.type -eq 'page' -and $_.url -notmatch 'edge://|chrome://'}|Select-Object -Last 1}\n"
+        "if(-not $p){$p=$t|Where-Object{$_.type -eq 'page'}|Select-Object -First 1}\n"
+        "$p.webSocketDebuggerUrl|Set-Content C:/tmp/v_cdp_ws.txt\n"
         "$ws=New-Object Net.WebSockets.ClientWebSocket\n"
-        "$ws.ConnectAsync([uri]$t[0].webSocketDebuggerUrl,[Threading.CancellationToken]::None).Wait()\n"
+        "$ws.ConnectAsync([uri]$p.webSocketDebuggerUrl,[Threading.CancellationToken]::None).Wait()\n"
         "$js=(Get-Content C:/tmp/v_js.txt -Raw) -replace '\"','\\\"'\n"
         "$m='{\"id\":1,\"method\":\"Runtime.evaluate\",\"params\":{\"expression\":\"'+$js+'\"}}'  \n"
         "$b=[Text.Encoding]::UTF8.GetBytes($m)\n"
@@ -120,8 +125,20 @@ static int cmd_gui(int argc,char**argv){AB;perf_disarm();
         }system(c);puts("launched CDP:9222");return 0;}
     if(!strcmp(s,"js")&&argc>=4){char js[B],o[B];vjoin(js,B,argc,argv,3); /* js eval */
         vcdp(js,o,B);printf("%s\n",o);return 0;}
-    if(!strcmp(s,"nav")&&argc>=4){char js[B],o[B]; /* navigate */
-        snprintf(js,B,"window.location='%s'",argv[3]);vcdp(js,o,B);printf("nav: %s\n",argv[3]);return 0;}
+    if(!strcmp(s,"nav")&&argc>=4){char c[B],o[B]; /* navigate via Page.navigate */
+        snprintf(c,B,
+            "$t=Invoke-RestMethod 'http://localhost:9222/json'\n"
+            "$p=$t|Where-Object{$_.type -eq 'page' -and $_.url -notmatch 'edge://|chrome://'}|Select-Object -Last 1\n"
+            "if(-not $p){$p=$t|Where-Object{$_.type -eq 'page'}|Select-Object -First 1}\n"
+            "$p.webSocketDebuggerUrl|Set-Content C:/tmp/v_cdp_ws.txt\n"
+            "$ws=New-Object Net.WebSockets.ClientWebSocket\n"
+            "$ws.ConnectAsync([uri]$p.webSocketDebuggerUrl,[Threading.CancellationToken]::None).Wait()\n"
+            "$m='{\"id\":1,\"method\":\"Page.navigate\",\"params\":{\"url\":\"%s\"}}'\n"
+            "$b=[Text.Encoding]::UTF8.GetBytes($m)\n"
+            "$ws.SendAsync([ArraySegment[byte]]::new($b),[Net.WebSockets.WebSocketMessageType]::Text,$true,[Threading.CancellationToken]::None).Wait()\n"
+            "$buf=New-Object byte[] 4096;$ws.ReceiveAsync([ArraySegment[byte]]::new($buf),[Threading.CancellationToken]::None).Wait()|Out-Null\n"
+            "$ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure,'',[Threading.CancellationToken]::None).Wait()\n",argv[3]);
+        vps(c,o,B);printf("nav: %s\n",argv[3]);return 0;}
     if(!strcmp(s,"text")){char o[B];vcdp("document.body.innerText",o,B);printf("%s\n",o);return 0;} /* page text */
     if(!strcmp(s,"links")){char o[B]; /* clickable elements */
         vcdp("[...document.querySelectorAll('a,button,input,[role=button],[onclick]')].map((e,i)=>i+':'+e.tagName+':'+(e.textContent||e.value||e.alt||e.title||'').trim().substring(0,50)).filter(s=>s.split(':')[2]).join('\\n')",o,B);
