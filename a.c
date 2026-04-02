@@ -299,6 +299,7 @@ static const char*EXT[]={"",".py",".c",".sh",".html",0};
 #include "lib/cal.c"      /* calendar */
 #include "lib/agent.c"    /* code review, scan */
 #include "lib/file.c"     /* Downloads open/move */
+#include "lib/view.c"     /* visual interaction: shot,fan,click,key */
 #include "lib/cc.c"       /* compiler manager */
 #include "lib/perf.c"     /* benchmark, timing limits */
 #include "lib/work.c"     /* workcycle habits */
@@ -488,6 +489,7 @@ static const cmd_t CMDS[] = {
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
     {"tm-unsave",cmd_tm_unsave},{"tutorial",cmd_tutorial},{"u",cmd_update},
     {"uninstall",cmd_uninstall},{"update",cmd_update},
+    {"v",cmd_view},{"view",cmd_view},
     {"w",cmd_w},{"watch",cmd_watch},{"web",cmd_web},{"work",cmd_w},
     {"x",cmd_x},
 };
