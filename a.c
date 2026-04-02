@@ -367,7 +367,8 @@ static int cmd_cat(int c,char**v){perf_disarm();
             if(i==hd&&tl>hd+tl2){GA("  ...\n",6);}
             i++;}
         fclose(f);p=e+1;}
-    CWD(cd);const char*actx=getenv("A_CTX");char ctd[P];snprintf(ctd,P,"%s/context/%s",AROOT,actx&&actx[0]?actx:bname(cd));
+    CWD(cd);const char*actx=getenv("A_CTX");char ctd[P];
+    if(actx&&actx[0]=='/')snprintf(ctd,P,"%s",actx);else snprintf(ctd,P,"%s/context/%s",AROOT,actx&&actx[0]?actx:bname(cd));
     {DIR*dd=opendir(ctd);if(dd){struct dirent*de;while((de=readdir(dd))){if(de->d_name[0]=='.')continue;
         char fp2[P];snprintf(fp2,P,"%s/%s",ctd,de->d_name);FILE*cf=fopen(fp2,"r");if(!cf)continue;
         char hdr[256];size_t hl=(size_t)snprintf(hdr,256,"\n==> context: %s <==\n",de->d_name);
@@ -458,18 +459,22 @@ static int cmd_run_once(int c,char**v){
 static int cmd_my(int c,char**v){(void)c;(void)v;char d[P];snprintf(d,P,"%s/my",SROOT);
     execlp("ls","ls","--color",d,(char*)0);return 1;}
 static int cmd_ref(int c,char**v){
-    char d[P];snprintf(d,P,"%s/context",AROOT);mkdirp(d);
-    char nm[32][128];int n=0;
-    {DIR*dd=opendir(d);struct dirent*e;while(dd&&(e=readdir(dd))&&n<32){if(e->d_name[0]=='.')continue;
-        char fp[P];snprintf(fp,P,"%s/%s",d,e->d_name);if(dexists(fp))snprintf(nm[n++],128,"%s",e->d_name);}if(dd)closedir(dd);}
+    char d[P],bd[P];snprintf(d,P,"%s/context",AROOT);snprintf(bd,P,"%s/books",AROOT);mkdirp(d);
+    char nm[64][128],pa[64][P];int n=0,nb=0;
+    {DIR*dd=opendir(d);struct dirent*e;while(dd&&(e=readdir(dd))&&n<64){if(e->d_name[0]=='.')continue;
+        snprintf(pa[n],P,"%s/%s",d,e->d_name);if(dexists(pa[n]))snprintf(nm[n++],128,"%s",e->d_name);}if(dd)closedir(dd);}
+    {DIR*dd=opendir(bd);struct dirent*e;while(dd&&(e=readdir(dd))&&n<64){if(e->d_name[0]=='.'||!strcmp(e->d_name,"book.py"))continue;
+        char op[P];snprintf(op,P,"%s/%s/output",bd,e->d_name);DIR*od=opendir(op);int has=0;
+        if(od){struct dirent*f;while((f=readdir(od)))if(strstr(f->d_name,".txt")){has=1;break;}closedir(od);}
+        if(has){snprintf(nm[n],128,"%s",e->d_name);snprintf(pa[n],P,"%s",op);n++;}else nb++;}if(dd)closedir(dd);}
     if(c<3){for(int i=0;i<n;i++)printf("  %d. %s\n",i,nm[i]);if(!n)puts("  (none)");
-        fflush(stdout);{char cm[B];snprintf(cm,B,"echo;echo 'BOOKS (+ has text)';for b in '%s/books'/*/;do n=$(basename \"$b\");[ \"$n\" = book.py ]&&continue;ls \"$b\"output/*.txt >/dev/null 2>&1&&printf '  + %%s\\n' \"$n\"||printf '  · %%s\\n' \"$n\";done",AROOT);(void)!system(cm);}
+        if(nb)printf("\n  %d books need: a book transcribe <name>\n",nb);
         printf("\na ref <#|name>\nadd: mkdir %s/<name>/\n",d);return 0;}
-    const char*sel=v[2];
-    if(isdigit(*sel)){int i=atoi(sel);if(i<n)sel=nm[i];else{puts("x");return 1;}}
-    char cd[P];snprintf(cd,P,"%s/%s",d,sel);
-    if(!dexists(cd)){printf("x %s\n",sel);return 1;}
-    setenv("A_CTX",sel,1);printf("+ %s\n",sel);
+    const char*sel=v[2];int si=-1;
+    if(isdigit(*sel)){si=atoi(sel);if(si>=n){puts("x");return 1;}}
+    else{for(int i=0;i<n;i++)if(!strcmp(nm[i],sel)){si=i;break;}}
+    if(si<0){printf("x %s\n",sel);return 1;}
+    setenv("A_CTX",pa[si],1);printf("+ %s\n",nm[si]);
     char*nv[]={v[0],(char*)"c",NULL};return cmd_sess(2,nv);}
 static int cmd_tutorial(int c,char**v){(void)c;
     char*fv[]={v[0],"a","Guide 'a'. Use 'a help'+README.md, teach as needed. scream=most essential.",NULL};
