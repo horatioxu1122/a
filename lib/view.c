@@ -1,4 +1,4 @@
-/* ── view: visual interaction. Priority: terminal>key>uia>fan>CDP ── */
+/* ── gui: visual interaction. Priority: terminal>key>uia>fan>CDP ── */
 static int vwsl(void){static int r=-1;if(r<0){char v[8];pcmd("grep -ci microsoft /proc/version 2>/dev/null",v,8);r=atoi(v)>0;}return r;}
 static int vps(const char*s,char*o,int n){writef("/mnt/c/tmp/v_cmd.ps1",s);
     return pcmd("powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:/tmp/v_cmd.ps1",o,n);}
@@ -17,9 +17,9 @@ static void vcrop(const char*td,int x,int y,int w,int h,const char*out){char c[B
 static void vjoin(char*out,int sz,int argc,char**argv,int from){out[0]=0;
     for(int i=from;i<argc;i++){int l=(int)strlen(out);snprintf(out+l,sz-l,"%s%s",l?" ":"",argv[i]);}}
 
-static int cmd_view(int argc,char**argv){AB;perf_disarm();
+static int cmd_gui(int argc,char**argv){AB;perf_disarm();
     const char*s=argc>2?argv[2]:NULL,*td=vwsl()?"/mnt/c/tmp":"/tmp";
-    if(!s){puts("a view — visual interaction (priority: terminal>key>uia>fan>CDP)\n"
+    if(!s){puts("a gui — visual interaction (priority: terminal>key>uia>fan>CDP)\n"
         "  shot  fan X Y W H [Z]  grid X Y W H P Z  crop X Y W H\n"
         "  click X Y  key \"text\"  uia \"name\"  open URI");return 0;}
     if(*s=='s'&&s[1]=='h'){char o[256];mkdirp((char*)td); /* shot */
@@ -81,4 +81,11 @@ static int cmd_view(int argc,char**argv){AB;perf_disarm();
         system(c);printf("opened: %s\n",argv[3]);return 0;}
     if(*s=='c'&&s[1]=='r'&&argc>=7){int x=atoi(argv[3]),y=atoi(argv[4]),w=atoi(argv[5]),h=atoi(argv[6]); /* crop */
         vcrop(td,x,y,w,h,"v.png");printf("%d %d\n%s/v.png\n",x+w/2,y+h/2,td);return 0;}
-    printf("unknown: a view %s\n",s);return 1;}
+    printf("unknown: a gui %s\n",s);return 1;}
+
+/* ── web: browser automation via agui.py ── */
+static int cmd_web(int argc,char**argv){AB;perf_disarm();
+    char c[B],args[B]="";
+    for(int i=2;i<argc;i++){int l=(int)strlen(args);snprintf(args+l,(size_t)(B-l),"%s%s",l?" ":"",argv[i]);}
+    snprintf(c,B,"python3 %s/projects/agui/web.py %s",HOME,args);
+    return system(c);}

@@ -299,7 +299,7 @@ static const char*EXT[]={"",".py",".c",".sh",".html",0};
 #include "lib/cal.c"      /* calendar */
 #include "lib/agent.c"    /* code review, scan */
 #include "lib/file.c"     /* Downloads open/move */
-#include "lib/view.c"     /* visual interaction: shot,fan,click,key */
+#include "lib/view.c"     /* gui: visual interaction, web: browser/agui */
 #include "lib/cc.c"       /* compiler manager */
 #include "lib/perf.c"     /* benchmark, timing limits */
 #include "lib/work.c"     /* workcycle habits */
@@ -497,7 +497,7 @@ static const cmd_t CMDS[] = {
     {"cal",cmd_cal},{"cat",cmd_cat},{"cc",cmd_cc},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},
     {"d",cmd_diff},{"deps",cmd_deps},{"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
-    {"e",cmd_e},{"email",cmd_email},{"file",cmd_get},{"fork",cmd_fork},{"freq",cmd_freq},
+    {"e",cmd_e},{"email",cmd_email},{"file",cmd_get},{"fork",cmd_fork},{"freq",cmd_freq},{"gui",cmd_gui},
     {"help",cmd_help_full},{"hi",cmd_hi},{"hub",cmd_hub},{"i",cmd_i},
     {"install",cmd_install},{"j",cmd_j},{"job",cmd_job},{"jobs",cmd_job},
     {"kill",cmd_kill},{"log",cmd_log},{"login",cmd_login},{"ls",cmd_ls},
@@ -506,13 +506,12 @@ static const cmd_t CMDS[] = {
     {"p",cmd_push},{"perf",cmd_perf},{"pr",cmd_pr},{"prompt",cmd_prompt},
     {"pull",cmd_pull},{"push",cmd_push},
     {"ref",cmd_ref},{"remove",cmd_remove},{"repo",cmd_create},{"restore",cmd_restore},{"revert",cmd_revert},{"review",cmd_review},
-    {"rm",cmd_remove},{"run",cmd_run},{"scan",cmd_scan},{"send",cmd_send},
+    {"rm",cmd_remove},{"run",cmd_run},{"scan",cmd_scan},{"search",cmd_search},{"send",cmd_send},
     {"set",cmd_set},{"settings",cmd_settings},{"setup",cmd_setup},
     {"ssh",cmd_ssh},
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
     {"tm-unsave",cmd_tm_unsave},{"tutorial",cmd_tutorial},{"u",cmd_update},
     {"uninstall",cmd_uninstall},{"update",cmd_update},
-    {"v",cmd_view},{"view",cmd_view},
     {"w",cmd_w},{"watch",cmd_watch},{"web",cmd_web},{"work",cmd_w},
     {"x",cmd_x},
 };
