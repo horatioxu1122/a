@@ -52,7 +52,7 @@ static void hub_timer(hub_t *j, int on) {
 #else
     char sd[P]; snprintf(sd,P,"%s/.config/systemd/user",HOME); mkdirp(sd);
     if(on) {
-        snprintf(buf,B,"[Unit]\nDescription=%s\n[Service]\nType=oneshot\nEnvironment=PATH=%s\nExecStart=/bin/bash -c '%s/.local/bin/a hub run %s'\n",j->n,getenv("PATH"),HOME,j->n);
+        snprintf(buf,B,"[Unit]\nDescription=%s\n[Service]\nType=oneshot\nKillMode=process\nEnvironment=PATH=%s\nExecStart=/bin/bash -c '%s/.local/bin/a hub run %s'\n",j->n,getenv("PATH"),HOME,j->n);
         char svc[P]; snprintf(svc,P,"%s/a-%s.service",sd,j->n); writef(svc,buf);
         snprintf(buf,B,"[Unit]\nDescription=%s\n[Timer]\nOnCalendar=%s\nAccuracySec=1s\nPersistent=true\n[Install]\nWantedBy=timers.target\n",j->n,j->s);
         char tmr[P]; snprintf(tmr,P,"%s/a-%s.timer",sd,j->n); writef(tmr,buf);

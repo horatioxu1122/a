@@ -38,7 +38,7 @@ static void ensure_git_id(void) {
 static void sync_repo(void) {
     ensure_git_id();
     char c[B];
-    snprintf(c,B,"flock /tmp/.a_git.lock sh -c \"D='%s';[ -s \\$D/.git/index ]||git -C \\$D read-tree HEAD;git -C \\$D add -A;git -C \\$D commit -qm sync;git -C \\$D pull --rebase -q origin main 2>/dev/null&&git -C \\$D push -q origin main 2>/dev/null||(git -C \\$D fetch -q origin;git -C \\$D reset --hard origin/main) 2>/dev/null\"",SROOT);
+    snprintf(c,B,"flock /tmp/.a_git.lock sh -c \"D='%s';[ -s \\$D/.git/index ]||git -C \\$D read-tree HEAD;git -C \\$D add -A;git -C \\$D commit -qm sync;git -C \\$D pull --no-rebase --no-edit -q origin main 2>/dev/null;git -C \\$D push -q origin main 2>/dev/null\"",SROOT);
     (void)!system(c);
 }
 static void sync_bg(void) {
