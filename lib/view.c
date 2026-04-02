@@ -122,6 +122,13 @@ static int cmd_gui(int argc,char**argv){AB;perf_disarm();
         vcdp(js,o,B);printf("%s\n",o);return 0;}
     if(!strcmp(s,"nav")&&argc>=4){char js[B],o[B]; /* navigate */
         snprintf(js,B,"window.location='%s'",argv[3]);vcdp(js,o,B);printf("nav: %s\n",argv[3]);return 0;}
+    if(!strcmp(s,"text")){char o[B];vcdp("document.body.innerText",o,B);printf("%s\n",o);return 0;} /* page text */
+    if(!strcmp(s,"links")){char o[B]; /* clickable elements */
+        vcdp("[...document.querySelectorAll('a,button,input,[role=button],[onclick]')].map((e,i)=>i+':'+e.tagName+':'+(e.textContent||e.value||e.alt||e.title||'').trim().substring(0,50)).filter(s=>s.split(':')[2]).join('\\n')",o,B);
+        printf("%s\n",o);return 0;}
+    if(!strcmp(s,"find")&&argc>=4){char js[B],o[B],q[512];vjoin(q,512,argc,argv,3); /* find+click by text */
+        snprintf(js,B,"(()=>{let e=[...document.querySelectorAll('a,button,input,[role=button]')].find(e=>(e.textContent||e.value||'').includes('%s'));if(e){e.click();return 'clicked: '+e.textContent.trim().substring(0,50)}return 'not found'})()",q);
+        vcdp(js,o,B);printf("%s\n",o);return 0;}
     printf("unknown: a gui %s\n",s);return 1;}
 
 /* ── web: browser automation via agui.py ── */
