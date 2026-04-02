@@ -17,11 +17,37 @@ static void vcrop(const char*td,int x,int y,int w,int h,const char*out){char c[B
 static void vjoin(char*out,int sz,int argc,char**argv,int from){out[0]=0;
     for(int i=from;i<argc;i++){int l=(int)strlen(out);snprintf(out+l,sz-l,"%s%s",l?" ":"",argv[i]);}}
 
+/* CDP: execute JS in browser launched with --remote-debugging-port=9222 */
+static int vcdp(const char*js,char*out,int osz){
+    writef("/mnt/c/tmp/v_js.txt",js); /* write JS to file, avoids all escaping */
+    if(vwsl()){return vps(
+        "$t=Invoke-RestMethod 'http://localhost:9222/json'\n"
+        "$ws=New-Object Net.WebSockets.ClientWebSocket\n"
+        "$ws.ConnectAsync([uri]$t[0].webSocketDebuggerUrl,[Threading.CancellationToken]::None).Wait()\n"
+        "$js=(Get-Content C:/tmp/v_js.txt -Raw) -replace '\"','\\\"'\n"
+        "$m='{\"id\":1,\"method\":\"Runtime.evaluate\",\"params\":{\"expression\":\"'+$js+'\"}}'  \n"
+        "$b=[Text.Encoding]::UTF8.GetBytes($m)\n"
+        "$ws.SendAsync([ArraySegment[byte]]::new($b),[Net.WebSockets.WebSocketMessageType]::Text,$true,[Threading.CancellationToken]::None).Wait()\n"
+        "$buf=New-Object byte[] 65536\n"
+        "$r=$ws.ReceiveAsync([ArraySegment[byte]]::new($buf),[Threading.CancellationToken]::None).Result\n"
+        "Write-Output([Text.Encoding]::UTF8.GetString($buf,0,$r.Count))\n"
+        "$ws.CloseAsync([Net.WebSockets.WebSocketCloseStatus]::NormalClosure,'',[Threading.CancellationToken]::None).Wait()\n",out,osz);
+    }else{char c[B];snprintf(c,B,"python3 -c \""
+        "import json;from websocket import create_connection;"
+        "t=json.loads(__import__('urllib.request',fromlist=['urlopen']).urlopen('http://localhost:9222/json').read());"
+        "ws=create_connection(t[0]['webSocketDebuggerUrl']);"
+        "ws.send(json.dumps({'id':1,'method':'Runtime.evaluate','params':{'expression':open('/tmp/v_js.txt').read()}}));"
+        "print(ws.recv());ws.close()\" 2>&1");
+        return pcmd(c,out,osz);}}
+
 static int cmd_gui(int argc,char**argv){AB;perf_disarm();
     const char*s=argc>2?argv[2]:NULL,*td=vwsl()?"/mnt/c/tmp":"/tmp";
     if(!s){puts("a gui — visual interaction (priority: terminal>key>uia>fan>CDP)\n"
         "  shot  fan X Y W H [Z]  grid X Y W H P Z  crop X Y W H\n"
-        "  click X Y  key \"text\"  uia \"name\"  open URI");return 0;}
+        "  click X Y  key \"text\"  uia \"name\"  open URI\n"
+        "  launch       start browser with CDP (port 9222)\n"
+        "  js \"code\"    execute JS in browser via CDP\n"
+        "  nav URL      navigate browser to URL");return 0;}
     if(*s=='s'&&s[1]=='h'){char o[256];mkdirp((char*)td); /* shot */
         if(vwsl()){vps("Add-Type -AssemblyName System.Windows.Forms,System.Drawing\n$s=[Windows.Forms.Screen]::PrimaryScreen.Bounds\n"
             "$b=New-Object Drawing.Bitmap $s.Width,$s.Height\n[Drawing.Graphics]::FromImage($b).CopyFromScreen(0,0,0,0,$b.Size)\n"
@@ -81,6 +107,21 @@ static int cmd_gui(int argc,char**argv){AB;perf_disarm();
         system(c);printf("opened: %s\n",argv[3]);return 0;}
     if(*s=='c'&&s[1]=='r'&&argc>=7){int x=atoi(argv[3]),y=atoi(argv[4]),w=atoi(argv[5]),h=atoi(argv[6]); /* crop */
         vcrop(td,x,y,w,h,"v.png");printf("%d %d\n%s/v.png\n",x+w/2,y+h/2,td);return 0;}
+    if(*s=='l'){ /* launch browser with CDP */
+        char c[B];
+        if(vwsl()){mkdirp("/mnt/c/tmp/a_web");
+            snprintf(c,B,"powershell.exe -NoProfile -c \"Start-Process msedge '--remote-debugging-port=9222 --user-data-dir=C:/tmp/a_web'\"");
+#ifdef __APPLE__
+        }else{snprintf(c,B,"'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' --remote-debugging-port=9222 --user-data-dir=/tmp/a_web >/dev/null 2>&1 &");
+#else
+        }else{snprintf(c,B,"google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/a_web >/dev/null 2>&1 &||"
+            "chromium --remote-debugging-port=9222 --user-data-dir=/tmp/a_web >/dev/null 2>&1 &");
+#endif
+        }system(c);puts("launched CDP:9222");return 0;}
+    if(!strcmp(s,"js")&&argc>=4){char js[B],o[B];vjoin(js,B,argc,argv,3); /* js eval */
+        vcdp(js,o,B);printf("%s\n",o);return 0;}
+    if(!strcmp(s,"nav")&&argc>=4){char js[B],o[B]; /* navigate */
+        snprintf(js,B,"window.location='%s'",argv[3]);vcdp(js,o,B);printf("nav: %s\n",argv[3]);return 0;}
     printf("unknown: a gui %s\n",s);return 1;}
 
 /* ── web: browser automation via agui.py ── */
