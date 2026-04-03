@@ -406,3 +406,25 @@ marketplace  → coordination (humans sell agent labor)
 Each layer exists. None are connected yet. The short term work is
 making each layer work well alone. The medium term is connecting them.
 The long term is the full stack replacing cloud AI APIs.
+
+### Current pricing reality (2026-04)
+
+Agents are useful but API pricing kills adoption.
+
+```
+Gemini CLI:   free, ok model. Best price/performance for light work.
+Claude Code:  $20/mo plan. Best agent, best complex code. The winner.
+Codex:        garbage. Slow, hallucinating, worse on complex code.
+              People don't realize bc they haven't tried others.
+API:          per-token. One loop = surprise bill. Nobody lets agents
+              run autonomously on API pricing.
+```
+
+The simplest observation: the two usable options are free (gemini) and
+flat (claude plan). The unusable option is per-token API. People will
+use agents exactly as much as the pricing model lets them without fear.
+
+a.c already routes between gemini/claude/codex. The value is: use free
+(gemini) for light work, use plan (claude) for real work, never touch
+API unless forced. The agent manager's job includes cost optimization
+— route to cheapest model that can do the job.
