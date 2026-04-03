@@ -304,3 +304,38 @@ words of a specific person across Google News RSS and web search. These
 work because the filter is tight (one person's words) and the signal
 is high (direct source from a great). Apply same principle to agent
 notifications: tight filter, high signal, or don't send.
+
+## What people would use it for
+
+Build freq list from actual usage. But expected:
+
+```
+1. Work/projects        — the core, manage tasks and agents
+2. Make money            — THE hook. Use AI to build and sell something.
+3. Learning              — talk to LLM, study, extract from greats
+4. Communication         — messaging, coordination
+5. Entertainment/feed    — what social media provides but with creation
+6. Financial planning    — people think they want this but it's useless
+```
+
+The killer feature isn't help with existing work. It's: use it to create
+things with LLMs as new exciting possibility and make money with it.
+
+The hook: measurably show bank account impact in real time. How much did
+this agent session earn you? Real P&L attached to agent actions. Not
+financial planning (useless) — a project with clear profit/loss like
+selling a product.
+
+```
+Agent builds product → lists it → tracks sales → shows P&L
+User sees: "Agent earned $47 today from the thing it built yesterday"
+THAT is the notification worth reading.
+```
+
+People don't want a project manager. They want a money machine they
+can talk to. The agent manager is the infrastructure. The P&L is the
+product. This connects directly to u.c — trading is the purest form
+of "agent makes money, show me the number."
+
+When users don't know what to do: show them the freq list of what
+others use it for, ranked by measured outcome. Not features — results.
