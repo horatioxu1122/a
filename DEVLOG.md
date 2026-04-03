@@ -252,3 +252,34 @@ Agent works in tmux → finishes unit → a sends diff to messaging app →
 human taps accept/reject → a resumes or reverts. The messaging app
 isn't the agent interface — it's the review interface. Fastest channel
 for the highest-leverage human decision.
+
+### Agent review principles
+
+Base agent review on dev workcycle but also best practices from top
+experts via direct text quotes. Torvalds on code review, Gates on
+code quality, Shannon on simplification.
+
+The review agent should:
+- Source advice from greats' direct quotes as review criteria
+- Run a diff on plans AND code, reduce both (shorter = better)
+- Test as code first if possible — run it, see if it works, before
+  asking human anything
+- Don't bug the user — batch questions for when they come to review.
+  The natural time to ask is then, not mid-work via notification spam.
+  The essential questions only, at review time.
+
+```
+Agent works → tests own output → runs a diff → applies review criteria
+  from greats → batches questions → HALT
+Human arrives at natural review time → sees:
+  - what changed (diff)
+  - whether it runs (test result)  
+  - whether it's shorter (token count)
+  - specific questions the agent couldn't resolve alone
+Human answers essentials → agent continues
+```
+
+This respects human attention. Don't interrupt for things the agent
+can verify itself (does it compile, is it shorter, does it run).
+Only interrupt for things that need human judgment (is this the right
+direction, does this match vision, is this what you screamed about).
