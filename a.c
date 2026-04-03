@@ -301,6 +301,7 @@ static const char*EXT[]={"",".py",".c",".sh",".html",0};
 #include "lib/file.c"     /* Downloads open/move */
 #include "lib/view.c"     /* gui: visual interaction, web: browser/agui */
 #include "lib/cc.c"       /* compiler manager */
+#include "lib/cmd.c"      /* native read+grep, ~25us vs ~100ms native tools */
 #include "lib/perf.c"     /* benchmark, timing limits */
 #include "lib/work.c"     /* workcycle habits */
 #include "lib/sess.c"     /* named sessions c/l/g */
@@ -500,7 +501,7 @@ static const cmd_t CMDS[] = {
     {"--help",cmd_help_full},{"-h",cmd_help_full},
     {"a",cmd_a_default},{"adb",cmd_adb},{"add",cmd_add},{"agent",cmd_agent},{"ai",cmd_all},
     {"all",cmd_all},
-    {"cal",cmd_cal},{"cat",cmd_cat},{"cc",cmd_cc},{"config",cmd_config},
+    {"cal",cmd_cal},{"cat",cmd_cat},{"cc",cmd_cc},{"cmd",cmd_cmd},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},
     {"d",cmd_diff},{"deps",cmd_deps},{"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
     {"e",cmd_e},{"email",cmd_email},{"file",cmd_get},{"fork",cmd_fork},{"freq",cmd_freq},{"gui",cmd_gui},
