@@ -154,3 +154,23 @@ a terminal.
 This is the messaging/web-chat idea generalized: instead of building one
 frontend (web dashboard, Telegram bot), expose the protocol and let every
 frontend connect. One backend, infinite frontends. Torvalds composability.
+
+### Models get philosophy, not just tools
+
+An MCP-connected LLM gets more than tool calls. The system prompt feeds:
+- `a cat 3` → implementation (what a can do)
+- `IDEAS.md` → philosophy (why a exists, alignment thesis)
+- `DEVLOG.md` → direction (where a is going, what to work on)
+
+The model reads code and understands architecture. Reads IDEAS.md and
+understands the alignment thesis. Reads DEVLOG.md and knows what matters
+next. Not just a tool caller — a collaborator with shared context.
+
+This is what `a c` already does via `--append-system-prompt-file`. MCP
+exposes the same to any client. The model gets capabilities AND intent
+AND philosophy in one read.
+
+Implication: IDEAS.md and DEVLOG.md aren't just for humans. They're
+training material for every agent that connects. Better docs = better
+agent performance. Writing ideas down isn't note-taking — it's
+programming the agents that will read them.
