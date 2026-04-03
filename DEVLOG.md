@@ -128,3 +128,29 @@ terminal+tmux+single-file-C → workcycle from Gates/Musk/Torvalds →
 Key: every wrong thing tried was an indirection. Everything that survived
 is direct. Terminal direct to OS. C direct to CPU. One file direct to
 compiler. Scream test direct to inadequacy.
+
+## MCP: a.c as Model Context Protocol server
+
+Expose a's capabilities (jobs, notes, tasks, push, ssh, hub) as MCP tools
+that any LLM client can call. Claude Desktop, Cursor, any MCP-compatible
+client connects to a and gets fleet management as tools.
+
+User setup: add a as MCP server in their client config. Every `a` command
+becomes a tool the LLM can call. This makes a.c the universal agent
+backend regardless of which LLM frontend someone uses.
+
+```json
+{
+  "mcpServers": {
+    "a": { "command": "a", "args": ["mcp-serve"] }
+  }
+}
+```
+
+Then in any MCP client: "launch a claude agent on my project" → LLM calls
+a's job tool → tmux session created → agent running. The user never opens
+a terminal.
+
+This is the messaging/web-chat idea generalized: instead of building one
+frontend (web dashboard, Telegram bot), expose the protocol and let every
+frontend connect. One backend, infinite frontends. Torvalds composability.
