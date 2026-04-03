@@ -2,16 +2,14 @@
 __attribute__((noreturn))
 static void fallback_py(const char *mod, int argc, char **argv) {
     if (getenv("A_BENCH")) _exit(0);
-    perf_disarm(); setenv("PYTHONDONTWRITEBYTECODE","1",1);
-    char path[P]; snprintf(path, P, "%s/lib/%s.py", SDIR, mod);
+    perf_disarm();char path[P],ld[P];snprintf(ld,P,"%s/lib",SDIR);snprintf(path,P,"%s/%s.py",ld,mod);
+    setenv("PYTHONDONTWRITEBYTECODE","1",1);setenv("PYTHONPATH",ld,1);
     char **a = malloc(((unsigned)argc + 5) * sizeof(char *));
-    {FILE *f=fopen(path,"r");char h[32]={0};
-    if(f){(void)!fgets(h,32,f);fclose(f);}
+    {char h[32]={0};FILE*f=fopen(path,"r");if(f){(void)!fgets(h,32,f);fclose(f);}
     if(strstr(h,"/// script")){
-        char uv[P];snprintf(uv,P,"%s/.local/bin/uv",HOME);
         a[0]="uv";a[1]="run";a[2]="--script";a[3]=path;
         for(int i=1;i<argc;i++)a[i+3]=argv[i];a[argc+3]=NULL;
-        if(access(uv,X_OK)==0){a[0]=uv;execv(uv,a);}
+        snprintf(ld,P,"%s/.local/bin/uv",HOME);if(!access(ld,X_OK)){a[0]=ld;execv(ld,a);}
         execvp("uv",a);}}
     a[0]="python3";a[1]=path;
     for(int i=1;i<argc;i++)a[i+1]=argv[i];a[argc+1]=NULL;
@@ -42,9 +40,6 @@ static int create_sess(const char *sn, const char *wd, const char *cmd) {
         snprintf(c, B, "tmux pipe-pane -t '%s:%s' 'cat >> %s'", TMS, sn, lf); (void)!system(c);
         char al[B]; snprintf(al, B, "session:%s log:%s", sn, lf);
         alog(al, wd);
-        char alf[P]; snprintf(alf, P, "%s/agent_logs.txt", DDIR);
-        time_t now = time(NULL);
-        FILE *af = fopen(alf, "a"); if (af) { fprintf(af, "%s %ld %s\n", sn, (long)now, DEV); fclose(af); }
     }
     tm_save_win(sn, wd);
     return r;
