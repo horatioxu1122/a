@@ -776,3 +776,23 @@ This connects back to: the learning curve IS the product. The product
 that makes failure cheap creates centaurs. The product that creates
 centaurs makes the future safer. Charity, self-interest, and alignment
 are the same thing.
+
+## Messaging via browser, not API
+
+Setting up messaging integration (Telegram bot, WhatsApp API) is a pain:
+API keys, webhooks, server, domain, registration. But a.c already has
+`a gui` with CDP browser control.
+
+```
+a gui → open web.telegram.org → log in → read messages → reply
+```
+
+No API. No bot. No webhook server. The agent uses messaging the same
+way the human does — through the web interface. CDP clicks, types,
+reads. Works for Telegram Web, WhatsApp Web, Discord, Slack — any
+service with a web interface.
+
+The agent's browser automation should help the USER set up any
+integration that's painful to do manually. The same capability that
+automates work automates setup. `a gui` is the universal integration
+layer — if a human can do it in a browser, the agent can do it.
