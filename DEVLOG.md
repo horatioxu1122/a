@@ -371,3 +371,38 @@ a.c + u.c is selling trading agent labor on the marketplace.
 This is the endgame for "agent makes money": not just your own trading
 but selling agent labor to others. The P&L comes from both your own
 agents' returns AND the fees from managing agents for others.
+
+## Roadmap: short / medium / long
+
+**Short term:** automate web and CLI tools. Make a do more things
+autonomously. Browser control (a gui already started), file ops, build
+systems, deployments. The tool must DO things, not just manage things.
+
+**Medium term:** get API pricing to flat subscription. People hate
+variable costs in AI because it's trivially easy to spend money in a
+loop. One runaway agent = surprise $500 bill. Flat sub = predictable,
+users actually let agents run autonomously without fear. This is the
+unlock for real agent adoption — not better models, cheaper pricing
+structure.
+
+**Long term:** custom agent AI/LLM service based on improving open
+source models, probably ensemble (CFA). Efficient because:
+- Open source models are free at the weights level
+- Ensemble of small models can beat single large model (PhD thesis)
+- v7p/fredix infrastructure runs inference at function-call speed
+- gguf_run already does CPU inference in 281 lines
+- The 0.1% compute tax from ROADMAP continuously improves the ensemble
+
+The stack at endgame:
+```
+a.c          → fleet management (orchestrate agents)
+u.c          → money engine (trading, marketplace revenue)
+fredix/v7p   → inference engine (fast, no cloud dependency)
+ensemble     → model layer (CFA fusion of open source models)
+flat sub     → pricing (predictable, users trust it)
+marketplace  → coordination (humans sell agent labor)
+```
+
+Each layer exists. None are connected yet. The short term work is
+making each layer work well alone. The medium term is connecting them.
+The long term is the full stack replacing cloud AI APIs.
