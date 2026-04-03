@@ -736,3 +736,14 @@ value is always one layer up from the commodity infrastructure.
 This is why u.c (using agents to trade) matters more than a.c
 (the agent infrastructure). a.c accelerates the collapse of agent
 management as a value layer. u.c captures value on the layer above.
+
+a.c is charity and societal advancement that helps the user individually
+and me the builder all because a better agent manager helps all. The
+user gets better at using AI. Society gets better tools. I get the best
+agent manager because I built it and use it daily. Everyone wins. This
+isn't altruism dressed as strategy — it's the same incentive structure
+as Linux. Torvalds benefits most from Linux because he uses it and
+controls it. Every contributor benefits because the tool they use gets
+better. Every user benefits because it's free and improving. No conflict
+between self-interest and public good when the tool's value comes from
+usage not ownership.
