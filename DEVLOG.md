@@ -237,3 +237,18 @@ The scream version: agent works, you pull up terminal, you can talk to
 it mid-task. Not just accept/reject — redirect, ask questions, give
 context. The conversation from this session proves this works. The
 agent halts are where the human contribution has highest leverage.
+
+### Faster review = messaging app
+
+Human review latency is the bottleneck, not agent speed.
+
+```
+Terminal:    at desk → switch pane → read → respond   ~minutes
+Email:       check inbox → open → read → respond      ~hours
+Messaging:   phone buzzes → glance → tap accept       ~seconds
+```
+
+Agent works in tmux → finishes unit → a sends diff to messaging app →
+human taps accept/reject → a resumes or reverts. The messaging app
+isn't the agent interface — it's the review interface. Fastest channel
+for the highest-leverage human decision.
