@@ -283,3 +283,24 @@ This respects human attention. Don't interrupt for things the agent
 can verify itself (does it compile, is it shorter, does it run).
 Only interrupt for things that need human judgment (is this the right
 direction, does this match vision, is this what you screamed about).
+
+### Communication channel reliability
+
+The key to any channel (messaging, email, notifications) is reliability
+of value. Many messages with low value → user stops paying attention.
+Few messages with high value → user reads every one.
+
+Must be short and useful or the channel dies. Delete low-value output
+aggressively. The channel's trust is the product of past message quality.
+One spam notification trains the user to ignore all future ones.
+
+This applies to agent review notifications: only send when the agent
+has something worth reviewing. "Compiled successfully" is not worth a
+notification. "Finished feature, 30 tokens shorter, all tests pass,
+one question about direction" is.
+
+Existing high-value jobs that work: custom news search following direct
+words of a specific person across Google News RSS and web search. These
+work because the filter is tight (one person's words) and the signal
+is high (direct source from a great). Apply same principle to agent
+notifications: tight filter, high signal, or don't send.
