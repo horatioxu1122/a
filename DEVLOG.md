@@ -457,3 +457,10 @@ For a.c: the agent manager should track and display spend in real time.
 "This session cost $0.47 so far." Transparency removes fear even on
 variable pricing. The anxiety comes from not knowing, not from the cost
 itself.
+
+Deeper issue: nobody can calculate how much API they'd use before using
+it. Per-token pricing requires predicting your own behavior — impossible
+for a new tool. So the decision stalls. Subscription removes the decision
+entirely: binary yes/no, one number. Even with tiers, people look at one
+number (the tier they'd pick) not the selector. The single big price is
+what determines yes or no. Everything else is noise after that decision.
