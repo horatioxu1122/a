@@ -618,3 +618,29 @@ and converge.
 Not worth building until you have enough query volume to justify it.
 For personal use: you already know. For a service with 1000 users:
 the savings from routing add up.
+
+## Three criteria for everything: speed, value, shortness
+
+Applies to code AND LLM responses AND human prompts AND agent actions.
+
+```
+Speed:      faster to execute, faster to iterate, faster to fail
+Value:      does it do the thing the user screams for
+Shortness:  fewer tokens = fewer bugs = faster to read = faster to change
+```
+
+These three are the universal optimization targets. Everything else
+is derived. Reliability comes from shortness (fewer things to break).
+Clarity comes from shortness (less to misunderstand). Cost comes from
+speed (less compute) and shortness (fewer tokens billed).
+
+For code: shorter, faster, does the scream.
+For LLM response: shorter, faster, answers the question.
+For human prompt: shorter, faster to type, gets the right output.
+For agent action: shorter plan, faster execution, produces value.
+
+When in conflict: speed > shortness > value feels wrong but is right.
+A fast wrong answer you can iterate on beats a slow right answer you
+can't. Shortness over value because short wrong code is cheaper to
+fix than long wrong code. But really all three must be present — the
+ranking is for tiebreakers only.
