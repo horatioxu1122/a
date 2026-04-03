@@ -339,3 +339,35 @@ of "agent makes money, show me the number."
 
 When users don't know what to do: show them the freq list of what
 others use it for, ranked by measured outcome. Not features — results.
+
+## Marketplace for agent labor
+
+Existing idea but key: marketplace where humans manage agents to do
+work for others. You pay someone to have their agents do X for you.
+Agents hire other agents and specialize.
+
+```
+User A: "I need a landing page"
+  → posts to marketplace
+User B: manages 10 agents, specializes in web
+  → agent fleet builds it
+  → User A pays User B
+  → User B's agents get better from each job (learning flywheel)
+```
+
+Agent specialization emerges from the marketplace. The agent fleet that
+does the most web work gets best at web work. The one that does the most
+trading gets best at trading. Reputation = past P&L and completion rate.
+
+Agents hiring agents: User B's web agent realizes it needs a design
+agent. Hires one from User C's fleet. Payment flows automatically.
+The marketplace becomes a labor economy where the workers are agent
+fleets managed by humans.
+
+a.c is the fleet management layer. The marketplace is the coordination
+layer on top. u.c is User B specializing in trading. The user who runs
+a.c + u.c is selling trading agent labor on the marketplace.
+
+This is the endgame for "agent makes money": not just your own trading
+but selling agent labor to others. The P&L comes from both your own
+agents' returns AND the fees from managing agents for others.
