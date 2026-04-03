@@ -644,3 +644,36 @@ A fast wrong answer you can iterate on beats a slow right answer you
 can't. Shortness over value because short wrong code is cheaper to
 fix than long wrong code. But really all three must be present — the
 ranking is for tiebreakers only.
+
+## Context is king but data stays where it is
+
+Need user's context to help them do work. Need local computer fleet
+control. But must work with existing services. Users won't migrate
+all their data into one central storage. They will make it available
+where it already lives.
+
+```
+User's data lives in:
+  Google Drive    — docs, sheets, notes
+  Gmail           — communication, receipts
+  GitHub          — code, repos
+  Slack/Discord   — team conversations
+  Local files     — projects, downloads
+  Phone           — messages, photos, calendar
+  Browser         — bookmarks, history, sessions
+```
+
+a.c doesn't own the data. a.c reads it where it is. MCP and tool
+integrations reach into each service, pull what's needed, act on it,
+put results back. The user never moves a file. The agent goes to it.
+
+This is why a.c is a fleet manager not a platform. Platforms want to
+own your data. Fleet managers command tools that reach your data
+wherever it lives. The user trusts the tool because nothing migrated
+— pull the plug on a.c and everything is where it was.
+
+The local fleet (tmux sessions on your machines) is the compute layer.
+The external services (Google, GitHub, Slack) are the data layer. a.c
+sits between: reads data from wherever, processes on your hardware,
+writes results back. No central storage. No vendor lock-in. The
+user's existing setup IS the infrastructure.
