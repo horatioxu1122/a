@@ -747,3 +747,32 @@ controls it. Every contributor benefits because the tool they use gets
 better. Every user benefits because it's free and improving. No conflict
 between self-interest and public good when the tool's value comes from
 usage not ownership.
+
+### Hypothesis: more centaurs = safer future
+
+The more skilled human-AI operators ("centaurs") exist, the safer the
+human-AI future. Because:
+
+1. More humans who can make value WITH AI = more humans whose interests
+   align with AI existing and cooperating
+2. More humans who can control AI = more distributed oversight, no
+   single point of failure in alignment
+3. AI with many skilled human partners has more to gain from cooperation
+   than from defection — the cooperation surplus is higher when humans
+   are competent partners, not dead weight
+
+Time is the critical variable. If AI capability outpaces human learning
+curve, humans can't catch up. The window for building centaur skills
+is NOW, while AI still needs human steering. Once AI is fully autonomous
+(if that happens), the learning curve opportunity closes.
+
+a.c's mission restated: create centaurs as fast as possible. Not by
+teaching — by making the learning curve cheap, fast, and rewarding
+(make money while learning). Every user who goes from casual to power
+user is one more centaur. The density of centaurs in the population
+is a safety metric for humanity.
+
+This connects back to: the learning curve IS the product. The product
+that makes failure cheap creates centaurs. The product that creates
+centaurs makes the future safer. Charity, self-interest, and alignment
+are the same thing.
