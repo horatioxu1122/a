@@ -677,3 +677,33 @@ The external services (Google, GitHub, Slack) are the data layer. a.c
 sits between: reads data from wherever, processes on your hardware,
 writes results back. No central storage. No vendor lock-in. The
 user's existing setup IS the infrastructure.
+
+## This races to zero
+
+The agent manager is a commodity. A middleman. Anyone can build a
+technical version — it's just software. The value gets captured by
+the users who use AI effectively to make profit. Not by the tool.
+
+Same as Linux: Red Hat makes money but the real value goes to Google,
+Amazon, Netflix who USE Linux to make billions. The OS captured
+almost nothing. The applications on top captured everything.
+
+So the agent manager's revenue model is:
+- Near zero from the tool itself (commodity, race to free)
+- Maybe a minimal fraction from enhanced output (0.1% compute tax)
+- The real money is from USING it yourself (trading, products, services)
+
+This is why u.c matters more than a.c commercially. a.c is the tool
+that races to zero. u.c is using the tool to make money. The builder
+of the pickaxe during the gold rush made some money. The miner who
+used it well made more. But the miner who BUILT the pickaxe and ALSO
+mined outperformed both.
+
+a.c is open source and should stay that way. The value capture is:
+1. You're the best user because you built it (information advantage)
+2. u.c uses it to trade (direct profit)
+3. Maybe a hosted version with flat pricing (small margin, high volume)
+4. The 0.1% labor tax if marketplace exists (tiny but scales)
+
+Trying to charge for the tool itself is fighting the commodity tide.
+Use the tool to make money directly. That's the sustainable model.
