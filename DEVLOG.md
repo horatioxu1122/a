@@ -587,3 +587,34 @@ But routing is the bridge — learn which tasks need which quality level
 from routing data, then build the custom model to hit exactly those
 quality levels at lower cost. The routing phase generates the training
 signal for the custom model phase.
+
+### Routing is useless today, maybe not tomorrow
+
+Current routing is a shitshow. People either know what model they want
+or just want highest intelligence for project work or fastest if any
+can handle it at acceptable quality. Two modes, user already knows.
+
+The paradox: to route a query you need to understand the query. When
+an LLM can understand it well enough to route, it can probably answer.
+So the router IS the model.
+
+But: a low-cost limited-intelligence routing LLM could change this.
+Not understanding — classifying. "Code or chat? Complex or simple?
+Needs current data or not?" A tiny model classifies without solving.
+
+```
+Tiny classifier (0.1ms, ~free):
+  "write a trading system" → complex code → Opus
+  "what time is it in Tokyo" → simple fact → Haiku
+  "summarize this PDF" → medium, long context → Sonnet
+```
+
+The classifier doesn't need to be smart. It needs to be fast and
+right about difficulty level 90% of the time. The 10% it gets wrong,
+the user notices and manually routes. Over time the classifier learns
+from corrections. This is CFA again — ensemble the routing decisions
+and converge.
+
+Not worth building until you have enough query volume to justify it.
+For personal use: you already know. For a service with 1000 users:
+the savings from routing add up.
