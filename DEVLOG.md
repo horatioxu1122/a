@@ -707,3 +707,32 @@ a.c is open source and should stay that way. The value capture is:
 
 Trying to charge for the tool itself is fighting the commodity tide.
 Use the tool to make money directly. That's the sustainable model.
+
+### Railroad economics: profit collapses, value distributes
+
+Railroads created immense value but railroad companies were mostly
+not profitable. Direct profit came from land ownership (grants along
+tracks), some from operation, but not as much as expected. The real
+value distributed through society — mobility of goods and people.
+Then the industrial revolution built on top: oil, steel, commerce,
+all things that could go over rails.
+
+Pattern: each infrastructure layer's profit collapses as the next
+layer extracts the value. Railroads → land/industry. Telecom →
+internet companies. Cloud → SaaS. LLMs → agent tools → the things
+agents build.
+
+Accelerating society might be as simple as reducing profit of each
+layer to speed the chase to the next. Rather than helping freeze
+value on one layer, collapse it faster so the next can emerge. GPL
+does this to software. Open source does this to infrastructure.
+Making a.c free does this to agent management.
+
+The position: be on the NEXT layer when the current one collapses.
+Don't be the railroad — be Standard Oil using the railroad. Don't
+be the agent tool — use the agent tool to trade, build, sell. The
+value is always one layer up from the commodity infrastructure.
+
+This is why u.c (using agents to trade) matters more than a.c
+(the agent infrastructure). a.c accelerates the collapse of agent
+management as a value layer. u.c captures value on the layer above.
