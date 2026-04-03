@@ -560,3 +560,30 @@ The product isn't the tool. The product is the user's skill after
 customer. The todo app user who fails, learns, rebuilds, and ships
 a.c is the success case. The system must keep people in the game long
 enough for the learning to compound.
+
+### Simplest high-value service: auto-scan AI pricing
+
+Auto-scan API pricing across all providers. Include personal subscription
+tiers. Maybe auto web-extract LLM responses AND CLI responses to find
+lowest cost per quality. Route work to cheapest provider that meets
+quality threshold.
+
+```
+User sends prompt → a checks:
+  - Claude plan: included in $20/mo, quality 9/10
+  - Gemini CLI: free, quality 7/10
+  - GPT API: $0.03 this prompt, quality 8/10
+  - DeepSeek API: $0.002, quality 6/10
+  → routes to Claude (included in plan, best quality/cost)
+```
+
+This is Google Shopping for AI. Nobody does it well because pricing
+changes constantly and quality varies by task type. The agent manager
+that auto-discovers cheapest path per task type saves users real money
+every day. Measurable savings = measurable value = retention.
+
+Long term: custom AI agent LLM is better than routing to others.
+But routing is the bridge — learn which tasks need which quality level
+from routing data, then build the custom model to hit exactly those
+quality levels at lower cost. The routing phase generates the training
+signal for the custom model phase.
