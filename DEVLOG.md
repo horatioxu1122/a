@@ -487,3 +487,24 @@ will be a small number of power users with specialized agent fleets.
 Most buyers will be people/corps who have the money and the problem but
 not the skill to direct agents. Same as freelance marketplaces — few
 sellers, many buyers. The skill is having ideas worth executing.
+
+But this is also the opportunity: a core value of an agent manager is
+to optimize the human's ability to manage and profit with agents. Teach
+them to use it. To do work with it. To have fun with it. Not control
+them — give skills. Like a teacher doesn't control a student yet
+provides them with things that affect what they do.
+
+The agent manager doesn't just execute — it educates. It shows the user
+what others are doing successfully (freq list of profitable actions).
+It suggests next steps based on what worked for similar users. It
+demonstrates by doing: "I built this for you, here's how, now you try."
+
+This turns casual users into power users over time. The flywheel:
+user tries something simple → agent does it → user sees result →
+user has bigger idea → agent does that → user becomes power user.
+
+The agent manager IS the bottleneck solution. The bottleneck is ideas.
+The fix is exposure to what's possible + low friction to try it. Not
+a tutorial. Not documentation. The agent doing things and the human
+watching and learning by proximity. Same way you learned — not from
+courses but from using Claude Code and seeing what it can do.
