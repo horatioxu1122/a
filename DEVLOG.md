@@ -428,3 +428,32 @@ a.c already routes between gemini/claude/codex. The value is: use free
 (gemini) for light work, use plan (claude) for real work, never touch
 API unless forced. The agent manager's job includes cost optimization
 — route to cheapest model that can do the job.
+
+### Pricing model analysis
+
+API + max limit is simplest if you must have API. Existing services have
+it implicitly but problems:
+- Every limit increase is a conscious decision → probabilistically won't
+  happen → users underutilize
+- Recurring limit not familiar or easy for users
+- Flat fees easier to budget, monthly is the standard comparison unit
+
+Flat sub problems:
+- Many underutilize → loss to company → subsidized by rest
+- Users incentivized to dump usage anywhere to hit limit, not on what's
+  valuable (no gradient on cost = no signal on value)
+- Company loses on power users, wins on casual users
+
+Per-token problems:
+- Loop = surprise bill → users never let agents run autonomously
+- Fear of cost dominates utility of tool
+- Every action has anxiety attached
+
+People will probably come around to max-price-per-month model eventually.
+The max monthly price is what people compare. "Up to $X/mo" is the number
+that determines adoption. Make that number low enough and usage follows.
+
+For a.c: the agent manager should track and display spend in real time.
+"This session cost $0.47 so far." Transparency removes fear even on
+variable pricing. The anxiety comes from not knowing, not from the cost
+itself.
