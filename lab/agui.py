@@ -1,32 +1,9 @@
 #!/usr/bin/env python3
-"""
-Full Wayland Migration with XWayland Tools (Option 3)
-
-Follows library glue pattern - all functionality via direct library calls.
-Uses XWayland-compatible tools (xdotool, xrandr) with Playwright.
-Chrome runs natively on Wayland, window management through XWayland.
-
-CRITICAL: Session restoration fixes applied (2025-11-04)
-- DO NOT reuse pages[0] - always create fresh pages with new_page()
-- DO NOT remove session restoration prevention (flags + file cleanup)
-- Navigation fails on 2nd run if these are changed
-See NAVIGATION_FIX_DOCUMENTATION.txt for details.
+"""agui — browser automation via raw CDP. Playwright optional (--pw).
+Connects to user's default browser on CDP port 9222, launches if needed.
 """
 
 import subprocess, sys, os
-
-# Self-bootstrap: auto-install dependencies into venv if missing
-try:
-    import playwright
-except ImportError:
-    venv = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'venv')
-    py = os.path.join(venv, 'bin', 'python3')
-    if not os.path.exists(venv):
-        print("Creating venv and installing dependencies...")
-        subprocess.run([sys.executable, '-m', 'venv', venv], check=True)
-        subprocess.run([py, '-m', 'pip', 'install', '-q', 'playwright', 'requests'], check=True)
-        subprocess.run([py, '-m', 'playwright', 'install', 'chromium'], check=True)
-    os.execv(py, [py] + sys.argv)
 
 import time
 import random
@@ -46,8 +23,13 @@ try:
 except ImportError:
     pdfplumber = None
 
-from playwright.sync_api import sync_playwright
-from playwright.async_api import async_playwright
+# Playwright optional — only needed with --pw flag
+try:
+    from playwright.sync_api import sync_playwright
+    from playwright.async_api import async_playwright
+    _HAS_PLAYWRIGHT = True
+except ImportError:
+    _HAS_PLAYWRIGHT = False
 
 # Platform detection
 IS_MAC = platform.system() == 'Darwin'
@@ -97,7 +79,7 @@ _center_mode = True  # Default: open on primary/center monitor
 _headless_mode = False
 _copy_profile = False  # Default: separate session (isolated profile)
 _chrome_variant = 'beta'  # 'beta' | 'stable' — controls binary AND profile source
-_use_cdp = False  # True = pure CDP (no playwright), False = playwright over CDP
+_use_cdp = True  # True = pure CDP (default), False = playwright over CDP (--pw)
 
 # ═══════════════════════════════════════════════════════════
 # CDP DIRECT — Pure Chrome DevTools Protocol, no Playwright
@@ -751,10 +733,21 @@ def _cdp_new_page():
     print(f"  → CDP direct: {ws_url[:60]}")
     return CDPPage(ws_url)
 
+def _cdp_already_running():
+    """Check if a browser with CDP is already listening on 9222"""
+    import urllib.request
+    try:
+        urllib.request.urlopen('http://localhost:9222/json', timeout=1)
+        return True
+    except: return False
+
 def launch_browser_with_positioning():
-    """Launch Chrome with window positioning (library glue)"""
+    """Connect to existing browser or launch one. CDP by default, --pw for playwright."""
     global _playwright, _browser, _browser_context, _page
 
+    if _page and isinstance(_page, CDPPage):
+        try: _page.close()
+        except: pass
     if _browser:
         try: _browser.close()
         except: pass
@@ -762,13 +755,19 @@ def launch_browser_with_positioning():
         try: _playwright.stop()
         except: pass
 
-    _launch_chrome_positioned()
+    # Try existing browser first, launch only if needed
+    if _cdp_already_running():
+        print("  → Connecting to existing browser on :9222")
+    else:
+        _launch_chrome_positioned()
 
     if _use_cdp:
-        # Pure CDP — no playwright
         _page = _cdp_new_page()
-        print(f"  ✓ CDP direct page ready")
+        print(f"  ✓ CDP page ready")
         return None
+
+    if not _HAS_PLAYWRIGHT:
+        raise RuntimeError("Playwright not installed. Use CDP mode (default) or: pip install playwright")
 
     _playwright = sync_playwright().start()
     _browser = _playwright.chromium.connect_over_cdp('http://localhost:9222')
@@ -2776,7 +2775,7 @@ if __name__ == "__main__":
 """
         print(examples)
 
-    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','cdp','canary'}
+    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary'}
     sys.argv = [a if a.startswith('-') or a not in _cmds else f'--{a}' for a in sys.argv]
     parser = argparse.ArgumentParser(
         description='agui - GUI Automation with XWayland Tools',
@@ -2803,12 +2802,12 @@ if __name__ == "__main__":
     parser.add_argument('--demo', '--examples', action='store_true', help='Show examples')
     parser.add_argument('--pick', '--only', type=str, help='Filter AI platforms')
     parser.add_argument('--log', '--signin', action='store_true', help='Sign-in mode')
-    parser.add_argument('--cdp', action='store_true', help='Pure CDP mode (no playwright)')
+    parser.add_argument('--pw', action='store_true', help='Use Playwright instead of raw CDP')
     parser.add_argument('--canary', action='store_true', help='Use Chrome Canary')
     args, extra = parser.parse_known_args(); args.ask = args.ask or (' '.join(extra) if extra and not args.say else None)
 
     if args.demo: show_examples(); sys.exit(0)
-    if args.cdp: globals()['_use_cdp'] = True
+    if args.pw: globals()['_use_cdp'] = False
     if args.canary: globals()['_chrome_variant'] = 'canary'
     if args.side: globals()['_center_mode'] = False
     if args.hide: globals()['_headless_mode'] = True
