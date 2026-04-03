@@ -508,3 +508,30 @@ The fix is exposure to what's possible + low friction to try it. Not
 a tutorial. Not documentation. The agent doing things and the human
 watching and learning by proximity. Same way you learned — not from
 courses but from using Claude Code and seeing what it can do.
+
+### Human labor converges to three things
+
+As agents handle more execution, human work becomes:
+
+1. **Is your idea good enough for agents to execute?**
+   The quality of the idea determines the value of the output.
+   Bad idea + perfect execution = worthless. Good idea + mediocre
+   execution = valuable. The idea is the bottleneck.
+
+2. **Generate that idea.**
+   Vision, taste, scream test, knowing what's inadequate.
+   This is the part that can't be automated because it requires
+   wanting something that doesn't exist yet.
+
+3. **Oversee agent capability.**
+   Review, accept/reject, redirect. The 1% error catch.
+   Not doing the work — verifying the work is right.
+
+Everything else gets automated. Typing code, running builds, debugging,
+deploying, testing, searching, filing — all agent work. The human
+contribution compresses to: imagine, judge, steer.
+
+This is exactly what this session was. You had ideas, I executed them.
+You steered when wrong, accepted when right. The code got written,
+committed, pushed — all agent work. Your work was the ideas and the
+judgment. That ratio only increases.
