@@ -206,3 +206,34 @@ Mutability: any user `a cat`s the source, modifies it, rebuilds <1s.
 The tool modifies itself. No other agent tool does this.
 
 Device reach: $50 phone to supercomputer. One `sh a.c install`.
+
+## Human-in-loop: halt agent, review, resume
+
+The error asymptote (~1%) means agents will make mistakes. The fix isn't
+better agents — it's faster human review. The agent should automatically
+pause on small work units and wait for human to review before continuing.
+
+```
+Agent works → produces small diff → HALT → notify human
+Human pulls up terminal session → sees diff → accept/reject
+Agent resumes with feedback → next small unit → HALT → repeat
+```
+
+This is the opposite of --dangerously-skip-permissions. That lets the
+agent run free. This makes the agent stop and show its work. The human
+doesn't need to watch — they get pulled in at review points.
+
+The mechanism: `a` already has tmux sessions. The agent runs in a pane.
+When it finishes a unit of work (commit-sized change), it pauses and
+sends notification (bell, email, push). Human switches to that pane,
+reads the diff, types accept or reject. Agent continues or reverts.
+
+This combats error chains. A 1% error rate compounded over 100
+autonomous steps = 63% chance of at least one error. The same 1% rate
+with human review every 5 steps = 5% chance the error propagates past
+review. Shorter review cycles = exponentially fewer compounded errors.
+
+The scream version: agent works, you pull up terminal, you can talk to
+it mid-task. Not just accept/reject — redirect, ask questions, give
+context. The conversation from this session proves this works. The
+agent halts are where the human contribution has highest leverage.
