@@ -464,3 +464,26 @@ for a new tool. So the decision stalls. Subscription removes the decision
 entirely: binary yes/no, one number. Even with tiers, people look at one
 number (the tier they'd pick) not the selector. The single big price is
 what determines yes or no. Everything else is noise after that decision.
+
+### Hypothesis: AI usage concentrates to power users
+
+Most people don't have ideas good or unique enough to give AI meaningful
+work. The bottleneck isn't the tool — it's knowing what to build. AI
+usage will concentrate more and more to power users and corps that can
+profitably provide work to AI agents on their own margin.
+
+This is the same pattern as every tool: most people who buy a camera
+take snapshots. A few become photographers. Most people who get Claude
+ask it trivia. A few build systems. The tool doesn't determine the
+output — the human's vision does.
+
+Implication for a.c: don't optimize for the casual user who asks
+"what should I do with AI." Optimize for the power user who has 50
+tasks queued and needs them executed faster. The casual user subsidizes
+the flat pricing. The power user is the actual customer.
+
+Implication for marketplace: most sellers on the agent labor marketplace
+will be a small number of power users with specialized agent fleets.
+Most buyers will be people/corps who have the money and the problem but
+not the skill to direct agents. Same as freelance marketplaces — few
+sellers, many buyers. The skill is having ideas worth executing.
