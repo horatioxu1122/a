@@ -535,3 +535,28 @@ This is exactly what this session was. You had ideas, I executed them.
 You steered when wrong, accepted when right. The code got written,
 committed, pushed — all agent work. Your work was the ideas and the
 judgment. That ratio only increases.
+
+### The learning curve is the product
+
+Simple to say "imagine, judge, steer." But people need time to play
+with the model and system. Not doing much visibly useful. Failing in
+predictable ways. In order to learn and get better to mastery. Turing
+wasn't the greatest student at the start. Nobody could match him at
+the end.
+
+The todo app disaster, the Docker phase, the GUI phase, the deleted
+tests — all necessary failures. Each one taught what doesn't work,
+which is the only reliable way to learn what does. Skipping the
+failures skips the learning.
+
+Implication: the agent manager must tolerate and support the learning
+phase. Not optimize it away. Not skip to "just tell me what to do."
+Let the user fail cheaply and quickly. Low cost per attempt (flat
+pricing). Fast feedback (instant build). Easy undo (git revert). The
+system that makes failure cheap makes mastery fast.
+
+The product isn't the tool. The product is the user's skill after
+6 months of using the tool. The todo app user who quits is a lost
+customer. The todo app user who fails, learns, rebuilds, and ships
+a.c is the success case. The system must keep people in the game long
+enough for the learning to compound.
