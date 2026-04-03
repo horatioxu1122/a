@@ -80,6 +80,7 @@ _headless_mode = False
 _copy_profile = False  # Default: separate session (isolated profile)
 _chrome_variant = 'beta'  # 'beta' | 'stable' — controls binary AND profile source
 _use_cdp = True  # True = pure CDP (default), False = playwright over CDP (--pw)
+_use_real_profile = False  # True = user's real Chrome profile (logged in)
 
 # ═══════════════════════════════════════════════════════════
 # CDP DIRECT — Pure Chrome DevTools Protocol, no Playwright
@@ -103,6 +104,11 @@ class CDPPage:
         while True:
             r = json.loads(self._ws.recv())
             if r.get('id') == self._id: return r.get('result', {})
+            # Stash events for watch_text
+            if r.get('method') == 'Runtime.bindingCalled':
+                self._events.append(r.get('params', {}).get('payload', ''))
+
+    _events = []
 
     def goto(self, url, wait_until='domcontentloaded', timeout=30000):
         self._send('Page.enable')
@@ -191,6 +197,42 @@ class CDPPage:
 
     def bring_to_front(self):
         self._send('Page.bringToFront')
+
+    def watch_text(self, sel=None, timeout=60):
+        """Event-driven text streaming via MutationObserver + CDP binding.
+        sel: CSS selector to watch (default: document.body). Works on any OS.
+        Yields (new_text, full_text) tuples as content changes."""
+        import json, time
+        self._send('Runtime.enable')
+        self._send('Runtime.addBinding', {'name': '_cdpText'})
+        target = f'document.querySelector({json.dumps(sel)})' if sel else 'document.body'
+        self._eval(f'''(()=>{{
+            let el={target};if(!el)el=document.body;
+            let prev=el.innerText;
+            new MutationObserver(()=>{{
+                let cur=el.innerText;
+                if(cur!==prev){{_cdpText(cur);prev=cur}}
+            }}).observe(el,{{childList:true,subtree:true,characterData:true}});
+        }})()''')
+        self._events = []
+        deadline = time.time() + timeout
+        prev_text = ''
+        last_change = time.time()
+        while time.time() < deadline:
+            self._ws.settimeout(0.5)
+            try:
+                r = json.loads(self._ws.recv())
+                if r.get('method') == 'Runtime.bindingCalled':
+                    text = r.get('params', {}).get('payload', '')
+                    if text != prev_text:
+                        new = text[len(prev_text):] if len(text) > len(prev_text) else text
+                        yield new, text
+                        prev_text = text
+                        last_change = time.time()
+            except: pass
+            if prev_text and time.time() - last_change > 3:
+                break
+        self._ws.settimeout(30)
 
     def close(self):
         try: self._ws.close()
@@ -490,11 +532,7 @@ def _position_chrome_window(target_monitor=None, tolerance=40):
         monitor = target_monitor or _get_target_monitor()
         if monitor and monitor.get('name'):
             _swaymsg(f'[con_id={window_id}]', 'move', 'to', 'output', monitor['name'])
-            _swaymsg(f'[con_id={window_id}]', 'fullscreen', 'enable')
-            print(f"  ✓ Moved to {monitor['name']} (fullscreen)")
-        else:
-            _swaymsg(f'[con_id={window_id}]', 'fullscreen', 'enable')
-            print(f"  ✓ Fullscreened on current output")
+            print(f"  ✓ Moved to {monitor['name']}")
         return window_id
 
     # X11/GNOME path
@@ -540,7 +578,6 @@ def maximize_window_on_monitor(window_id, monitor):
     if IS_SWAY and window_id:
         if monitor and monitor.get('name'):
             _swaymsg(f'[con_id={window_id}]', 'move', 'to', 'output', monitor['name'])
-        _swaymsg(f'[con_id={window_id}]', 'fullscreen', 'enable')
         return
     move_window(window_id, monitor['x'], monitor['y'])
     time.sleep(0.15)
@@ -609,8 +646,27 @@ def verify_window_on_monitor(window_id, monitor, tolerance=100):
 # BROWSER LIFECYCLE - Native Wayland with CDP
 # ═══════════════════════════════════════════════════════════
 
+def _real_chrome_profile():
+    """Find user's real Chrome profile dir"""
+    if IS_MAC:
+        for p in ['~/Library/Application Support/Google/Chrome', '~/Library/Application Support/Google/Chrome Beta',
+                   '~/Library/Application Support/Google/Chrome Canary']:
+            ep = os.path.expanduser(p)
+            if os.path.isdir(ep): return ep
+    paths = {'canary': '~/.config/google-chrome-canary', 'beta': '~/.config/google-chrome-beta',
+             'stable': '~/.config/google-chrome'}
+    for v in [_chrome_variant] + [k for k in paths if k != _chrome_variant]:
+        ep = os.path.expanduser(paths.get(v, paths['stable']))
+        if os.path.isdir(ep): return ep
+    return os.path.expanduser('~/.config/google-chrome')
+
 def get_profile_path():
-    """Get persistent profile path (library glue)"""
+    """Get profile path — copy of user profile with --me, isolated otherwise.
+    Chrome refuses --remote-debugging-port on default profile dir, so --me
+    copies cookies/logins to a separate dir."""
+    if _use_real_profile:
+        suffix = f'-{_chrome_variant}' if _chrome_variant != 'beta' else ''
+        return os.path.expanduser(f'~/.waylandauto/chrome-me{suffix}')
     if IS_MAC:
         return os.path.expanduser('~/Library/Application Support/agui/chrome-profile')
     suffix = f'-{_chrome_variant}' if _chrome_variant != 'beta' else ''
@@ -677,20 +733,33 @@ def _launch_chrome_positioned():
     global _chrome_process, _profile_dir
 
     user_data_dir = get_profile_path()
-    _terminate_profile_processes(user_data_dir)
-    os.makedirs(user_data_dir, exist_ok=True)
     _profile_dir = user_data_dir
-    print(f"  → Profile: {user_data_dir}")
+    print(f"  → Profile: {user_data_dir}{' (user)' if _use_real_profile else ''}")
 
-    # EXPERIMENTAL: Profile grabbing disabled by default
-    # if _copy_profile:
-    #     _sync_profile_data()
-
-    for session_file in ['Last Session', 'Last Tabs', 'Current Session', 'Current Tabs']:
-        try:
-            os.remove(os.path.join(user_data_dir, session_file))
-        except:
-            pass
+    if _use_real_profile:
+        # Copy cookies/logins from real profile (Chrome refuses CDP on default dir)
+        src = _real_chrome_profile()
+        _terminate_profile_processes(user_data_dir)
+        os.makedirs(user_data_dir, exist_ok=True)
+        for item in ['Default/Cookies', 'Default/Login Data', 'Default/Web Data',
+                      'Default/Local Storage', 'Default/IndexedDB', 'Default/Preferences',
+                      'Default/Secure Preferences', 'Default/Extensions', 'Local State']:
+            s, d = os.path.join(src, item), os.path.join(user_data_dir, item)
+            if os.path.exists(s):
+                os.makedirs(os.path.dirname(d), exist_ok=True)
+                try:
+                    if os.path.isdir(s):
+                        if os.path.exists(d): shutil.rmtree(d)
+                        shutil.copytree(s, d)
+                    else: shutil.copy2(s, d)
+                except: pass
+        print(f"  → Synced profile from {src}")
+    else:
+        _terminate_profile_processes(user_data_dir)
+        os.makedirs(user_data_dir, exist_ok=True)
+        for session_file in ['Last Session', 'Last Tabs', 'Current Session', 'Current Tabs']:
+            try: os.remove(os.path.join(user_data_dir, session_file))
+            except: pass
     time.sleep(1.5)
 
     target_monitor = _get_target_monitor()
@@ -2775,7 +2844,7 @@ if __name__ == "__main__":
 """
         print(examples)
 
-    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary'}
+    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary','me'}
     sys.argv = [a if a.startswith('-') or a not in _cmds else f'--{a}' for a in sys.argv]
     parser = argparse.ArgumentParser(
         description='agui - GUI Automation with XWayland Tools',
@@ -2804,11 +2873,13 @@ if __name__ == "__main__":
     parser.add_argument('--log', '--signin', action='store_true', help='Sign-in mode')
     parser.add_argument('--pw', action='store_true', help='Use Playwright instead of raw CDP')
     parser.add_argument('--canary', action='store_true', help='Use Chrome Canary')
+    parser.add_argument('--me', action='store_true', help='Use real Chrome profile (logged in)')
     args, extra = parser.parse_known_args(); args.ask = args.ask or (' '.join(extra) if extra and not args.say else None)
 
     if args.demo: show_examples(); sys.exit(0)
     if args.pw: globals()['_use_cdp'] = False
     if args.canary: globals()['_chrome_variant'] = 'canary'
+    if args.me: globals()['_use_real_profile'] = True
     if args.side: globals()['_center_mode'] = False
     if args.hide: globals()['_headless_mode'] = True
     if args.solo: globals()['_copy_profile'] = False
