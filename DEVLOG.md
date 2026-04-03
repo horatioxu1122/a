@@ -174,3 +174,35 @@ Implication: IDEAS.md and DEVLOG.md aren't just for humans. They're
 training material for every agent that connects. Better docs = better
 agent performance. Writing ideas down isn't note-taking — it's
 programming the agents that will read them.
+
+## What a.c has that nothing else does
+
+Physically grounded in hardware you control, with low-level control
+and mutability, compiles faster than others, no indirection layers,
+works across devices and architectures.
+
+```
+OpenClaw:      local but Python/Node, can't modify itself fast
+Claude Code:   local but closed binary, no source, no fork
+Cursor:        IDE plugin, sandboxed, can't touch system
+LangChain:     framework, many layers, slow, no hardware access
+
+a.c:           compiles <1s on your hardware
+               source is one file you own and modify
+               controls real PTY sessions on real hardware
+               ssh to real devices you physically have
+               reads/writes real files at syscall speed
+               runs on ARM, x86, Termux, WSL, macOS, Linux
+               self-installs including OS deps
+               no Docker, no VM, no container, no sandbox
+               the agent IS the machine
+```
+
+The grounding chain: a.c → C binary → syscalls → kernel → hardware.
+No abstraction between agent and CPU. When a j creates a tmux session,
+that's a real PTY on real hardware. Not simulated, not sandboxed.
+
+Mutability: any user `a cat`s the source, modifies it, rebuilds <1s.
+The tool modifies itself. No other agent tool does this.
+
+Device reach: $50 phone to supercomputer. One `sh a.c install`.
