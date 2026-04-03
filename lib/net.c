@@ -138,6 +138,12 @@ static int cmd_sync(int argc, char **argv) { AB;
         printf("  %s: %s files\n", folders[i], cnt);
     }
     bg_backup_jsonl();
+    /* rclone sync context/ + books/ output */
+    {char rc[64];pcmd("rclone listremotes 2>/dev/null|grep a-gdrive|head -1|tr -d ':'",rc,64);rc[strcspn(rc,"\n")]=0;
+    if(rc[0]){char cd[P],bd[P];snprintf(cd,P,"%s/context",AROOT);snprintf(bd,P,"%s/books",AROOT);mkdirp(cd);mkdirp(bd);
+        snprintf(c,B,"rclone copy '%s' '%s:adata/context/' -q -L 2>/dev/null;rclone copy '%s:adata/context/' '%s' -q 2>/dev/null",cd,rc,rc,cd);(void)!system(c);
+        snprintf(c,B,"rclone copy '%s' '%s:adata/books/' --include '*/output/*.txt' -q -L 2>/dev/null;rclone copy '%s:adata/books/' '%s' --include '*/output/*.txt' -q 2>/dev/null",bd,rc,rc,bd);(void)!system(c);
+        puts("\xe2\x9c\x93 context + books");}}
     if (argc > 2 && !strcmp(argv[2], "all")) {
         puts("\n--- Broadcasting to SSH hosts ---");
         char bc[B]; snprintf(bc, B, "%s/lib/a.py", SDIR);
