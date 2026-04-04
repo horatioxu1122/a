@@ -2,7 +2,7 @@
 # ── a.c — agent manager & human-AI accelerator. sh a.c [build|install|analyze|shell|clean]
 # Polyglot: shell sees # as comments; C preprocessor skips #if 0..#endif.
 # Fixes: fewer tokens, same speed+. Features: cut until it breaks.
-# Read codebase: a cat (1=all 2=skip lab/ 3=root full+sub first10+last5, copies to clipboard)
+# Read codebase: a cat (1=all 2=skip my/ 3=root full+sub first10+last5, copies to clipboard)
 # Context: a c/j preloads a cat (auto mode 3) into claude's system prompt via --append-system-prompt-file
 # TERMUX: set CLAUDE_CODE_TMPDIR=$HOME/.tmp; build with clang directly.
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
@@ -345,9 +345,9 @@ static int cmd_cat(int c,char**v){perf_disarm();
     char m=0;int di=2;
     if(c>2&&v[2][0]>='1'&&v[2][0]<='3'&&!v[2][1]){m=v[2][0];di=3;}
     if(c>di&&chdir(v[di]))return 1;
-    if(!m){if(!isatty(1))m='3';else{puts("1 all\n2 all (skip lab/)\n3 first10+last5 (skip lab/)");
+    if(!m){if(!isatty(1))m='3';else{puts("1 all\n2 all (skip my/)\n3 first10+last5 (skip my/)");
         printf("> ");fflush(stdout);char ch[4];if(!fgets(ch,4,stdin))return 0;m=ch[0];}}
-    const char*ex=m!='1'?" -- ':!lab/'":"";
+    const char*ex=m!='1'?" -- ':!my/'":"";
     #define GA(p,n) if(l+(n)>=cap){cap=(l+(n)+8192)*2;d=realloc(d,cap);}memcpy(d+l,p,n);l+=(n)
     {char cm[B];snprintf(cm,B,"git grep -lI ''%s",ex);
     size_t l=0,cap=0;char*d=NULL,b[8192];size_t n;int nf=0,skf=0;
@@ -551,14 +551,14 @@ static void gt_print(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);
     long us=(t.tv_sec-gt0.tv_sec)*1000000L+(t.tv_nsec-gt0.tv_nsec)/1000;
     struct stat st;char p[P];DIR*d;struct dirent*e;
     snprintf(p,P,"%s/a.c",SDIR);long ac=!stat(p,&st)?st.st_size/4:0;
-    long dt[2]={0,0};const char*dn[]={"lib","lab"};
+    long dt[2]={0,0};const char*dn[]={"lib","my"};
     for(int i=0;i<2;i++){snprintf(p,P,"%s/%s",SDIR,dn[i]);d=opendir(p);if(d){
         while((e=readdir(d))){if(e->d_name[0]=='.')continue;snprintf(p,P,"%s/%s/%s",SDIR,dn[i],e->d_name);
             if(!stat(p,&st)&&S_ISREG(st.st_mode))dt[i]+=st.st_size;}closedir(d);}}
     long ct=0;const char*cn=G_argc>1?G_argv[1]:"";
     snprintf(p,P,"%s/lib/%s.c",SDIR,cn);if(!stat(p,&st))ct=st.st_size/4;
-    if(ct)fprintf(stderr,"%ldus tokens %s.c:%ld a.c:%ld lib:%ld lab:%ld\n",us,cn,ct,ac,dt[0]/4,dt[1]/4);
-    else fprintf(stderr,"%ldus tokens a.c:%ld lib:%ld lab:%ld\n",us,ac,dt[0]/4,dt[1]/4);}
+    if(ct)fprintf(stderr,"%ldus tokens %s.c:%ld a.c:%ld lib:%ld my:%ld\n",us,cn,ct,ac,dt[0]/4,dt[1]/4);
+    else fprintf(stderr,"%ldus tokens a.c:%ld lib:%ld my:%ld\n",us,ac,dt[0]/4,dt[1]/4);}
 int main(int argc, char **argv) {
     init_paths();G_argc=argc;G_argv=argv;
 
@@ -583,12 +583,12 @@ int main(int argc, char **argv) {
      snprintf(pf,P,"%s/lib/%s/__init__.py",SDIR,arg);
      if(fexists(pf)){char m[P];snprintf(m,P,"%s/__init__",arg);fallback_py(m,argc,argv);}
      #define RL {int r=run_lab(pf,argc,argv);if(r>=0)return r;}
-     snprintf(pf,P,"%s/lab/%s",SDIR,arg);
+     snprintf(pf,P,"%s/my/%s",SDIR,arg);
      if(strrchr(arg,'.')&&fexists(pf))RL
-     for(int i=1;EXT[i];i++){snprintf(pf,P,"%s/lab/%s%s",SDIR,arg,EXT[i]);if(fexists(pf))RL}
-     DIR*ld;struct dirent*le;snprintf(pf,P,"%s/lab",SDIR);ld=opendir(pf);
+     for(int i=1;EXT[i];i++){snprintf(pf,P,"%s/my/%s%s",SDIR,arg,EXT[i]);if(fexists(pf))RL}
+     DIR*ld;struct dirent*le;snprintf(pf,P,"%s/my",SDIR);ld=opendir(pf);
      if(ld){while((le=readdir(ld))){if(le->d_name[0]=='.')continue;
-      for(int i=1;EXT[i];i++){snprintf(pf,P,"%s/lab/%s/%s%s",SDIR,le->d_name,arg,EXT[i]);
+      for(int i=1;EXT[i];i++){snprintf(pf,P,"%s/my/%s/%s%s",SDIR,le->d_name,arg,EXT[i]);
        if(fexists(pf)){closedir(ld);RL}}}closedir(ld);}
      #undef RL
      }

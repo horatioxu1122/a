@@ -13,7 +13,7 @@ static const char *HELP_FULL =
     "GIT     a push [msg]  a pr [title]  a pull/diff/revert\n"
     "NOTES   a n \"text\"  a task\n"
     "REMOTE  a ssh [<#>]  a run <#> \"task\"\n"
-    "CODE    a cat [1|2|3]  (1=all 2=skip lab/ 3=first10+last5)\n"
+    "CODE    a cat [1|2|3]  (1=all 2=skip my/ 3=first10+last5)\n"
     "SYSTEM  a ls/kill/attach  a hub  a config/sync/update/perf";
 
 static void list_all(int cache, int quiet) {
@@ -44,7 +44,7 @@ static void gen_icache(void) {
     {char af[P];snprintf(af,P,"%s/local/apps.txt",AROOT);
     size_t al;char*ad=readf(af,&al);if(ad){fwrite(ad,1,al,f);free(ad);}}
 #endif
-    {char ad[P];snprintf(ad,P,"%s/lab/platonic_agents",SDIR);DIR*d=opendir(ad);struct dirent*e;
+    {char ad[P];snprintf(ad,P,"%s/lib/platonic_agents",SDIR);DIR*d=opendir(ad);struct dirent*e;
     if(d){while((e=readdir(d))){char*p=strrchr(e->d_name,'.');
         if(p&&(p[1]=='p'||p[1]=='c')){*p=0;fprintf(f,"agent run %s\tagent\n",e->d_name);}}closedir(d);}}
     /* auto-discover lib .py — extract docstring desc */

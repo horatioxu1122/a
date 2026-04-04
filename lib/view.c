@@ -152,5 +152,5 @@ static int cmd_gui(int argc,char**argv){AB;perf_disarm();
 static int cmd_web(int argc,char**argv){AB;perf_disarm();
     char c[B],args[B]="";
     for(int i=2;i<argc;i++){int l=(int)strlen(args);snprintf(args+l,(size_t)(B-l),"%s%s",l?" ":"",argv[i]);}
-    snprintf(c,B,"python3 %s/lab/agui.py %s",SDIR,args);
+    snprintf(c,B,"python3 %s/lib/agui.py %s",SDIR,args);
     return system(c);}

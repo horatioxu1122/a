@@ -6,7 +6,7 @@ Read a.c and use the index to jump as needed to see locations by searching.
 General information:
 Write code as short as possible, readable, fast as possible, using direct library calls over custom logic.  
 Logic goes in flat files in lib folder. 
-Experiments in lab folder.
+Experimental work lives in my/ (gitignored, not in context load). Promoted experiments live in lib/ tagged "# experimental". Promote from my/ to lib/ when proven by use.
 All persistent data lives in adata folder.
 Don't push without approval. 
 The optimal program is maximally short fast and valuable. Edits should converge towards this.
@@ -29,7 +29,7 @@ Use "a diff" to compare against main before pushing — token count must be lowe
 Time all command runs the fix must be faster or same time.
 
 Feature additions:
-For feature additions, once code works, cut it aggressively, verify cuts are shorter with "a diff", and output is correct, until it cannot be cut more. This should be done by cuts that halve the new tokens or more each time. If the user says "crunch" they want it halved with same functionality until it breaks. Lab is exempt from cuts.
+For feature additions, once code works, cut it aggressively, verify cuts are shorter with "a diff", and output is correct, until it cannot be cut more. This should be done by cuts that halve the new tokens or more each time. If the user says "crunch" they want it halved with same functionality until it breaks. my/ is exempt from cuts.
 
 Build workflow:
 Use "sh a.c" for fast iteration (instant O0 build, checkers run async in background).
