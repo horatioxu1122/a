@@ -113,7 +113,6 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
     char*lines[1024];int n=0;
     for(char*p=raw,*end=raw+len;p<end&&n<1024;){char*nl=memchr(p,'\n',(size_t)(end-p));
         if(!nl)nl=end;if(nl>p&&p[0]!='<'&&p[0]!='='&&p[0]!='>'&&p[0]!='#'){*nl=0;lines[n++]=p;}p=nl+1;}
-    /* append web cache */
     size_t wl;char wp[P];snprintf(wp,P,"%s/web_cache.txt",DDIR);char*wraw=readf(wp,&wl);
     if(wraw){for(char*p=wraw,*end=wraw+wl;p<end&&n<1024;){char*nl=memchr(p,'\n',(size_t)(end-p));
         if(!nl)nl=end;if(nl>p){*nl=0;lines[n++]=p;}p=nl+1;}}
@@ -124,9 +123,8 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
     raw_t.c_lflag&=~(tcflag_t)(ICANON|ECHO|ISIG);raw_t.c_cc[VMIN]=1;raw_t.c_cc[VTIME]=0;
     tcsetattr(STDIN_FILENO,TCSANOW,&raw_t);write(STDOUT_FILENO,"\033[?1000h\033[?1006h",16);
     char buf[256]="";int blen=0,sel=0;char prefix[256]="";
-    #define IRST tcsetattr(STDIN_FILENO,TCSANOW,&old);write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);(void)!system("clear");free(raw);free(wraw)
+    #define IRST write(STDOUT_FILENO,"\033[?1000l\033[?1006l",16);tcflush(STDIN_FILENO,TCIFLUSH);tcsetattr(STDIN_FILENO,TCSANOW,&old);(void)!system("clear");free(raw);free(wraw)
     while (1) {
-        /* Search */
         fqm_t fm[1024]; int nm = 0; int plen = (int)strlen(prefix);
         for (int i=0;i<n&&nm<1024;i++) {
             if (plen && strncmp(lines[i], prefix, (size_t)plen)) continue;
@@ -137,9 +135,7 @@ static int cmd_i(int argc, char **argv) { (void)argc; (void)argv;
         }
         if(blen&&nfq)qsort(fm,(size_t)nm,sizeof(fqm_t),fqm_cmp);
         {int mx=nm?nm:blen?2:0;if(sel>=mx)sel=mx?mx-1:0;}
-        /* Scroll window around sel */
         int top=sel>=maxshow?sel-maxshow+1:0, show=nm-top<maxshow?nm-top:maxshow;
-        /* Render — single write to avoid flicker */
         {char fb[B*4];int fl=0;
         #define FP(f,...) fl+=snprintf(fb+fl,(size_t)(B*4-fl),f,##__VA_ARGS__)
         FP("\033[H\033[?25l%s> %s\033[K\n",prefix,buf);
