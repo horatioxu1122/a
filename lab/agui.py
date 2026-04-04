@@ -111,17 +111,23 @@ class CDPPage:
     _events = []
 
     def goto(self, url, wait_until='domcontentloaded', timeout=30000):
-        self._send('Page.enable')
-        self._send('Page.navigate', {'url': url})
-        # Wait for load
         import json, time
+        self._send('Page.enable')
+        # Fire navigate without waiting for response (Chrome blocks during session restore)
+        self._id += 1
+        nav_id = self._id
+        self._ws.send(json.dumps({'id': nav_id, 'method': 'Page.navigate', 'params': {'url': url}}))
+        # Wait for load event OR navigate response
         deadline = time.time() + timeout / 1000
         while time.time() < deadline:
             try:
                 self._ws.settimeout(2)
                 r = json.loads(self._ws.recv())
-                if r.get('method') in ('Page.loadEventFired', 'Page.domContentEventFired'): break
-            except: break
+                m = r.get('method', '')
+                if m in ('Page.loadEventFired', 'Page.domContentEventFired'): break
+                if m == 'Runtime.bindingCalled':
+                    self._events.append(r.get('params', {}).get('payload', ''))
+            except: pass
         self._ws.settimeout(30)
         self.url = self._eval('location.href') or url
 
@@ -723,8 +729,8 @@ def check_cdp_available(timeout=10):
                 return True
             print(f"  → No page targets yet, retrying...")
         except Exception as e:
-            print(f"  → CDP not ready yet: {str(e)[:50]}")
-        time.sleep(0.5)
+            pass
+        time.sleep(0.05)
     print(f"  ✗ CDP timeout after {timeout}s")
     return False
 
@@ -737,30 +743,24 @@ def _launch_chrome_positioned():
     print(f"  → Profile: {user_data_dir}{' (user)' if _use_real_profile else ''}")
 
     if _use_real_profile:
-        # Copy cookies/logins from real profile (Chrome refuses CDP on default dir)
+        # Copy only small auth files — skip Extensions/IndexedDB (200MB+, slow)
         src = _real_chrome_profile()
         _terminate_profile_processes(user_data_dir)
-        os.makedirs(user_data_dir, exist_ok=True)
+        os.makedirs(os.path.join(user_data_dir, 'Default'), exist_ok=True)
         for item in ['Default/Cookies', 'Default/Login Data', 'Default/Web Data',
-                      'Default/Local Storage', 'Default/IndexedDB', 'Default/Preferences',
-                      'Default/Secure Preferences', 'Default/Extensions', 'Local State']:
+                      'Default/Preferences', 'Default/Secure Preferences', 'Local State']:
             s, d = os.path.join(src, item), os.path.join(user_data_dir, item)
             if os.path.exists(s):
-                os.makedirs(os.path.dirname(d), exist_ok=True)
-                try:
-                    if os.path.isdir(s):
-                        if os.path.exists(d): shutil.rmtree(d)
-                        shutil.copytree(s, d)
-                    else: shutil.copy2(s, d)
+                try: shutil.copy2(s, d)
                 except: pass
-        print(f"  → Synced profile from {src}")
+        print(f"  → Synced auth from {src}")
     else:
         _terminate_profile_processes(user_data_dir)
         os.makedirs(user_data_dir, exist_ok=True)
         for session_file in ['Last Session', 'Last Tabs', 'Current Session', 'Current Tabs']:
             try: os.remove(os.path.join(user_data_dir, session_file))
             except: pass
-    time.sleep(1.5)
+    time.sleep(0.5)
 
     target_monitor = _get_target_monitor()
     if target_monitor:
@@ -790,15 +790,30 @@ def _launch_chrome_positioned():
         raise RuntimeError("CDP not available")
 
 def _cdp_new_page():
-    """Create CDPPage — connect to existing blank tab or first page target"""
-    import urllib.request, json
-    r = urllib.request.urlopen('http://localhost:9222/json', timeout=5)
-    targets = json.loads(r.read())
-    # Prefer about:blank, else first page
-    target = next((t for t in targets if t.get('type') == 'page' and 'blank' in t.get('url', '')),
-                  next((t for t in targets if t.get('type') == 'page'), None))
-    if not target: raise RuntimeError("No page target found")
-    ws_url = target['webSocketDebuggerUrl']
+    """Create CDPPage — create fresh tab via Target.createTarget (skips extension init delay)"""
+    import urllib.request, json, websocket as _ws
+    # Connect to browser-level websocket
+    r = urllib.request.urlopen('http://localhost:9222/json/version', timeout=5)
+    info = json.loads(r.read())
+    bws = _ws.create_connection(info['webSocketDebuggerUrl'], timeout=10)
+    bws.send(json.dumps({'id': 1, 'method': 'Target.createTarget', 'params': {'url': 'about:blank'}}))
+    resp = json.loads(bws.recv())
+    tid = resp.get('result', {}).get('targetId')
+    bws.close()
+    if not tid:
+        # Fallback: use existing page
+        r = urllib.request.urlopen('http://localhost:9222/json', timeout=5)
+        targets = json.loads(r.read())
+        target = next((t for t in targets if t.get('type') == 'page'), None)
+        if not target: raise RuntimeError("No page target found")
+        ws_url = target['webSocketDebuggerUrl']
+    else:
+        # Get websocket URL for new target
+        r = urllib.request.urlopen('http://localhost:9222/json', timeout=5)
+        targets = json.loads(r.read())
+        target = next((t for t in targets if t.get('id') == tid), None)
+        ws_url = target['webSocketDebuggerUrl'] if target else None
+        if not ws_url: raise RuntimeError(f"Target {tid} not found")
     print(f"  → CDP direct: {ws_url[:60]}")
     return CDPPage(ws_url)
 
@@ -824,13 +839,14 @@ def launch_browser_with_positioning():
         try: _playwright.stop()
         except: pass
 
-    # Try existing browser first, launch only if needed
-    if _cdp_already_running():
-        print("  → Connecting to existing browser on :9222")
-    else:
-        _launch_chrome_positioned()
-
     if _use_cdp:
+        # Hot path: if browser already running, just create tab — ~20ms
+        if _cdp_already_running():
+            _page = _cdp_new_page()
+            print(f"  ✓ CDP page ready (existing browser)")
+            return None
+        # Cold path: launch browser first
+        _launch_chrome_positioned()
         _page = _cdp_new_page()
         print(f"  ✓ CDP page ready")
         return None

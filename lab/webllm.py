@@ -102,26 +102,35 @@ def test_site(name, query='What is 2+2? Answer in one word.'):
         print(f'  ✗ No input field found')
         return True
 
-    # Event-driven response — MutationObserver on body, diff against baseline
-    baseline = _js('document.body.innerText') or ''
-    print(f'  ', end='', flush=True)
-    total = 0
+    # Event-driven wait — MutationObserver detects when response is done
+    # Then extract clean response text with one JS eval
+    print(f'  Streaming', end='', flush=True)
+    changed = False
     for chunk, full in page.watch_text(timeout=60):
-        # Only show text beyond baseline + query echo
-        resp = full[len(baseline):] if len(full) > len(baseline) else ''
-        resp = resp.replace(query, '', 1).strip()
-        if len(resp) > total:
-            new = resp[total:]
-            # Filter UI chrome
-            lines = [l for l in new.split('\n') if l.strip()
-                     and not any(x in l for x in ['is AI and can','double-check','Please verify'])]
-            out = '\n'.join(lines)
-            if out:
-                print(out, end='', flush=True)
-            total = len(resp)
+        changed = True
+        print('.', end='', flush=True)
     print()
-    if total: print(f'  [{total} chars]')
-    else: print('  (no response captured)')
+
+    # Extract: use site-specific JS, fall back to generic
+    resp = _js(resp_js) or ''
+    if not resp or resp == query:
+        # Generic: find text that appeared after query on the page
+        resp = _js(f'''(()=>{{
+            let t=document.body.innerText;
+            let i=t.lastIndexOf({json.dumps(query)});
+            if(i>=0){{let after=t.substring(i+{len(query)}).trim();
+                let lines=after.split("\\n").filter(l=>l.trim()&&
+                    !/Reply|Extended|Opus|Pro|is AI|double-check|Share|Tools/i.test(l));
+                return lines[0]||""}}
+            return""}})()''') or ''
+
+    if resp:
+        print(f'  Response: {resp[:500]}')
+        print(f'  [{len(resp)} chars]')
+    elif changed:
+        print('  (response arrived — check screenshot)')
+    else:
+        print('  (no response)')
 
     page.screenshot(path=f'/tmp/webllm_{name}_resp.png')
     print(f'  Shot: /tmp/webllm_{name}_resp.png')
