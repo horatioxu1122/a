@@ -21,7 +21,6 @@ static int cmd_email(int argc, char **argv) { AB;
 /* ── log ── */
 static int cmd_log(int argc, char **argv) {
     const char *sub = argc > 2 ? argv[2] : NULL;
-    if (sub && (!strcmp(sub,"sync")||!strcmp(sub,"grab"))) fallback_py("log",argc,argv);
     if (sub && !strcmp(sub, "backup")) { perf_disarm();
         char c[B], cnt[64], bdir[P]; snprintf(bdir, P, "%s/backup", AROOT);
         char jdir[P]; snprintf(jdir, P, "%s/git/jobs", AROOT);
@@ -112,7 +111,21 @@ static int cmd_log(int argc, char **argv) {
 }
 
 /* ── login ── */
-static int cmd_login(int argc, char **argv) { fallback_py("login", argc, argv); }
+static int cmd_login(int argc, char **argv) {
+    char ld[P];snprintf(ld,P,"%s/login",SROOT);mkdirp(ld);
+    const char*sub=argc>2?argv[2]:NULL;
+    if(sub&&!strcmp(sub,"save")){char tk[256];pcmd("gh auth token 2>/dev/null",tk,256);tk[strcspn(tk,"\n")]=0;
+        if(!*tk){puts("x gh auth token failed");return 1;}
+        char fp[P],buf[B];snprintf(fp,P,"%s/gh_%s.txt",ld,DEV);
+        snprintf(buf,B,"Token: %s\nDevice: %s\n",tk,DEV);writef(fp,buf);sync_bg();printf("\xe2\x9c\x93 saved\n");return 0;}
+    if(sub&&!strcmp(sub,"apply")){char fp[P*2],tk[256]="";
+        DIR*d=opendir(ld);struct dirent*e;if(d){while((e=readdir(d))){if(!strncmp(e->d_name,"gh_",3)){
+            snprintf(fp,P,"%s/%s",ld,e->d_name);kvs_t kv=kvfile(fp);const char*t=kvget(&kv,"Token");
+            if(t&&*t){snprintf(tk,256,"%s",t);break;}}}closedir(d);}
+        if(!*tk){puts("x no saved token");return 1;}
+        snprintf(fp,P*2,"echo '%s'|gh auth login --with-token 2>&1",tk);(void)!system(fp);
+        (void)!system("gh auth setup-git 2>/dev/null");printf("\xe2\x9c\x93 applied\n");return 0;}
+    puts("a login save   save gh token\na login apply  apply from sync");return 0;}
 
 /* ── sync ── */
 static int cmd_sync(int argc, char **argv) { AB;

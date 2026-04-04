@@ -28,15 +28,15 @@ static int load_notes(const char *dir, const char *f) {
 static int cmd_note(int argc, char **argv) {
     AB;
     char dir[P]; snprintf(dir,P,"%s/notes",SROOT); mkdirp(dir);
-    if(argc>2&&!strcmp(argv[2],"l")){int n=load_notes(dir,NULL);
+    if(argc>2&&!strcmp(argv[2],"l")){perf_disarm();int n=load_notes(dir,NULL);
         if(!n){puts("(none)");return 0;}
         qsort(gn,(size_t)n,sizeof(GN),gncmp);
         for(int i=0;i<n;i++)printf("%3d. %s\n",i+1,gn[i].t);return 0;}
-    if(argc<=2){int n=load_notes(dir,NULL);
-        printf("%d pending\n  a n <text>  add\n  a n l       list\n  a n r       review\n  a n ?<q>    search\n  a n m       AI manage\n",n);return 0;}
-    if(argc>2&&(argv[2][0]=='?'||!strcmp(argv[2],"r")||!strcmp(argv[2],"review"))){
+    if(argc<=2){int n=0;DIR*d=opendir(dir);if(d){struct dirent*e;while((e=readdir(d)))if(e->d_name[0]!='.'&&strstr(e->d_name,".txt"))n++;closedir(d);}
+        printf("%d notes\n  a n <text>  add\n  a n l       list\n  a n r       review\n  a n ?<q>    search\n  a n m       AI manage\n",n);return 0;}
+    if(argc>2&&(argv[2][0]=='?'||!strcmp(argv[2],"r")||!strcmp(argv[2],"review"))){perf_disarm();
         const char *f=argv[2][0]=='?'?argv[2]+1:NULL;int n=load_notes(dir,f);
-        if(!n){puts("(none)");return 0;} if(!isatty(STDIN_FILENO)){for(int i=0;i<n&&i<10;i++)puts(gn[i].t);return 0;} perf_disarm();
+        if(!n){puts("(none)");return 0;} if(!isatty(STDIN_FILENO)){for(int i=0;i<n&&i<10;i++)puts(gn[i].t);return 0;}
         int i=0,show=1; raw_enter();
         while(i<n){if(show)printf("\n[%d/%d] %s\n",i+1,n,gn[i].t);show=1;
             printf("  [d]el [a]dd [/]find [j/k/q]  ");fflush(stdout);

@@ -8,19 +8,19 @@ static int tm_list(char out[B], char *lines[], int max) {
 }
 /* ── ls ── */
 static int cmd_ls(int argc, char **argv) {
-    char out[B]; char *lines[64]; int n=tm_list(out,lines,64);
     if (argc > 2 && argv[2][0] >= '0' && argv[2][0] <= '9') {
+        char out[B]; char *lines[64]; int n=tm_list(out,lines,64);
         int idx = atoi(argv[2]);
         if (idx >= 0 && idx < n) tm_go(lines[idx]);
         return 0;
     }
-    if (!n) { puts("No windows"); return 0; }
-    for (int i = 0; i < n; i++) {
-        char c[B], path[512] = "";
-        snprintf(c, B, "tmux display-message -p -t '%s:%s' '#{pane_current_path}' 2>/dev/null", TMS, lines[i]);
-        pcmd(c, path, 512); path[strcspn(path,"\n")] = 0;
-        printf("  %d  %s: %s\n", i, lines[i], path);
-    }
+    char out[B];snprintf(out,B,"tmux list-windows -t '%s' -F '#{window_name}\t#{pane_current_path}' 2>/dev/null",TMS);
+    char buf[B];pcmd(out,buf,B);
+    if(!*buf){puts("No windows");return 0;}
+    int i=0;for(char*p=buf;*p;i++){char*e=strchr(p,'\n');if(e)*e=0;
+        char*t=strchr(p,'\t');if(t)*t=0;
+        printf("  %d  %s: %s\n",i,p,t?t+1:"");
+        if(e)p=e+1;else break;}
     puts("\nSelect:\n  a ls 0"); return 0;
 }
 

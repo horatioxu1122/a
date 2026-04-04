@@ -18,9 +18,6 @@ static int cmd_docs(int argc, char **argv) {
     return 0;
 }
 
-/* ── run (remote) ── */
-static int cmd_run(int argc, char **argv) { fallback_py("run", argc, argv); }
-
 static int cmd_a_default(int c,char**v){
     init_db();load_cfg();load_sess();const char*k=cfget("default_agent");
     static char kb[16];snprintf(kb,16,"%s",k[0]?k:"c");v[1]=kb;return cmd_sess(c,v);}

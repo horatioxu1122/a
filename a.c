@@ -373,11 +373,18 @@ static int cmd_cat(int c,char**v){perf_disarm();
     {DIR*dd=opendir(ctd);if(dd){struct dirent*de;while((de=readdir(dd))){if(de->d_name[0]=='.')continue;
         char fp2[P];snprintf(fp2,P,"%s/%s",ctd,de->d_name);
         const char*ext=strrchr(de->d_name,'.');int pdf=ext&&(!strcmp(ext,".pdf")||!strcmp(ext,".djvu"));
-        if(pdf){char ref[P];size_t rl=(size_t)snprintf(ref,P,"\n==> context: %s (PDF — read with Read tool: %s) <==\n",de->d_name,fp2);GA(ref,rl);}
-        else{FILE*cf=fopen(fp2,"r");if(!cf)continue;
+        if(pdf){char ref[P];size_t rl=(size_t)snprintf(ref,P,"\n==> context: %s (PDF — read with Read tool: %s) <==\n",de->d_name,fp2);GA(ref,rl);nf++;}
+        else{struct stat st2;if(!stat(fp2,&st2)&&S_ISDIR(st2.st_mode)){DIR*sd=opendir(fp2);if(sd){struct dirent*se;while((se=readdir(sd))){if(se->d_name[0]=='.')continue;
+                char sp[P];snprintf(sp,P,"%s/%s",fp2,se->d_name);
+                const char*sx=strrchr(se->d_name,'.');int spdf=sx&&(!strcmp(sx,".pdf")||!strcmp(sx,".djvu"));
+                if(spdf){char ref[P];size_t rl=(size_t)snprintf(ref,P,"\n==> context: %s/%s (PDF — read with Read tool: %s) <==\n",de->d_name,se->d_name,sp);GA(ref,rl);}
+                else{FILE*sf=fopen(sp,"r");if(!sf)continue;
+                    char hdr[256];size_t hl=(size_t)snprintf(hdr,256,"\n==> context: %s/%s <==\n",de->d_name,se->d_name);
+                    GA(hdr,hl);char ln2[512];while(fgets(ln2,512,sf)){size_t sl=strlen(ln2);GA(ln2,sl);}fclose(sf);}
+                nf++;}closedir(sd);}continue;}
+            FILE*cf=fopen(fp2,"r");if(!cf)continue;
             char hdr[256];size_t hl=(size_t)snprintf(hdr,256,"\n==> context: %s <==\n",de->d_name);
-            GA(hdr,hl);char ln2[512];while(fgets(ln2,512,cf)){size_t sl=strlen(ln2);GA(ln2,sl);}fclose(cf);}
-        nf++;}closedir(dd);}}
+            GA(hdr,hl);char ln2[512];while(fgets(ln2,512,cf)){size_t sl=strlen(ln2);GA(ln2,sl);}fclose(cf);nf++;}}closedir(dd);}}
     if(!d)return 1;d[l]=0;
     char tf[P];snprintf(tf,P,"%s/local/a_cat.txt",AROOT);writef(tf,d);
     {int lc=0;for(size_t i=0;i<l;i++)if(d[i]=='\n')lc++;dprintf(1,"Read %s (%d lines) in full\n\n",tf,lc);}
@@ -513,7 +520,7 @@ static const cmd_t CMDS[] = {
     {"p",cmd_push},{"perf",cmd_perf},{"pr",cmd_pr},{"prompt",cmd_prompt},
     {"pull",cmd_pull},{"push",cmd_push},
     {"ref",cmd_ref},{"remove",cmd_remove},{"repo",cmd_create},{"restore",cmd_restore},{"revert",cmd_revert},{"review",cmd_review},
-    {"rm",cmd_remove},{"run",cmd_run},{"scan",cmd_scan},{"search",cmd_search},{"send",cmd_send},
+    {"rm",cmd_remove},{"scan",cmd_scan},{"search",cmd_search},{"send",cmd_send},
     {"set",cmd_set},{"settings",cmd_settings},{"setup",cmd_setup},
     {"ssh",cmd_ssh},
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
@@ -535,7 +542,7 @@ static void perf_arm_for(const char *cmd) {
 }
 static void perf_arm(const char *cmd) {
     if(getenv("A_BENCH")||isdigit(*cmd))return;
-    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|review|fork|kill|",sk))return;}
+    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|review|fork|kill|deps|",sk))return;}
     perf_arm_for(cmd);
 }
 static void perf_disarm(void) { struct itimerval z={{0,0},{0,0}};setitimer(ITIMER_REAL,&z,NULL);signal(SIGALRM,SIG_DFL); }
@@ -585,8 +592,6 @@ int main(int argc, char **argv) {
        if(fexists(pf)){closedir(ld);RL}}}closedir(ld);}
      #undef RL
      }
-    {size_t l=strlen(arg);if(l>=3&&arg[l-1]=='+'&&arg[l-2]=='+'&&*arg!='w')return cmd_wt_plus(argc,argv);}
-    if(*arg=='w'&&arg[1]&&!fexists(arg))return cmd_wt(argc,argv);
     {init_db();load_cfg();load_sess();if(find_sess(arg))return cmd_sess(argc,argv);}
     if(dexists(arg)||fexists(arg))return cmd_dir_file(argc,argv);
     {char ep[P];snprintf(ep,P,"%s%s",HOME,arg);if(*arg=='/'&&dexists(ep))return cmd_dir_file(argc,argv);}
