@@ -1,7 +1,0 @@
-.gradle/
-app/build/
-build/
-tools/
-out/apktool-*/
-out/jadx-*/
-local.properties
