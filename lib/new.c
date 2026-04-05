@@ -24,6 +24,9 @@ static int cmd_new(int argc, char **argv) {
     snprintf(cmd,B,"%sssh %s %s 'sh ~/a/a.c install' 2>&1",sp,so,hp);
     int r=system(cmd);
     if(r)puts("! install had warnings");else puts("+ installed");
+    /* setup git credentials if gh available */
+    snprintf(cmd,B,"%sssh %s %s 'command -v gh >/dev/null && gh auth status >/dev/null 2>&1 && gh auth setup-git 2>/dev/null' 2>/dev/null",sp,so,hp);
+    system(cmd);
     /* capture device info */
     char dev[P];snprintf(dev,P,"%s/git/devices",AROOT);mkdirp(dev);
     snprintf(cmd,B,"%sssh %s %s 'hostname;uname -m;cat /etc/os-release 2>/dev/null|head -3;which tmux git clang node claude 2>/dev/null' 2>/dev/null",sp,so,hp);
