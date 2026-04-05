@@ -543,7 +543,7 @@ static void perf_arm_for(const char *cmd) {
 }
 static void perf_arm(const char *cmd) {
     if(getenv("A_BENCH")||isdigit(*cmd))return;
-    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|review|fork|kill|deps|",sk))return;}
+    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|mono|cat|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|review|fork|kill|ls|i|deps|",sk))return;}
     perf_arm_for(cmd);
 }
 static void perf_disarm(void) { struct itimerval z={{0,0},{0,0}};setitimer(ITIMER_REAL,&z,NULL);signal(SIGALRM,SIG_DFL); }
