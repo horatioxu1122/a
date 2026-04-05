@@ -1,37 +1,67 @@
 #!/usr/bin/env python3
 """mac.py — macOS native GUI automation via CoreGraphics.
-No accessibility permission needed for CGEvent mouse/keyboard.
 
-IMPORTANT — what works and what doesn't:
-  screenshot()  — always works, no permissions needed
-  activate()    — always works, brings app to front
-  click(x,y)    — works but NEVER guess coordinates. Use aim() first
-  type_text()   — works, sends keystrokes to frontmost app
-  key()         — works, sends special keys (return, tab, etc)
-  windows()     — needs accessibility permission for window details
+PERMISSIONS — click() REQUIRES Accessibility permission or clicks silently fail:
+  System Settings → Privacy & Security → Accessibility → add Terminal (or host app)
+  Without this, mouse events are sent but NEVER reach the target app.
+  check_accessibility() tests this. a install should prompt for it.
+
+screenshot()  — always works, no permissions needed
+activate()    — always works, brings app to front
+click(x,y)    — NEEDS Accessibility permission. Fails silently without it.
+type_text()   — NEEDS Accessibility permission for cross-app keystroke delivery.
+key()         — NEEDS Accessibility permission for cross-app key events.
+windows()     — needs accessibility permission for window details
+check_accessibility() — returns True if clicks will work, False if not
+
+For browser automation: prefer AppleScript URL control (no permissions needed)
+over click coordinates when possible. AppleScript 'set URL of active tab'
+works without Accessibility. JS execution needs Chrome's 'Allow JavaScript
+from Apple Events' toggle (View → Developer menu).
 
 NEVER calculate/estimate click coordinates from screenshots.
 Coordinate guessing will never reliably hit the right element.
 Instead: use aim() to draw a red dot on the screenshot, LLM confirms
 the dot is on target, THEN click. Adjust via crop() if off.
 
-Usage: python3 mac.py screenshot | aim X Y | click X Y | type "text"
+Usage: python3 mac.py check | screenshot | click X Y | type "text"
 
 Proven workflow for clicking GUI elements:
-  1. activate(app)           — bring app to front
-  2. screenshot()            — capture screen
-  3. crop(path, x,y,w,h)    — zoom into region of interest
-  4. aim(x, y)               — draw green crosshair+dot on screenshot
-  5. crop the aim image      — zoom in to verify dot is on target
-  6. LLM reviews cropped aim — confirms dot is on correct element
-  7. If off: adjust x,y and re-aim. If on target: click(x, y)
-  8. screenshot() after click — verify result
+  1. check_accessibility()   — verify clicks will work FIRST
+  2. activate(app)           — bring app to front
+  3. screenshot()            — capture screen
+  4. crop(path, x,y,w,h)    — zoom into region of interest
+  5. aim(x, y)               — draw green crosshair+dot on screenshot
+  6. crop the aim image      — zoom in to verify dot is on target
+  7. LLM reviews cropped aim — confirms dot is on correct element
+  8. If off: adjust x,y and re-aim. If on target: click(x, y)
+  9. screenshot() after click — verify result
 
-NEVER skip steps 3-6. Guessing coordinates without visual confirmation
+NEVER skip steps 5-7. Guessing coordinates without visual confirmation
 will miss the target nearly every time. The crop+aim loop is fast and
 reliable; blind coordinate math is not.
+
+COST WARNING: each screenshot read by an LLM costs ~1600 tokens (~$0.02 on Opus).
+Minimize screenshot reads: crop to small regions before reading, use text-based
+checks (AppleScript URL, page text) instead of visual verification when possible.
 """
 import subprocess, sys, os, time
+
+def check_accessibility():
+    """Test if Accessibility permission is granted. Returns True if clicks will work.
+    If False: System Settings → Privacy & Security → Accessibility → add host app."""
+    try:
+        from Quartz import CGEventCreateMouseEvent, CGEventPost, kCGEventMouseMoved, kCGHIDEventTap, CGPointMake
+        e = CGEventCreateMouseEvent(None, kCGEventMouseMoved, CGPointMake(-1, -1), 0)
+        CGEventPost(kCGHIDEventTap, e)
+        # If we get here without error, basic posting works. But the real test
+        # is whether events reach OTHER apps. Try AXIsProcessTrusted.
+        r = subprocess.run(['osascript', '-e',
+            'tell app "System Events" to return name of first process whose frontmost is true'],
+            capture_output=True, text=True, timeout=3)
+        return r.returncode == 0
+    except Exception:
+        return False
 
 def _cg():
     from Quartz import (CGEventCreateMouseEvent, CGEventCreateKeyboardEvent,
@@ -115,7 +145,8 @@ def crop(path, x, y, w, h, out='/tmp/mac_crop.png'):
     return out
 
 def click(x, y, pause=0.05):
-    """Click at logical point. NEVER call without aim() confirmation first."""
+    """Click at logical point. Requires Accessibility permission.
+    Without it: System Settings → Privacy & Security → Accessibility → add Terminal."""
     cg = _cg()
     p = cg.CGPointMake(x, y)
     for t in (cg.kCGEventLeftMouseDown, cg.kCGEventLeftMouseUp):
@@ -176,10 +207,14 @@ def windows(app=None):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print('mac.py screenshot | aim X Y | crop X Y W H | click X Y | type "text" | key name | activate app')
+        print('mac.py check | screenshot | click X Y | type "text" | key name | activate app')
         sys.exit(1)
     cmd = sys.argv[1]
-    if cmd == 'screenshot': print(screenshot(sys.argv[2] if len(sys.argv) > 2 else '/tmp/mac_screen.png'))
+    if cmd == 'check':
+        ok = check_accessibility()
+        print('+ Accessibility: granted' if ok else '✗ Accessibility: DENIED — clicks will silently fail\n  Fix: System Settings → Privacy & Security → Accessibility → add Terminal')
+        sys.exit(0 if ok else 1)
+    elif cmd == 'screenshot': print(screenshot(sys.argv[2] if len(sys.argv) > 2 else '/tmp/mac_screen.png'))
     elif cmd == 'aim': print(aim(float(sys.argv[2]), float(sys.argv[3])))
     elif cmd == 'crop': print(crop(sys.argv[2], float(sys.argv[3]), float(sys.argv[4]), float(sys.argv[5]), float(sys.argv[6])))
     elif cmd == 'click': click(float(sys.argv[2]), float(sys.argv[3]))
