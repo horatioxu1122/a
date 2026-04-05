@@ -42,6 +42,9 @@ def transcribe_page(source_path, output_dir, nocache=False):
 def translate_page(source_path, output_dir, target_lang="English", nocache=False):
     return process_page(source_path, output_dir, f"Translate this document to {target_lang}. Return only the translated text, preserving paragraph structure", nocache)
 
+def latex_page(source_path, output_dir, nocache=False):
+    return process_page(source_path, output_dir, "Transcribe this page to LaTeX body content. Inline math: $...$. Display math: \\[...\\]. Sections: \\section*{N.}. Footnotes: \\footnote{}. Emphasis: \\textit{}. No preamble, no \\begin{document}, no \\end{document}. If blank return empty <transcription></transcription>. Wrap output in <transcription></transcription> tags", nocache)
+
 def explain_page(source_path, output_dir, nocache=False):
     return process_page(source_path, output_dir, "Reproduce this text verbatim, inserting [bracketed explanations] immediately after obscure terms that require context. Example: 'the Semyonovsky Regiment [elite Russian guard unit] was known for...' Rules: 1) Never rewrite - only insert [brackets] after words needing explanation 2) Skip well-known figures and common terms 3) Only explain what a reader cannot infer from context 4) Keep explanations to a few words 5) Less is more - when in doubt, skip it. Return annotated text only", nocache)
 
@@ -122,6 +125,7 @@ def cmd_show(name):
         print(f"  {label:<12} {n or '-'}")
     print(f"\n  a book split {name}                    split PDF into pages")
     print(f"  a book transcribe {name} [s e] [w]     OCR pages to text")
+    print(f"  a book latex {name} [s e] [w]          OCR pages to LaTeX")
     print(f"  a book translate {name} [lang] [s e w]  translate pages")
     print(f"  a book explain {name} [s e] [w]        annotate obscure terms")
     print(f"  a book chat {name} [files...]           interactive Q&A")
@@ -150,6 +154,14 @@ if __name__ == "__main__":
         start, end = (int(args[3]), int(args[4])) if len(args) >= 5 else (1, total)
         workers = int(args[5]) if len(args) >= 6 else 1
         process_range(book, start, end, transcribe_page, "pages", "transcriptions", "transcript", workers, total, nocache=nocache)
+    elif cmd == "latex":
+        from PyPDF2 import PdfReader
+        book = resolve_book(args[2] if len(args) > 2 else None)
+        split_pdf(book, nocache=nocache)
+        total = len(PdfReader(str(book / "source.pdf")).pages)
+        start, end = (int(args[3]), int(args[4])) if len(args) >= 5 else (1, total)
+        workers = int(args[5]) if len(args) >= 6 else 1
+        process_range(book, start, end, latex_page, "pages", "latex", "latex", workers, total, nocache=nocache)
     elif cmd == "translate":
         from PyPDF2 import PdfReader
         book = resolve_book(args[2] if len(args) > 2 else None)
