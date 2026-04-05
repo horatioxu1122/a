@@ -171,7 +171,7 @@ install)
             ok "tmux + node + gh + rclone" ;;
         debian)
             if [[ -n "$SUDO" ]]; then export DEBIAN_FRONTEND=noninteractive
-                $SUDO apt update -qq && $SUDO apt install -yqq clang tmux git curl python3-pip sshpass rclone tcc gcc cppcheck cbmc frama-c-base 2>/dev/null || true
+                $SUDO apt update -qq && $SUDO apt install -yqq clang libclang-rt-dev tmux git curl python3-pip sshpass rclone tcc gcc cppcheck cbmc frama-c-base 2>/dev/null || true
                 command -v gh &>/dev/null||{ curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg|$SUDO tee /etc/apt/keyrings/gh.gpg>/dev/null&&echo "deb [signed-by=/etc/apt/keyrings/gh.gpg] https://cli.github.com/packages stable main"|$SUDO tee /etc/apt/sources.list.d/gh.list>/dev/null&&$SUDO apt update -qq&&$SUDO apt install -yqq gh;}||true; ok "pkgs"
                 command -v infer &>/dev/null||{ V="v1.2.0";curl -sSL "https://github.com/facebook/infer/releases/download/$V/infer-linux-x86_64-$V.tar.xz"|tar -xJ -C /tmp/&&$SUDO mv "/tmp/infer-linux-x86_64-$V" /usr/local/lib/infer&&$SUDO ln -sf /usr/local/lib/infer/bin/infer /usr/local/bin/infer&&ok "infer"||warn "infer";}
             fi; install_node; [[ -z "$SUDO" ]] && { command -v tmux &>/dev/null || warn "tmux needs: sudo apt install tmux"; } ;;
@@ -306,6 +306,7 @@ static const char*EXT[]={"",".py",".c",".sh",".html",0};
 #include "lib/work.c"     /* workcycle habits */
 #include "lib/sess.c"     /* named sessions c/l/g */
 #include "lib/vm.c"       /* disposable QEMU VM */
+#include "lib/new.c"      /* self-replicate to device */
 
 static int cmd_freq(int c,char**v){perf_disarm();
     int vb=0,n=0;
@@ -518,7 +519,7 @@ static const cmd_t CMDS[] = {
     {"install",cmd_install},{"j",cmd_j},{"job",cmd_job},{"jobs",cmd_job},
     {"kill",cmd_kill},{"log",cmd_log},{"login",cmd_login},{"ls",cmd_ls},
     {"mono",cmd_cat},{"monolith",cmd_cat},{"move",cmd_move},{"my",cmd_my},
-    {"n",cmd_note},{"note",cmd_note},{"once",cmd_run_once},
+    {"n",cmd_note},{"new",cmd_new},{"note",cmd_note},{"once",cmd_run_once},
     {"p",cmd_push},{"perf",cmd_perf},{"pr",cmd_pr},{"prompt",cmd_prompt},
     {"pull",cmd_pull},{"push",cmd_push},
     {"ref",cmd_ref},{"remove",cmd_remove},{"repo",cmd_create},{"restore",cmd_restore},{"revert",cmd_revert},{"review",cmd_review},
