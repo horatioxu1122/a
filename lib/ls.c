@@ -11,8 +11,10 @@ static int cmd_ls(int argc, char **argv) {
     if (argc > 2 && argv[2][0] >= '0' && argv[2][0] <= '9') {
         char out[B]; char *lines[64]; int n=tm_list(out,lines,64);
         int idx = atoi(argv[2]);
-        if (idx >= 0 && idx < n) tm_go(lines[idx]);
-        return 0;
+        if (idx >= 0 && idx < n) {
+            if(getenv("TMUX"))tm_go(lines[idx]);
+            else{char c[B];snprintf(c,B,"tmux select-window -t '"TMS":%s'",lines[idx]);(void)!system(c);printf("→ %s\n",lines[idx]);}
+        } return 0;
     }
     char out[B];snprintf(out,B,"tmux list-windows -t '%s' -F '#{window_name}\t#{pane_current_path}' 2>/dev/null",TMS);
     char buf[B];pcmd(out,buf,B);
