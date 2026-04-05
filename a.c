@@ -419,9 +419,10 @@ static int cmd_j(int c,char**v){
         tm_ensure_conf();char jcmd[B];jcmd_fill(jcmd,1,wd);
         {char sn[64];snprintf(sn,64,"j-%s",bname(wd));tm_new(sn,wd,jcmd);tm_go(sn);}
         return 0;}
-    int si=2,nowt=0;if(c>3&&isdigit(*v[2])){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
-    char pr[B]="";int pl=0;for(int i=si;i<c;i++){if(!strcmp(v[i],"--no-wt")){nowt=1;continue;}pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);}
-    if(!nowt&&git_in_repo(wd)){
+    int si=2,wt=0;if(c>3&&isdigit(*v[2])){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
+    /* jobs run on main by default. --wt opts into fork isolation. agents work in parallel, push only their files. */
+    char pr[B]="";int pl=0;for(int i=si;i<c;i++){if(!strcmp(v[i],"--wt")){wt=1;continue;}if(!strcmp(v[i],"--no-wt"))continue;pl+=snprintf(pr+pl,(size_t)(B-pl),"%s%s",pl?" ":"",v[i]);}
+    if(wt&&git_in_repo(wd)){
         char fkd[P];snprintf(fkd,P,"%s/forks",AROOT);mkdirp(fkd);
         time_t now=time(NULL);struct tm*t=localtime(&now);char ts[16];
         strftime(ts,16,"%b%d",t);for(char*p=ts;*p;p++)*p=(char)tolower(*p);
