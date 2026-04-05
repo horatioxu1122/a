@@ -68,8 +68,8 @@ static int cmd_vm(int argc, char **argv) {
         snprintf(sd,P,"%s/%s-seed",d,os->name);mkdirp(sd);
         snprintf(c,B,"cp '%s' '%s/user-data'",ud,sd);system(c);
         snprintf(md,P,"%s/meta-data",sd);writef(md,"{\"instance-id\":\"vm0\"}");
-        snprintf(c,B,"mkisofs -o '%s' -V cidata -J -r '%s/' 2>&1",seed,sd);
-        if(system(c)){puts("x mkisofs failed");return 1;}
+        snprintf(c,B,"xorriso -as mkisofs -o '%s' -V cidata -J -r '%s/' 2>&1",seed,sd);
+        if(system(c)){puts("x xorriso failed");return 1;}
     }
     pid_t p=fork();
     if(p==0){int fd=open(log,O_WRONLY|O_CREAT|O_TRUNC,0644);if(fd>=0){dup2(fd,1);dup2(fd,2);close(fd);}

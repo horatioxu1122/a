@@ -53,6 +53,7 @@ static void tm_ensure_conf(void) {
     const char *cc = clip_cmd();
     fputs("# aio-managed-config\n"
         "set -ga update-environment \"WAYLAND_DISPLAY\"\n"
+        "set -ga update-environment \"SWAYSOCK\"\n"
         "set -g mouse on\n"
         "set -g focus-events on\n"
         "set -g set-titles on\n"
