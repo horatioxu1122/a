@@ -47,6 +47,7 @@ Multi-agent:
 Spawn: `a ssh <device> 'cd <dir> && a j "<prompt>"'` — runs in tmux window.
 View: `a ssh <device> 'tmux capture-pane -t a:<win>.0 -p -S -30 | tail -20'`
 Health: `a ssh <device> 'free -h|head -2; pgrep -c claude'` Kill: `tmux send-keys -t a:<win>.0 C-c`
+Important context to pass to spawned agents:
 The specific "scream" that motivates why the work is being done must be passed to agents.
 No speculative work, period. Code must be maximally short and fast and valuable.
 Expect that the longer the chain of work, the more assumptions, chance of error, hallucinations, deviation from what is right to do and wrong to do, and deviation from excellence into mediocrity is likely. Short work frequent review and redirection by the human and ai manager is the way to combat this natural problem as well as short amounts of work.
