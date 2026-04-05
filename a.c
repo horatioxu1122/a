@@ -305,6 +305,7 @@ static const char*EXT[]={"",".py",".c",".sh",".html",0};
 #include "lib/perf.c"     /* benchmark, timing limits */
 #include "lib/work.c"     /* workcycle habits */
 #include "lib/sess.c"     /* named sessions c/l/g */
+#include "lib/vm.c"       /* disposable QEMU VM */
 
 static int cmd_freq(int c,char**v){perf_disarm();
     int vb=0,n=0;
@@ -527,6 +528,7 @@ static const cmd_t CMDS[] = {
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
     {"tm-unsave",cmd_tm_unsave},{"tutorial",cmd_tutorial},{"u",cmd_update},
     {"uninstall",cmd_uninstall},{"update",cmd_update},
+    {"vm",cmd_vm},
     {"w",cmd_w},{"watch",cmd_watch},{"web",cmd_web},{"work",cmd_w},
     {"x",cmd_x},
 };
