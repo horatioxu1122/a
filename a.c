@@ -179,7 +179,7 @@ install)
             if [[ -n "$SUDO" ]]; then $SUDO pacman -Sy --noconfirm clang tmux nodejs npm git python-pip sshpass rclone github-cli tcc gcc cppcheck cbmc frama-c 2>/dev/null && ok "pkgs"
             else install_node; command -v tmux &>/dev/null || warn "tmux needs: sudo pacman -S tmux"; fi ;;
         fedora)
-            if [[ -n "$SUDO" ]]; then $SUDO dnf install -y clang tmux nodejs npm git python3-pip sshpass rclone gh tcc gcc cppcheck cbmc frama-c 2>/dev/null && ok "pkgs"
+            if [[ -n "$SUDO" ]]; then $SUDO dnf install -y clang tmux nodejs npm git python3-pip sshpass rclone gh tcc gcc cppcheck cbmc frama-c zstd 2>/dev/null && ok "pkgs"
             else install_node; command -v tmux &>/dev/null || warn "tmux needs: sudo dnf install tmux"; fi ;;
         termux) pkg update -y && pkg upgrade -y -o Dpkg::Options::=--force-confold && pkg install -y build-essential tcc tmux nodejs git python openssh sshpass gh rclone cronie termux-services && mkdir -p ~/.gyp && echo "{'variables':{'android_ndk_path':''}}" > ~/.gyp/include.gypi && ok "pkgs" ;;
         *) install_node; warn "Unknown OS - install tmux manually" ;;
