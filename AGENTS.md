@@ -45,6 +45,8 @@ When human approves, push your changes only. Use "a done" to get human if there 
 
 Multi-agent:
 Spawn: `a ssh <device> 'cd <dir> && a j "<prompt>"'` — runs in tmux window.
+Inject file context: `a j "$(cat file.txt) <prompt>"` — shell expands file into prompt.
+Pass AGENTS.md to spawned agents: `a j "$(cat AGENTS.md) <task>"` — agent gets full instructions.
 View: `a ssh <device> 'tmux capture-pane -t a:<win>.0 -p -S -30 | tail -20'`
 Health: `a ssh <device> 'free -h|head -2; pgrep -c claude'` Kill: `tmux send-keys -t a:<win>.0 C-c`
 Important context to pass to spawned agents:
