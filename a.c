@@ -435,7 +435,7 @@ static int cmd_j(int c,char**v){
     if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: write .a_done with summary + test commands");
     tm_ensure_conf();
     char jcmd[B];jcmd_fill(jcmd,0,wd);
-    char sn[64];snprintf(sn,64,"j-%s",bname(wd));
+    char sn[64];snprintf(sn,64,"j-%s-%ld",bname(wd),(long)getpid());
     tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);
     tm_go(sn);
     return 0;}
