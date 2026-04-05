@@ -1,3 +1,6 @@
+# /// script
+# dependencies = ["PyPDF2"]
+# ///
 import sys, subprocess, time, tempfile, os
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
@@ -43,7 +46,7 @@ def translate_page(source_path, output_dir, target_lang="English", nocache=False
     return process_page(source_path, output_dir, f"Translate this document to {target_lang}. Return only the translated text, preserving paragraph structure", nocache)
 
 def latex_page(source_path, output_dir, nocache=False):
-    return process_page(source_path, output_dir, "Transcribe this page to LaTeX body content. Inline math: $...$. Display math: \\[...\\]. Sections: \\section*{N.}. Footnotes: \\footnote{}. Emphasis: \\textit{}. No preamble, no \\begin{document}, no \\end{document}. If blank return empty <transcription></transcription>. Wrap output in <transcription></transcription> tags", nocache)
+    return process_page(source_path, output_dir, "Transcribe to LaTeX body (no preamble/documentclass/begin{document}). $..$ inline, \\[..\\] display, \\section*{}, \\footnote{}, \\textit{}. Blank→empty tags. Wrap in <transcription></transcription>", nocache)
 
 def explain_page(source_path, output_dir, nocache=False):
     return process_page(source_path, output_dir, "Reproduce this text verbatim, inserting [bracketed explanations] immediately after obscure terms that require context. Example: 'the Semyonovsky Regiment [elite Russian guard unit] was known for...' Rules: 1) Never rewrite - only insert [brackets] after words needing explanation 2) Skip well-known figures and common terms 3) Only explain what a reader cannot infer from context 4) Keep explanations to a few words 5) Less is more - when in doubt, skip it. Return annotated text only", nocache)
@@ -146,22 +149,15 @@ if __name__ == "__main__":
     elif cmd == "add":
         if len(args) < 3: print("Usage: a book add <file>"); sys.exit(1)
         cmd_add(args[2])
-    elif cmd == "transcribe":
+    elif cmd in ("transcribe", "latex"):
         from PyPDF2 import PdfReader
+        fn, cd, sf = (transcribe_page,"transcriptions","transcript") if cmd=="transcribe" else (latex_page,"latex","latex")
         book = resolve_book(args[2] if len(args) > 2 else None)
         split_pdf(book, nocache=nocache)
         total = len(PdfReader(str(book / "source.pdf")).pages)
         start, end = (int(args[3]), int(args[4])) if len(args) >= 5 else (1, total)
         workers = int(args[5]) if len(args) >= 6 else 1
-        process_range(book, start, end, transcribe_page, "pages", "transcriptions", "transcript", workers, total, nocache=nocache)
-    elif cmd == "latex":
-        from PyPDF2 import PdfReader
-        book = resolve_book(args[2] if len(args) > 2 else None)
-        split_pdf(book, nocache=nocache)
-        total = len(PdfReader(str(book / "source.pdf")).pages)
-        start, end = (int(args[3]), int(args[4])) if len(args) >= 5 else (1, total)
-        workers = int(args[5]) if len(args) >= 6 else 1
-        process_range(book, start, end, latex_page, "pages", "latex", "latex", workers, total, nocache=nocache)
+        process_range(book, start, end, fn, "pages", cd, sf, workers, total, nocache=nocache)
     elif cmd == "translate":
         from PyPDF2 import PdfReader
         book = resolve_book(args[2] if len(args) > 2 else None)
