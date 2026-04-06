@@ -307,6 +307,7 @@ static const char*EXT[]={"",".py",".c",".sh",".html",0};
 #include "lib/sess.c"     /* named sessions c/l/g */
 #include "lib/vm.c"       /* disposable QEMU VM */
 #include "lib/new.c"      /* self-replicate to device */
+#include "lib/bench.c"    /* UI latency benchmark */
 
 static int cmd_freq(int c,char**v){perf_disarm();
     int vb=0,n=0;
@@ -511,7 +512,7 @@ static const cmd_t CMDS[] = {
     {"--help",cmd_help_full},{"-h",cmd_help_full},
     {"a",cmd_a_default},{"adb",cmd_adb},{"add",cmd_add},{"agent",cmd_agent},{"ai",cmd_all},
     {"all",cmd_all},
-    {"cal",cmd_cal},{"cat",cmd_cat},{"cc",cmd_cc},{"cmd",cmd_cmd},{"config",cmd_config},
+    {"bench",cmd_bench},{"cal",cmd_cal},{"cat",cmd_cat},{"cc",cmd_cc},{"cmd",cmd_cmd},{"config",cmd_config},
     {"copy",cmd_copy},{"create",cmd_create},
     {"d",cmd_diff},{"deps",cmd_deps},{"diff",cmd_diff},{"dir",cmd_dir},{"docs",cmd_docs},{"done",cmd_done},
     {"e",cmd_e},{"email",cmd_email},{"file",cmd_get},{"fork",cmd_fork},{"freq",cmd_freq},{"gui",cmd_gui},
