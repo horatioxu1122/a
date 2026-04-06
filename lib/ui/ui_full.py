@@ -33,7 +33,7 @@ HTML = '''<!doctype html>
 <style>*{font-family:system-ui}[data-go]{touch-action:manipulation}.b{padding:16px 24px;font-size:24px;background:#000;color:#4af;border:2px solid #4af;border-radius:8px;cursor:pointer}.n{font-size:28px;color:#4af;cursor:pointer;padding:20px 40px;border:2px solid #4af;border-radius:12px}.f{background:#000;color:#fff;border:1px solid #333;border-radius:8px}.ni{padding:6px 0;color:#aaa;border-bottom:1px solid #222;display:flex;align-items:center}.nx{background:none;border:1px solid #555;color:#888;padding:12px 20px;margin-right:10px;border-radius:4px;cursor:pointer;font-size:16px}</style>
 <body style="margin:0;height:100vh;background:#000;overflow:hidden">
 <div id=v_index style="display:none;height:100vh;flex-direction:column;align-items:center">
-  <form id=omni style="margin-top:45vh"><input id=qi autofocus placeholder="" style="width:80vw;max-width:600px;font-size:24px;padding:16px;text-align:center;background:#000;color:#fff;border:1px solid #333;border-radius:8px;outline:none"></form>
+  <form id=omni style="margin-top:45vh"><input id=qi autofocus placeholder="" style="width:80vw;max-width:600px;font-size:24px;padding:16px;text-align:center;background:#000;color:#fff;border:1px solid #333;border-radius:8px;outline:none;caret-color:transparent"></form>
   <div id=qo style="width:90vw;max-width:800px;margin-top:20px;max-height:45vh;overflow-y:auto"></div>
 </div>
 __MY__
@@ -96,6 +96,7 @@ var _tg=0;document.addEventListener('touchstart',function(e){var g=e.target.clos
 document.addEventListener('click',function(e){if(_tg){_tg=0;return;}var g=e.target.closest('[data-go]');if(g)go(g.dataset.go);});
 show(views[location.pathname]?location.pathname:'/');
 qi.onblur=function(){setTimeout(function(){qi.focus()},0)};
+window.onfocus=function(){qi.style.borderColor='#555'};window.onblur=function(){qi.style.borderColor='#333'};
 var _cmds=__CMDS__,_cs=0;
 qi.oninput=function(){var v=qi.value.toLowerCase();if(!v){qo.innerHTML='';return}_cs=0;var m=_cmds.filter(function(c){return c[0].indexOf(v)>=0}).slice(0,12);qo.innerHTML=m.map(function(c,i){return '<div data-c="'+c[0]+'" style="padding:8px 16px;color:'+(i?'#555':'#4af')+';cursor:pointer;font-size:18px" onclick="qi.value=this.dataset.c;omni.requestSubmit()">a '+c[0]+(c[1]?' <span style=color:#333>'+c[1]+'</span>':'')+'</div>'}).join('')};
 qi.onkeydown=function(e){var it=qo.querySelectorAll('[data-c]');if(!it.length)return;if(e.key==='ArrowDown'){e.preventDefault();_cs=Math.min(_cs+1,it.length-1)}else if(e.key==='ArrowUp'){e.preventDefault();_cs=Math.max(_cs-1,0)}else if(e.key==='Tab'&&it[_cs]){e.preventDefault();qi.value=it[_cs].dataset.c;qi.oninput();return}else return;it.forEach(function(el,i){el.style.color=i===_cs?'#4af':'#555'})};
