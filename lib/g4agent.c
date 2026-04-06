@@ -1,3 +1,4 @@
+# experimental
 #if 0
 cc -w -o "${0%.c}" "$0"&&exit 0
 exit 1
