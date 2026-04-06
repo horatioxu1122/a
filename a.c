@@ -108,9 +108,9 @@ build) _PT=${EPOCHREALTIME/./}
         echo "Couldn't auto-fix. github:seanpattencode"
     }
     if command -v tcc &>/dev/null; then
-        TCT=${EPOCHREALTIME/./};tcc $_Q -w -o "$ABIN/a" "$D/a.c" 2>/dev/null||{ _build_fix "$(tcc $_Q -w -o /dev/null "$D/a.c" 2>&1)"; exit 1; };TCT=$(( ${EPOCHREALTIME/./} - TCT ))000
+        TCT=${EPOCHREALTIME/./};tcc $_Q -w -o "$ABIN/a" "$D/a.c" -lutil 2>/dev/null||{ _build_fix "$(tcc $_Q -w -o /dev/null "$D/a.c" -lutil 2>&1)"; exit 1; };TCT=$(( ${EPOCHREALTIME/./} - TCT ))000
     else
-        _ensure_cc; E=$($CC $_Q -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { _build_fix "$E"; exit 1; }
+        _ensure_cc; E=$($CC $_Q -w -O0 -o "$ABIN/a" "$D/a.c" -lutil 2>&1) || { _build_fix "$E"; exit 1; }
     fi
     [[ "$ABIN" == */adata/local ]] && ln -sf "$ABIN/a" "$BIN/a"; _perf_chk build
     [[ -d /data/data/com.termux ]]&&/system/bin/cmd package query-activities --brief --user 0 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER 2>/dev/null|awk '/\//{gsub(/^ +/,"");p=$0;sub(/\/.*/,"",p);sub(/.*\./,"",p);printf"open %s\t%s · app\n",$0,p}'>$ABIN/apps.txt&
@@ -124,17 +124,17 @@ build) _PT=${EPOCHREALTIME/./}
         _checkers
         if ls "$T"/[0-9].f "$T"/1[0-9].f &>/dev/null 2>&1;then cat "$T"/[0-9] "$T"/1[0-9] >"$ABIN/.chk" 2>/dev/null
             [ "$(cat "$ABIN/.bld" 2>&-)" = "$$" ]&&printf '#!/bin/sh\nhead -80 %s/.chk;exit 1' "$ABIN">"$ABIN/a"&&chmod +x "$ABIN/a"
-        else $CC $A -O3 -march=native -flto -w -o "$ABIN/a.opt" "$F"&&[ "$(cat "$ABIN/.bld" 2>&-)" = "$$" ]&&mv "$ABIN/a.opt" "$ABIN/a" 2>&-;rm -f "$ABIN/a.opt"
+        else $CC $A -O3 -march=native -flto -w -o "$ABIN/a.opt" "$F" -lutil&&[ "$(cat "$ABIN/.bld" 2>&-)" = "$$" ]&&mv "$ABIN/a.opt" "$ABIN/a" 2>&-;rm -f "$ABIN/a.opt"
         fi
     ) >&- 2>&- &
     ;;
 check) _PT=${EPOCHREALTIME/./}
-    _abin; _ensure_cc; E=$($CC $_Q -w -O0 -o "$ABIN/a" "$D/a.c" 2>&1) || { echo "$E"; exit 1; }
+    _abin; _ensure_cc; E=$($CC $_Q -w -O0 -o "$ABIN/a" "$D/a.c" -lutil 2>&1) || { echo "$E"; exit 1; }
     [[ "$ABIN" == */adata/local ]] && ln -sf "$ABIN/a" "$BIN/a"
     T=$(mktemp -d);trap "rm -rf $T" EXIT;F="$D/a.c";A="$_Q";_warn_flags
     _checkers
     if ls "$T"/[0-9].f "$T"/1[0-9].f &>/dev/null 2>&1;then cat "$T"/[0-9] "$T"/1[0-9] 2>/dev/null; exit 1
-    else ok "all checkers passed"; _perf_chk check; $CC $A -O3 -march=native -flto -w -o "$ABIN/a.opt" "$F"&&mv "$ABIN/a.opt" "$ABIN/a" 2>&-;rm -f "$ABIN/a.opt" & fi
+    else ok "all checkers passed"; _perf_chk check; $CC $A -O3 -march=native -flto -w -o "$ABIN/a.opt" "$F" -lutil&&mv "$ABIN/a.opt" "$ABIN/a" 2>&-;rm -f "$ABIN/a.opt" & fi
     ;;
 analyze) _ensure_cc;_warn_flags
     $CC $WARN $_Q --analyze -Xanalyzer -analyzer-output=text -Xanalyzer -analyzer-checker=security,unix,nullability,optin.portability.UnixAPI -Xanalyzer -analyzer-disable-checker=security.insecureAPI.DeprecatedOrUnsafeBufferHandling "$D/a.c"
@@ -308,6 +308,7 @@ static const char*EXT[]={"",".py",".c",".sh",".html",0};
 #include "lib/vm.c"       /* disposable QEMU VM */
 #include "lib/new.c"      /* self-replicate to device */
 #include "lib/bench.c"    /* UI latency benchmark */
+#include "lib/serve.c"   /* C HTTP server for UI */
 
 static int cmd_freq(int c,char**v){perf_disarm();
     int vb=0,n=0;
@@ -524,7 +525,7 @@ static const cmd_t CMDS[] = {
     {"p",cmd_push},{"perf",cmd_perf},{"pr",cmd_pr},{"prompt",cmd_prompt},
     {"pull",cmd_pull},{"push",cmd_push},
     {"ref",cmd_ref},{"remove",cmd_remove},{"repo",cmd_create},{"restore",cmd_restore},{"revert",cmd_revert},{"review",cmd_review},
-    {"rm",cmd_remove},{"scan",cmd_scan},{"search",cmd_search},{"send",cmd_send},
+    {"rm",cmd_remove},{"scan",cmd_scan},{"search",cmd_search},{"send",cmd_send},{"serve",cmd_serve},
     {"set",cmd_set},{"settings",cmd_settings},{"setup",cmd_setup},
     {"ssh",cmd_ssh},
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
