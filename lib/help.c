@@ -136,17 +136,17 @@ static void gen_icache(void) {
 #ifdef __APPLE__
             "for b in 'Google/Chrome' 'Google/Chrome Canary' 'BraveSoftware/Brave-Browser' "
             "'BraveSoftware/Brave-Browser-Beta' Chromium;do "
-            "cp '%s/Library/Application Support/'$b'/Default/History' $T 2>/dev/null&&"
+            "cp \"$HOME/Library/Application Support/\"$b'/Default/History' $T 2>/dev/null&&"
             "sqlite3 $T \"$Q\" 2>/dev/null;done;"
-            "cp '%s/Library/Safari/History.db' $T 2>/dev/null&&"
+            "cp \"$HOME/Library/Safari/History.db\" $T 2>/dev/null&&"
             "sqlite3 $T \"SELECT h.url,v.title FROM history_items h,history_visits v WHERE h.id=v.history_item AND v.title<>'' ORDER BY h.visit_count DESC LIMIT 50\" 2>/dev/null;"
 #else
             "for b in google-chrome google-chrome-unstable google-chrome-beta google-chrome-canary "
             "BraveSoftware/Brave-Browser-Beta chromium;do "
-            "cp '%s/.config/'$b'/Default/History' $T 2>/dev/null&&"
+            "cp \"$HOME/.config/\"$b'/Default/History' $T 2>/dev/null&&"
             "sqlite3 $T \"$Q\" 2>/dev/null;done;"
 #endif
-            "rm -f $T",HOME,HOME);
+            "rm -f $T");
         FILE*sp=popen(cm,"r");if(sp){FILE*wf=fopen(fp2,"w");if(wf){
             unsigned char uh[4096]={0};char sl[1024];
             while(fgets(sl,1024,sp)){sl[strcspn(sl,"\n")]=0;
