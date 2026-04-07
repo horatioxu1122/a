@@ -12,6 +12,8 @@ static void tm_save_win(const char *sn, const char *wd) {
 static void tm_ensure_sess(void){
     {int r=system("timeout 1 tmux info >/dev/null 2>&1");
     if(WIFEXITED(r)&&WEXITSTATUS(r)==124){(void)!system("pkill -9 tmux 2>/dev/null; sleep 1");}}
+    /* kill orphan grouped sessions (a-PID where PID is dead) */
+    (void)!system("tmux ls -F '#{session_name}:#{session_attached}' 2>/dev/null|awk -F: '/^"TMS"-[0-9]+:0$/{print$1}'|xargs -rI{} tmux kill-session -t {} 2>/dev/null");
     if(!system("tmux has-session -t '"TMS"' 2>/dev/null"))return;
     (void)!system("tmux new-session -d -s '"TMS"'");tm_restore();}
 static int tm_has(const char *w) {
@@ -19,7 +21,8 @@ static int tm_has(const char *w) {
     return !system(c);
 }
 static void tm_t(const char*w,char*t){if(*w=='%')snprintf(t,256,"%s",w);else snprintf(t,256,TMS":%s",w);}
-/* new-session -t = grouped session: shares windows, independent client. prevents multi-device crash. */
+/* grouped session: shares windows, independent client. prevents multi-device crash. */
+/* set-hook client-detached destroys grouped session on disconnect, preventing zombie buildup. */
 static void tm_attach(const char *s){perf_disarm();
     if(getenv("TMUX"))execlp("tmux","tmux","switch-client","-t",s,(char*)NULL);
     else{char g[64];snprintf(g,64,"%s-%d",s,(int)getpid());
