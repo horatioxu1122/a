@@ -10,6 +10,7 @@ Experimental work lives in my/ (gitignored, not in context load). Promoted exper
 All persistent data lives in adata folder.
 Don't push without approval. 
 The optimal program is maximally short fast and valuable. Edits should converge towards this.
+Never poll. Use event-driven methods only (e.g. tmux wait-for, inotifywait, signals). Polling wastes CPU and kills shared services under load.
 Issues with environment, ex dependency is not working, should be fixed by modifying a.c to systemically fix issue in code for all users not one off single device fixes.
 Multiple agents work on the same directory simultaneously on main. Files may change as you work. If this blocks work, use "a done" to get user to help resolve.
 Push only YOUR changes: git add <your files> not git add -A. If push conflicts, stop and use “a done <message describing conflict>” for the human to intervene. Do not attempt to resolve merge conflicts yourself.
