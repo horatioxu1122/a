@@ -9,10 +9,11 @@ static void tm_save_win(const char *sn, const char *wd) {
         if(ll>0&&!(ll>=sl&&l[sl]=='|'&&!memcmp(l,sn,(size_t)sl)))fprintf(f,"%.*s\n",ll,l);
         l=nl?nl+1:l+ll;}free(d);}
     fprintf(f,"%s|%s\n",sn,wd);fclose(f);}
+static void tm_gc(void){(void)!system("tmux ls -F'#{session_name}:#{session_attached}' 2>/dev/null|awk -F: '/^"TMS"-[0-9]+:0/{print$1}'|xargs -I{} tmux kill-session -t{} 2>/dev/null");}
 static void tm_ensure_sess(void){
     {int r=system("timeout 1 tmux info >/dev/null 2>&1");
     if(WIFEXITED(r)&&WEXITSTATUS(r)==124){(void)!system("pkill -9 tmux 2>/dev/null; sleep 1");}}
-    (void)!system("tmux ls -F'#{session_name}:#{session_attached}' 2>/dev/null|awk -F: '/^"TMS"-[0-9]+:0/{print$1}'|xargs -I{} tmux kill-session -t{} 2>/dev/null");
+    tm_gc();
     if(!system("tmux has-session -t '"TMS"' 2>/dev/null"))return;
     (void)!system("tmux new-session -d -s '"TMS"'");tm_restore();}
 static int tm_has(const char *w) {
@@ -20,9 +21,8 @@ static int tm_has(const char *w) {
     return !system(c);
 }
 static void tm_t(const char*w,char*t){if(*w=='%')snprintf(t,256,"%s",w);else snprintf(t,256,TMS":%s",w);}
-/* grouped session: shares windows, auto-cleanup orphans. prevents multi-device crash. */
 static void tm_go(const char *w) {
-    perf_disarm();char g[64];snprintf(g,64,TMS"-%d",(int)getpid());
+    perf_disarm();tm_gc();char g[64];snprintf(g,64,TMS"-%d",(int)getpid());
     if(getenv("TMUX")){if(w){char t[256];tm_t(w,t);execlp("tmux","tmux","select-window","-t",t,(char*)NULL);}
         else execlp("tmux","tmux","switch-client","-t",TMS,(char*)NULL);}
     if(w){char t[256];tm_t(w,t);execlp("tmux","tmux","new-session","-t",TMS,"-s",g,";","select-window","-t",t,(char*)NULL);}
