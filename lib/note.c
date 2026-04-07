@@ -340,7 +340,7 @@ static int cmd_task(int argc,char**argv){
                     for(int j=ns-1;j>=0;j--)if(ss[j].st==1){pick=j;break;}
                     if(pick<0)pick=ns-1;
                     raw_exit();
-                    if(ss[pick].st==1){char cmd[P];snprintf(cmd,P,"tmux attach -t '%s'",ss[pick].tmx);
+                    if(ss[pick].st==1){char cmd[P];snprintf(cmd,P,"tmux new-session -t '%s'",ss[pick].tmx);
                         (void)!system(cmd);}
                     else{char cmd[P];snprintf(cmd,P,"claude -r %s",ss[pick].sid);
                         printf("  Resuming claude session...\n");(void)!system(cmd);}

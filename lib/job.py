@@ -223,7 +223,7 @@ def _run_local(ak, proj, rn, prompt, jn, br, wp, fkd, sn, watch=False, timeout=6
     timed_out = False
     if watch:
         print(f"Attaching to {sn}... (Ctrl-B d to detach)")
-        S.run(['tmux', 'attach', '-t', sn], env=env)
+        S.run(['tmux', 'new-session', '-t', sn], env=env)
     else:
         print("Waiting for agent...")
         start = time.time()

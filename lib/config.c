@@ -68,7 +68,7 @@ static int cmd_e(int argc, char **argv) { AB;
     init_db(); load_cfg();
     CWD(wd);
     create_sess("edit", wd, "e");
-    execlp("tmux", "tmux", "attach", "-t", "edit", (char*)NULL);
+    tm_attach("edit");
     return 0;
 }
 

@@ -45,6 +45,6 @@ def run():
     # send prefix + prompt to each agent pane in background
     for idx, (wt_path, bc) in enumerate(launched):
         send_prefix(f"{sn}:.{idx}", 'claude', wt_path, cfg, prompt)
-    print(f"\n+ '{sn}': {len(launched)}+broadcast"); print(f"   tmux switch-client -t {sn}") if "TMUX" in os.environ else os.execvp('tmux', ['tmux', 'attach', '-t', sn])
+    print(f"\n+ '{sn}': {len(launched)}+broadcast"); print(f"   tmux switch-client -t {sn}") if "TMUX" in os.environ else os.execvp('tmux', ['tmux', 'new-session', '-t', sn])
 
 run()

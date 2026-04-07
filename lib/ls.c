@@ -163,7 +163,7 @@ static int cmd_jobs(int argc, char **argv) {
         return 0;}
     if(sel&&*sel>='0'&&*sel<='9'){int x=atoi(sel);
         if(x<na&&A[x].pid[0]){char c[B];snprintf(c,B,"tmux select-window -t '%s'",A[x].pid);(void)!system(c);tm_go(A[x].sn);}
-        else if(x<na){perf_disarm();execlp("a","a","ssh",A[x].dev,"tmux","attach","-t",A[x].sn,(char*)NULL);}
+        else if(x<na){perf_disarm();execlp("a","a","ssh",A[x].dev,"tmux","new-session","-t",A[x].sn,(char*)NULL);}
         return 0;}
     hub_load();
     if(!na&&!NJ){puts("No jobs");return 0;}

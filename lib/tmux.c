@@ -19,6 +19,11 @@ static int tm_has(const char *w) {
     return !system(c);
 }
 static void tm_t(const char*w,char*t){if(*w=='%')snprintf(t,256,"%s",w);else snprintf(t,256,TMS":%s",w);}
+/* new-session -t = grouped session: shares windows, independent client. prevents multi-device crash. */
+static void tm_attach(const char *s){perf_disarm();
+    if(getenv("TMUX"))execlp("tmux","tmux","switch-client","-t",s,(char*)NULL);
+    else{char g[64];snprintf(g,64,"%s-%d",s,(int)getpid());
+        execlp("tmux","tmux","new-session","-t",s,"-s",g,(char*)NULL);}}
 static void tm_go(const char *w) {
     perf_disarm();char t[256];tm_t(w,t);
     if(getenv("TMUX"))execlp("tmux","tmux","select-window","-t",t,(char*)NULL);

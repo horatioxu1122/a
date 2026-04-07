@@ -27,7 +27,7 @@ def run():
         for e in running:
             alive = tm.has(e['session'])
             print(f"\n{'*' if alive else 'x'} {e['session']} - {e['task']}")
-            if alive: print(f"  Resume: tmux attach -t {e['session']}")
+            if alive: print(f"  Resume: tmux new-session -t {e['session']}")
         print(f"\nResume: a work resume <#>")
         return
 
@@ -64,6 +64,6 @@ def run():
     sp.Popen(['tmux', 'new-session', '-d', '-s', sn,
               sys.executable, str(SCAN_DIR / 'work.py'), limit])
     alog(f"work:launched {sn}")
-    print(f"+ Launched: {sn}\n  Monitor: tmux attach -t {sn}\n  Log:     a work log")
+    print(f"+ Launched: {sn}\n  Monitor: tmux new-session -t {sn}\n  Log:     a work log")
 
 run()

@@ -33,7 +33,7 @@ def _tx(*a,**k): return sp.run(['tmux']+list(a), capture_output=True, text=True,
 class TM:
     def new(s,n,d,c,e=None): return sp.run(['tmux','new-session','-d','-s',n,'-c',d]+([c]if c else[]),capture_output=True,env=e)
     def send(s,n,t): return sp.run(['tmux','send-keys','-l','-t',n,t])
-    def go(s,n): os.execvp('tmux',['tmux','switch-client'if'TMUX'in os.environ else'attach','-t',n])
+    def go(s,n): os.execvp('tmux',['tmux','switch-client','-t',n] if'TMUX'in os.environ else['tmux','new-session','-t',n])
     def has(s,n):
         try: return _tx('has-session','-t',n,timeout=2).returncode==0
         except sp.TimeoutExpired: return False
