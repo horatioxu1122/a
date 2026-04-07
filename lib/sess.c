@@ -1,6 +1,5 @@
 /* ── session (c, l, g, co, cp, etc.) ── */
 static int cmd_sess(int argc, char **argv) {
-    perf_disarm();
     init_db(); load_cfg(); load_proj(); load_apps(); load_sess();
     const char *key = argv[1];
     sess_t *s = find_sess(key);
