@@ -248,6 +248,7 @@ exit 0
 #include <dirent.h>
 #include <time.h>
 #include <fcntl.h>
+#include <arpa/inet.h>
 #include <signal.h>
 #include <termios.h>
 #include <sys/ioctl.h>
