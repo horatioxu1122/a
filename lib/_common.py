@@ -165,11 +165,11 @@ def get_prefix(agent, cfg, wd=None):
 
 def send_prefix(sn, agent, wd, cfg, prompt=None):
     if prompt:
-        script = f'import time,subprocess as s\nfor _ in range(600):\n time.sleep(0.1);r=s.run(["tmux","capture-pane","-t","{sn}","-p"],capture_output=True,text=True)\n if "bypass" in r.stdout.lower():s.run(["tmux","send-keys","-t","{sn}","Enter"]);time.sleep(5);break\n if "\\u276f" in r.stdout:break\ns.run(["tmux","send-keys","-l","-t","{sn}",{repr(prompt)}])\ntime.sleep(0.1);s.run(["tmux","send-keys","-t","{sn}","Enter"])'
+        script = f'import subprocess as s\ns.run(["tmux","wait-for","rdy-{sn}"]);s.run(["tmux","send-keys","-l","-t","{sn}",{repr(prompt)}]);s.run(["tmux","send-keys","-t","{sn}","Enter"])'
     else:
         pre = get_prefix(agent, cfg, wd)
         if not pre: return
-        script = f'import time,subprocess as s\nfor _ in range(300):\n time.sleep(0.05);r=s.run(["tmux","capture-pane","-t","{sn}","-p","-S","-50"],capture_output=True,text=True);o=r.stdout.lower()\n if r.returncode!=0 or any(x in o for x in["context","claude","opus","gemini","codex"]):break\ns.run(["tmux","send-keys","-l","-t","{sn}",{repr(pre)}])'
+        script = f'import subprocess as s\ns.run(["tmux","wait-for","rdy-{sn}"]);s.run(["tmux","send-keys","-l","-t","{sn}",{repr(pre)}])'
     sp.Popen([sys.executable, '-c', script], stdout=sp.DEVNULL, stderr=sp.DEVNULL)
 
 # Help

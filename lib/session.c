@@ -24,7 +24,7 @@ static int create_sess(const char *sn, const char *wd, const char *cmd) {
     char wcmd[B*2],ctxf[P]="",csuf[256]="";
     if(ai&&strstr(acmd,"claude")){snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());snprintf(csuf,256," --append-system-prompt-file %s",ctxf);}
     if (ai) snprintf(wcmd, sizeof(wcmd),
-        "unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT;%s%s%swhile :;do %s%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo -e \"\\n! crash $e [R]estart/[Q]uit:\";read -n1 k;[[ $k =~ [Rr] ]]||break;done", ctxf[0]?ACAT " >":"",ctxf,ctxf[0]?" 2>/dev/null;":"",acmd,csuf,LOGDIR);
+        "unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT;%s%s%stmux wait-for -S rdy-%s;while :;do %s%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo -e \"\\n! crash $e [R]estart/[Q]uit:\";read -n1 k;[[ $k =~ [Rr] ]]||break;done", ctxf[0]?ACAT " >":"",ctxf,ctxf[0]?" 2>/dev/null;":"",sn,acmd,csuf,LOGDIR);
     else snprintf(wcmd, sizeof(wcmd), "%s", cmd ? cmd : "");
     tm_ensure_conf();
     int r = tm_new(sn, wd, wcmd);
@@ -66,14 +66,7 @@ static void send_prefix_bg(const char *sn, const char *agent, const char *wd, co
     if (!pre[0]) return;
     if (fork() == 0) {
         setsid();
-        for (int i = 0; i < 300; i++) {
-            usleep(50000);
-            char buf[B] = "";
-            tm_read(sn, buf, B);
-            char *lo = buf;
-            for (char *p = lo; *p; p++) *p = (*p >= 'A' && *p <= 'Z') ? *p + 32 : *p;
-            if (strstr(lo,"context") || strstr(lo,"claude") || strstr(lo,"opus") || strstr(lo,"shortcut") || strstr(lo,"codex")) break;
-        }
+        char wf[B];snprintf(wf,B,"tmux wait-for rdy-%s",sn);(void)!system(wf);
         tm_send(sn, pre);
         if (extra) { sleep(1); tm_key(sn, "Enter"); }
         _exit(0);
