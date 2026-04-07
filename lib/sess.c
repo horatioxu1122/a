@@ -28,11 +28,9 @@ static int cmd_sess(int argc, char **argv) {
         pl+=snprintf(prompt+pl,(size_t)(B-pl),"%s%s",pl?" ":"",argv[i]);
         is_prompt = 1;
     }
-    /* append-only: time-stamped window names, no collision across devices */
-    char sn[256];{time_t t=time(NULL);struct tm*tm=localtime(&t);
-        int h=tm->tm_hour%12;if(!h)h=12;
-        snprintf(sn,256,"%s-%s-%d%02d%s",s->name,bname(wd),h,tm->tm_min,tm->tm_hour>=12?"p":"a");
-        if(tm_has(sn)){snprintf(sn,256,"%s-%s-%d%02d%02d%s",s->name,bname(wd),h,tm->tm_min,tm->tm_sec,tm->tm_hour>=12?"p":"a");}}
+    char sn[256];{struct tm*t=localtime(&(time_t){time(NULL)});int h=t->tm_hour%12;if(!h)h=12;
+        snprintf(sn,256,"%s-%s-%d%02d%s",s->name,bname(wd),h,t->tm_min,t->tm_hour>=12?"p":"a");
+        if(tm_has(sn))snprintf(sn,256,"%s-%s-%d%02d%02d%s",s->name,bname(wd),h,t->tm_min,t->tm_sec,t->tm_hour>=12?"p":"a");}
     /* Inside tmux = new window in same session */
     if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
         char ac[B];if(in_fork(wd)){const char*fk=strstr(wd,"/adata/forks/")+13;snprintf(ac,B,"a fork run %s %s",fk,s->cmd);}else snprintf(ac,B,"%s",s->cmd);

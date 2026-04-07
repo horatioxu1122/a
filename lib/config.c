@@ -68,7 +68,7 @@ static int cmd_e(int argc, char **argv) { AB;
     init_db(); load_cfg();
     CWD(wd);
     create_sess("edit", wd, "e");
-    tm_attach("edit");
+    tm_go("edit");
     return 0;
 }
 

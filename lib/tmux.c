@@ -12,8 +12,7 @@ static void tm_save_win(const char *sn, const char *wd) {
 static void tm_ensure_sess(void){
     {int r=system("timeout 1 tmux info >/dev/null 2>&1");
     if(WIFEXITED(r)&&WEXITSTATUS(r)==124){(void)!system("pkill -9 tmux 2>/dev/null; sleep 1");}}
-    /* kill orphan grouped sessions (a-PID where PID is dead) */
-    (void)!system("tmux ls -F '#{session_name}:#{session_attached}' 2>/dev/null|awk -F: '/^"TMS"-[0-9]+:0$/{print$1}'|xargs -rI{} tmux kill-session -t {} 2>/dev/null");
+    (void)!system("tmux ls -F'#{session_name}:#{session_attached}' 2>/dev/null|awk -F: '/^"TMS"-[0-9]+:0/{print$1}'|xargs -I{} tmux kill-session -t{} 2>/dev/null");
     if(!system("tmux has-session -t '"TMS"' 2>/dev/null"))return;
     (void)!system("tmux new-session -d -s '"TMS"'");tm_restore();}
 static int tm_has(const char *w) {
@@ -21,18 +20,13 @@ static int tm_has(const char *w) {
     return !system(c);
 }
 static void tm_t(const char*w,char*t){if(*w=='%')snprintf(t,256,"%s",w);else snprintf(t,256,TMS":%s",w);}
-/* grouped session: shares windows, independent client. prevents multi-device crash. */
-/* set-hook client-detached destroys grouped session on disconnect, preventing zombie buildup. */
-static void tm_attach(const char *s){perf_disarm();
-    if(getenv("TMUX"))execlp("tmux","tmux","switch-client","-t",s,(char*)NULL);
-    else{char g[64];snprintf(g,64,"%s-%d",s,(int)getpid());
-        execlp("tmux","tmux","new-session","-t",s,"-s",g,(char*)NULL);}}
+/* grouped session: shares windows, auto-cleanup orphans. prevents multi-device crash. */
 static void tm_go(const char *w) {
-    perf_disarm();char t[256];tm_t(w,t);
-    if(getenv("TMUX"))execlp("tmux","tmux","select-window","-t",t,(char*)NULL);
-    else{char g[64];snprintf(g,64,TMS"-%d",(int)getpid());
-        execlp("tmux","tmux","new-session","-t",TMS,"-s",g,";","select-window","-t",t,(char*)NULL);}
-}
+    perf_disarm();char g[64];snprintf(g,64,TMS"-%d",(int)getpid());
+    if(getenv("TMUX")){if(w){char t[256];tm_t(w,t);execlp("tmux","tmux","select-window","-t",t,(char*)NULL);}
+        else execlp("tmux","tmux","switch-client","-t",TMS,(char*)NULL);}
+    if(w){char t[256];tm_t(w,t);execlp("tmux","tmux","new-session","-t",TMS,"-s",g,";","select-window","-t",t,(char*)NULL);}
+    execlp("tmux","tmux","new-session","-t",TMS,"-s",g,(char*)NULL);}
 static int tm_new(const char *w, const char *wd, const char *cmd) {
     tm_ensure_sess();if(tm_has(w))return 1;char c[B*2];
     if(cmd&&*cmd)snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s' '%s'",w,wd,cmd);
