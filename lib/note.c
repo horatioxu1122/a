@@ -10,7 +10,8 @@ static void note_save(const char *d, const char *t) {
     snprintf(fn,P,"%s/%08x_%s.%09ld.txt",d,(unsigned)(tp.tv_nsec^(unsigned)now),ts,tp.tv_nsec);
     snprintf(buf,B,"Text: %s\nStatus: pending\nDevice: %s\nCreated: %s\n",t,DEV,ts); writef(fn,buf);
 }
-static char rdir[P];
+static char rdir[P],ltd[P]="";
+static void dl_norm(const char*,char*,size_t);
 static void rapid_note(const char*t){note_save(rdir,t);sync_bg();puts("\xe2\x9c\x93");}
 typedef struct{char p[P];char t[512];}GN;
 static GN*gn;static int gn_cap;
@@ -78,16 +79,24 @@ static int load_tasks(const char*dir){
 static void task_add(const char*dir,const char*t,int pri){
     char sl[64];snprintf(sl,64,"%.32s",t);for(char*p=sl;*p;p++)*p=*p==' '||*p=='/'?'-':*p>='A'&&*p<='Z'?*p+32:*p;
     struct timespec tp;clock_gettime(CLOCK_REALTIME,&tp);
-    char ts[32],td[P],fn[P],buf[B];strftime(ts,32,"%Y%m%dT%H%M%S",localtime(&tp.tv_sec));
-    snprintf(td,P,"%s/%05d-%s_%s",dir,pri,sl,ts);mkdir(td,0755);
-    char sd[P];snprintf(sd,P,"%s/task",td);mkdir(sd,0755);
-    snprintf(fn,P,"%s/task/%s.%09ld_%s.txt",td,ts,tp.tv_nsec,DEV);
+    char ts[32],fn[P],buf[B];strftime(ts,32,"%Y%m%dT%H%M%S",localtime(&tp.tv_sec));
+    snprintf(ltd,P,"%s/%05d-%s_%s",dir,pri,sl,ts);mkdir(ltd,0755);
+    char sd[P];snprintf(sd,P,"%s/task",ltd);mkdir(sd,0755);
+    snprintf(fn,P,"%s/task/%s.%09ld_%s.txt",ltd,ts,tp.tv_nsec,DEV);
     snprintf(buf,B,"Text: %s\nDevice: %s\nCreated: %s\n",t,DEV,ts);writef(fn,buf);
 }
-static void rapid_task(const char*t){task_add(rdir,t,50000);sync_bg();printf("\xe2\x9c\x93 P50000 %s\n",t);}
+#define THINT "  \033[90mp <pri>  d MM-DD  enter=done\033[0m\n"
+static void rapid_task(const char*t){
+    if((*t=='p'||*t=='d')&&t[1]==' '){char*bn=strrchr(ltd,'/');
+        if(*t=='p'){int pv=atoi(t+2);pv=pv<0?0:pv>99999?99999:pv;char np[8];snprintf(np,8,"%05d",pv);
+            char nw[P];snprintf(nw,P,"%.*s/%s%s",(int)(bn-ltd),ltd,np,bn+6);
+            rename(ltd,nw);snprintf(ltd,P,"%s",nw);printf("\xe2\x9c\x93 P%s\n",np);}
+        else{char dn[32],df[P];dl_norm(t+2,dn,32);snprintf(df,P,"%s/deadline.txt",ltd);writef(df,dn);printf("\xe2\x9c\x93 %s\n",dn);}
+        sync_bg();return;}
+    task_add(rdir,t,50000);sync_bg();printf("\xe2\x9c\x93 P50000 %s\n" THINT,t);}
 static int task_add_p(const char*dir,int argc,char**argv,int si){
     int pri=50000;if(si<argc&&is5d(argv[si])){pri=atoi(argv[si]);si++;if(si>=argc){puts("a task [PPPPP] <text>");return 1;}}
-    char t[B]="";ajoin(t,B,argc,argv,si);task_add(dir,t,pri);printf("\xe2\x9c\x93 P%05d %s\n",pri,t);sync_bg();
+    char t[B]="";ajoin(t,B,argc,argv,si);task_add(dir,t,pri);printf("\xe2\x9c\x93 P%05d %s\n" THINT,pri,t);sync_bg();
     snprintf(rdir,P,"%s",dir);rapid("t> ",rapid_task);return 0;}
 static void task_printbody(const char*path){
     size_t l;char*r=readf(path,&l);if(!r)return;if(!strncmp(r,"Text: ",6))r+=6;
