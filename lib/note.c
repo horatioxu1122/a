@@ -57,11 +57,11 @@ static int cmd_note(int argc, char **argv) {
 /* ── task ── */
 static int is5d(const char*s){return strspn(s,"0123456789")==5&&!s[5];}
 typedef struct{char d[P],t[256],p[8];}Tk;
-static Tk T[256];
+static Tk T[1024];
 static int tcmp(const void*a,const void*b){int c=strcmp(((const Tk*)a)->p,((const Tk*)b)->p);return c?c:strcmp(strrchr(((const Tk*)a)->d,'_'),strrchr(((const Tk*)b)->d,'_'));}
 static int load_tasks(const char*dir){
     DIR*d=opendir(dir);if(!d)return 0;struct dirent*e;int n=0;
-    while((e=readdir(d))&&n<256){
+    while((e=readdir(d))&&n<1024){
         if(e->d_name[0]=='.'||!strcmp(e->d_name,"README.md"))continue;
         const char*nm=e->d_name;snprintf(T[n].d,P,"%s/%s",dir,nm);
         int hp=nm[5]=='-'&&strspn(nm,"0123456789")==5;
@@ -363,7 +363,7 @@ static int cmd_task(int argc,char**argv){
                 task_show(i,n);show=0;}
             else if(k=='/'||k=='s'){
                 char q[128];if(!raw_line("  Search: ",q,128)){show=0;continue;}
-                int mx[256],nm=0;for(int j=0;j<n&&nm<256;j++){
+                int mx[1024],nm=0;for(int j=0;j<n&&nm<1024;j++){
                     if(strcasestr(T[j].t,q)){mx[nm++]=j;continue;}
                     struct stat ss;if(stat(T[j].d,&ss))continue;
                     if(!S_ISDIR(ss.st_mode)){size_t l;char*fc=readf(T[j].d,&l);
@@ -394,11 +394,11 @@ static int cmd_task(int argc,char**argv){
         char dn[32];dl_norm(raw,dn,32);
         char df[P];snprintf(df,P,"%s/deadline.txt",T[x].d);writef(df,dn);printf("\xe2\x9c\x93 %s\n",dn);sync_bg();return 0;}
     if(!strcmp(sub,"due")){int n=load_tasks(dir);if(!n){puts("No tasks");return 0;}
-        int ix[256];int dl[256];int nd=0;
+        int ix[1024],dl[1024],nd=0;
         for(int i=0;i<n;i++){int d=task_dl(T[i].d);if(d>=0){ix[nd]=i;dl[nd]=d;nd++;}}
         if(!nd){puts("No deadlines");return 0;}
         for(int a=0;a<nd-1;a++)for(int b=a+1;b<nd;b++)if(dl[a]>dl[b]){int t=ix[a];ix[a]=ix[b];ix[b]=t;t=dl[a];dl[a]=dl[b];dl[b]=t;}
-        Tk D[256];for(int j=0;j<nd;j++)D[j]=T[ix[j]];memcpy(T,D,(size_t)nd*sizeof(Tk));
+        Tk D[1024];for(int j=0;j<nd;j++)D[j]=T[ix[j]];memcpy(T,D,(size_t)nd*sizeof(Tk));
         if(argc>3&&(*argv[3]=='r'||*argv[3]=='t')){sub="r";grn=nd;goto review;}
         for(int j=0;j<nd;j++)printf("  %s%dd\033[0m P%s %.50s\n",dl[j]<=1?"\033[31m":dl[j]<=7?"\033[33m":"\033[90m",dl[j],T[j].p,T[j].t);return 0;}
     if(!strcmp(sub,"bench")){struct timespec t0,t1;
