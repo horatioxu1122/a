@@ -1,4 +1,4 @@
-As a general principle, tools must have an interface that works well for both llm agents and humans both.
+As a general principle, tools must have an interface that works well for both llm agents and humans both. This is crucial for alignemnent and collaborative human ai work because it gives a shared function set and information flow to user and llm
 Speed for the user is essential as is minimizing keystrokes and input actions to acomplish anything. Esp mobile users need char minimized at all cost.
 Exceeding time limit should kill the program and lack of completion is an error to fix by faster software.
 
