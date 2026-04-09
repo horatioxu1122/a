@@ -222,8 +222,10 @@ static void task_repri(int x,int pv){
 static int cmd_task(int argc,char**argv){
     perf_disarm();
     char dir[P];snprintf(dir,P,"%s/tasks",SROOT);mkdirp(dir);const char*sub=argc>2?argv[2]:NULL;
-    if(!sub){int n=load_tasks(dir);
-        printf("%d tasks\n  \033[90ml list  r review  add <t>  rank  d #  v vision  m ai  h help\033[0m\n",n);return 0;}
+    if(!sub||!strcmp(sub,"top")){int n=load_tasks(dir),k=sub&&argc>3?atoi(argv[3]):10;if(k>n)k=n;
+        printf("%d tasks\n",n);
+        for(int i=0;i<k;i++)printf("  %2d P%s %.60s\n",i+1,T[i].p,T[i].t);
+        return 0;}
     if(!strcmp(sub,"v")||!strcmp(sub,"vision")){
         char vf[P];snprintf(vf,P,"%s/vision.txt",SROOT);
         size_t vl;char*vc=readf(vf,&vl);
@@ -400,7 +402,8 @@ static int cmd_task(int argc,char**argv){
         for(int a=0;a<nd-1;a++)for(int b=a+1;b<nd;b++)if(dl[a]>dl[b]){int t=ix[a];ix[a]=ix[b];ix[b]=t;t=dl[a];dl[a]=dl[b];dl[b]=t;}
         Tk D[1024];for(int j=0;j<nd;j++)D[j]=T[ix[j]];memcpy(T,D,(size_t)nd*sizeof(Tk));
         if(argc>3&&(*argv[3]=='r'||*argv[3]=='t')){sub="r";grn=nd;goto review;}
-        for(int j=0;j<nd;j++)printf("  %s%dd\033[0m P%s %.50s\n",dl[j]<=1?"\033[31m":dl[j]<=7?"\033[33m":"\033[90m",dl[j],T[j].p,T[j].t);return 0;}
+        int lim=argc>3&&isdigit(*argv[3])?atoi(argv[3]):nd;if(lim>nd)lim=nd;
+        for(int j=0;j<lim;j++)printf("  %s%dd\033[0m P%s %.50s\n",dl[j]<=1?"\033[31m":dl[j]<=7?"\033[33m":"\033[90m",dl[j],T[j].p,T[j].t);return 0;}
     if(!strcmp(sub,"bench")){struct timespec t0,t1;
         clock_gettime(CLOCK_MONOTONIC,&t0);int n=0;for(int j=0;j<100;j++)n=load_tasks(dir);
         clock_gettime(CLOCK_MONOTONIC,&t1);
