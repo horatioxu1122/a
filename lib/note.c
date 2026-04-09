@@ -225,7 +225,7 @@ static int cmd_task(int argc,char**argv){
     if(!sub||!strcmp(sub,"top")){int n=load_tasks(dir),k=sub&&argc>3?atoi(argv[3]):10;if(k>n)k=n;
         printf("%d tasks\n",n);
         for(int i=0;i<k;i++)printf("  %2d P%s %.60s\n",i+1,T[i].p,T[i].t);
-        puts("  \033[90mtop N  due N  l  r  add <t>  h\033[0m");return 0;}
+        puts("\033[90m  a t top N        top N by priority\n  a t due N        top N by deadline\n  a t l            list all\n  a t r            review (navigate)\n  a t add <text>   add task\n  a t h            help\033[0m");return 0;}
     if(!strcmp(sub,"v")||!strcmp(sub,"vision")){
         char vf[P];snprintf(vf,P,"%s/vision.txt",SROOT);
         size_t vl;char*vc=readf(vf,&vl);
