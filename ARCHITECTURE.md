@@ -1,23 +1,24 @@
-As a general principle, tools must have an interface that works well for both llm agents and humans both. This is crucial for alignemnent and collaborative human ai work because it gives a shared function set and information flow to user and llm
-Speed for the user is essential as is minimizing keystrokes and input actions to acomplish anything. Esp mobile users need char minimized at all cost.
-Exceeding time limit should kill the program and lack of completion is an error to fix by faster software.
+## Principles
+1. As a general principle, tools must have an interface that works well for both LLM agents and humans. This is crucial for alignment and collaborative human-AI work because it gives a shared function set and information flow to the user and LLM.
+2. Speed for the user is essential, as is minimizing keystrokes and input actions to accomplish anything. Especially mobile users need chars minimized at all cost.
+3. There should be no polling, only event-driven processes.
+4. OS program dependencies and software dependencies must all be handled by the script, not ad hoc install per machine. If the script fails to work on a new machine because of a missing dependency, it's the script's fault for not auto-installing it properly, not the user's fault.
+5. Exceeding the time limit should kill the program, and lack of completion is an error to fix by faster software.
+6. Scripts should expect to die and save persistent data to adata given that expectation.
 
-Important organizational principles:
-All persistent data goes in adata period. adata /git will hold user personal git synced data. 
-All logic goes to /lib. /lib files should be indepndent as can be from one another but some shared logic is inevitable.
-a.c handles build, dep install, dispatch to /lib
+## Organization
+7. All persistent data goes in adata, period. adata/git will hold user personal git-synced data.
+8. All logic goes to /lib. /lib files should be as independent as can be from one another, but some shared logic is inevitable.
+9. a.c handles build, dep install, and dispatch to /lib.
 
-Specifically:
-all commands and subcommands must be accessible in the a i tui.
-There should be no polling, only event driven processes.
-If software is dependent on any process like network operations they must still complete in 5 sec or be killed ideally 1 sec.
-Software is killed at 1 sec by default and limits auto tightened continously by best time of past through a perf.
-If software must operate indefinitely, like waiting for user input or running a server, the killing must still occur but disarm when the waiting op is done. However waiting must be a no op, state changes also get killed on time. 
-no command should ever be excempt from time killing.
-time killing is only enabled if the user has set it on.
-scripts should expect to die and save persistent data given that expectation to adata
-Favor c if possible, but python or other languages should be used for library avaliability.
-Commands should follow the format: 3 char or less occsionally 4 never more, same name as file unless file handles many cmd, 
-cmd no parameter should show the menu of commands and how to type them and the obvious most common information user wants,
-all sub cmd must be one char to call. cmd <text> should do the obvious thing when given text user wants most often.
-Show all subcommands as you would type in to call them exactly.
+## Rules
+10. Software is killed at 1 sec by default, and limits are auto-tightened continuously by best time of past through a perf. Network-dependent operations may be 5 sec at max.
+11. If software must operate indefinitely, like waiting for user input or running a server, it must reach a no-op, no-mem-change state before disarming the timer.
+12. No command or operation should ever be exempt from time killing except the no-op state and necessary dep downloads. Download the highest-priority deps first. The number of deps and time to install must be minimized.
+13. First-time installation, compiling, and installing dependencies are also program operations under time limits, with a dep download time exception.
+14. Use C unless unsuitable.
+15. All commands and subcommands must be accessible in the a i tui.
+16. Commands should follow the format: 3 chars or less, occasionally 4, never more; same name as file unless file handles many cmds.
+17. A cmd with no parameter should show the menu of commands, how to type them, and the obvious most common information the user wants.
+18. All sub cmds must be one char to call. cmd <text> should do the obvious thing when given text the user wants most often.
+19. Show all subcommands exactly as you would type them to call them, and explain what they do in 4 words or less.
