@@ -33,3 +33,6 @@ adata/
 *.plist
 infer-out/
 a
+
+# macOS Finder metadata
+.DS_Store
