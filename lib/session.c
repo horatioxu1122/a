@@ -79,25 +79,16 @@ static void tm_restore(void) {
     if(!NSE){init_db();load_cfg();load_sess();}
     for(char*l=d,*nl;*l;l=nl?nl+1:l+strlen(l)){
         nl=strchr(l,'\n');if(nl)*nl=0;
-        char*s=strchr(l,'|');if(!s)continue;*s=0;
-        if(!dexists(s+1))continue;
+        char*s=strchr(l,'|');if(!s)continue;*s++=0;
+        char*s2=strchr(s,'|');if(s2)*s2=0;
+        if(!dexists(s))continue;
         char key[16]="",*dash=strchr(l,'-');
         if(dash)snprintf(key,16,"%.*s",(int)(dash-l),l);
         sess_t*se=find_sess(key);if(!se)continue;
         char cmd[1024];
-        int resume=strstr(se->cmd,"claude")||strstr(se->cmd,"gemini");
-        snprintf(cmd,1024,resume?"%s --continue":"%s",se->cmd);
-        create_sess(l,s+1,cmd);}
+        snprintf(cmd,1024,strstr(se->cmd,"claude")||strstr(se->cmd,"gemini")?"%s --continue":"%s",se->cmd);
+        create_sess(l,s,cmd);}
     free(d);}
-
-static void tm_unsave_win(const char *sn) {
-    char sf[P];snprintf(sf,P,"%s/tmux_wins.txt",DDIR);
-    char*d=readf(sf,NULL);if(!d)return;
-    int sl=(int)strlen(sn);FILE*f=fopen(sf,"w");if(!f){free(d);return;}
-    for(char*l=d;*l;){char*nl=strchr(l,'\n');int ll=nl?(int)(nl-l):(int)strlen(l);
-        if(ll>0&&!(ll>=sl&&l[sl]=='|'&&!memcmp(l,sn,(size_t)sl)))fprintf(f,"%.*s\n",ll,l);
-        l=nl?nl+1:l+ll;}
-    free(d);fclose(f);}
 
 static int cmd_restore(int c,char**v){(void)c;(void)v;
     init_db();load_cfg();load_sess();tm_restore();return 0;}

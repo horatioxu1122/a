@@ -5,10 +5,11 @@ static void tm_restore(void);
 static void tm_save_win(const char *sn, const char *wd) {
     char sf[P];snprintf(sf,P,"%s/tmux_wins.txt",DDIR);
     char*d=readf(sf,NULL);FILE*f=fopen(sf,"w");if(!f){free(d);return;}
-    if(d){int sl=(int)strlen(sn);for(char*l=d;*l;){char*nl=strchr(l,'\n');int ll=nl?(int)(nl-l):(int)strlen(l);
-        if(ll>0&&!(ll>=sl&&l[sl]=='|'&&!memcmp(l,sn,(size_t)sl)))fprintf(f,"%.*s\n",ll,l);
-        l=nl?nl+1:l+ll;}free(d);}
-    fprintf(f,"%s|%s\n",sn,wd);fclose(f);}
+    if(d){int sl=(int)strlen(sn);for(char*l=d,*nl;*l;l=nl?nl+1:l+strlen(l)){
+        nl=strchr(l,'\n');int ll=nl?(int)(nl-l):(int)strlen(l);
+        if(ll>0&&!(ll>=sl&&l[sl]=='|'&&!memcmp(l,sn,(size_t)sl)))fprintf(f,"%.*s\n",ll,l);}free(d);}
+    if(wd)fprintf(f,"%s|%s\n",sn,wd);fclose(f);}
+static void tm_unsave_win(const char*sn){tm_save_win(sn,NULL);}
 static void tm_gc(void){(void)!system("tmux ls -F'#{session_name}:#{session_attached}' 2>/dev/null|awk -F: '/^"TMS"-[0-9]+:0/{print$1}'|xargs -I{} tmux kill-session -t{} 2>/dev/null");}
 static void tm_ensure_sess(void){
     {int r=system("timeout 1 tmux info >/dev/null 2>&1");

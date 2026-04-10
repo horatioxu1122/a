@@ -22,6 +22,7 @@ __pycache__/
 .a_done
 .a_job
 /my
+/lab
 
 # User data — adata/ is a separate world from the code repo.
 # adata/git/ is its own independent git repo (not a submodule).
