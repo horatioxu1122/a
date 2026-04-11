@@ -390,6 +390,8 @@ static int cmd_cat(int c,char**v){perf_disarm();
             FILE*cf=fopen(fp2,"r");if(!cf)continue;
             char hdr[256];size_t hl=(size_t)snprintf(hdr,256,"\n==> context: %s <==\n",de->d_name);
             GA(hdr,hl);char ln2[512];while(fgets(ln2,512,cf)){size_t sl=strlen(ln2);GA(ln2,sl);}fclose(cf);nf++;}}closedir(dd);}}
+    {char p[P];snprintf(p,P,"%s/common/prompts/default.txt",SROOT);FILE*f=fopen(p,"r");
+     if(f){GA("\n==> default prompt <==\n",24);char b[512];size_t r;while((r=fread(b,1,512,f))>0)GA(b,r);fclose(f);nf++;}}
     if(!d)return 1;d[l]=0;
     char tf[P];snprintf(tf,P,"%s/local/a_cat.txt",AROOT);writef(tf,d);
     {int lc=0;for(size_t i=0;i<l;i++)if(d[i]=='\n')lc++;dprintf(1,"Read %s (%d lines) in full\n\n",tf,lc);}
