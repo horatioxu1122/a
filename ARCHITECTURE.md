@@ -22,3 +22,8 @@
 17. A cmd with no parameter should show the menu of commands, how to type them, and the obvious most common information the user wants.
 18. All sub cmds must be one char to call. cmd <text> should do the obvious thing when given text the user wants most often.
 19. Show all subcommands exactly as you would type them to call them, and explain what they do in 4 words or less.
+
+## Jobs
+20. Every long-running job runs as a tmux window in the single shared `a:` session — never in a tool-private background. Humans and LLMs use the same primitives (tmux attach, tmux capture-pane, tmux send-keys) to observe and control the same process. A job invisible to one party is a violation: if the LLM can see it but the user cannot, or vice versa, oversight and collaboration break down.
+21. Window naming is predictable: `<cmd>-HHMM` so multiple runs of the same command coexist and are timestamped at a glance. Every window tees its output to `adata/local/bg/<name>.log` so tailing, grepping, and monitor-style event streams all work without polling the pane. An opening banner prints start time, full command, and log path before the job runs, so attaching always shows what is happening.
+22. Control is universal across actors: `tmux send-keys -t a:<name> C-c` for clean interrupt, `tmux kill-window` for hard kill, `tmux attach` for live view, `a ls` for listing. No tool needs a private job manager — tmux is the job manager. Claude Code's `run_in_background`, spawned agents, and user shells all converge on the same windows, enabling cross-agent visibility and making every job reviewable, interruptible, and resumable by anyone on the device.
