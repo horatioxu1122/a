@@ -67,7 +67,7 @@ static int cmd_e(int argc, char **argv) { AB;
     if (getenv("TMUX")) execlp("e", "e", (char*)NULL);
     init_db(); load_cfg();
     CWD(wd);
-    create_sess("edit", wd, "e");
+    create_sess("edit", wd, "e", NULL);
     tm_go("edit");
     return 0;
 }

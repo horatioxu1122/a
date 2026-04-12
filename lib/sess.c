@@ -31,30 +31,13 @@ static int cmd_sess(int argc, char **argv) {
     char sn[256];{struct tm*t=localtime(&(time_t){time(NULL)});int h=t->tm_hour%12;if(!h)h=12;
         snprintf(sn,256,"%s-%s-%d%02d%s",s->name,bname(wd),h,t->tm_min,t->tm_hour>=12?"p":"a");
         if(tm_has(sn))snprintf(sn,256,"%s-%s-%d%02d%02d%s",s->name,bname(wd),h,t->tm_min,t->tm_sec,t->tm_hour>=12?"p":"a");}
-    /* Inside tmux = new window in same session */
-    if (getenv("TMUX") && strlen(key) == 1 && key[0] != 'a') {
-        char ac[B];if(in_fork(wd)){const char*fk=strstr(wd,"/adata/forks/")+13;snprintf(ac,B,"a fork run %s %s",fk,s->cmd);}else snprintf(ac,B,"%s",s->cmd);
-        char ctxf[P]="",csuf[256]="",cpfx[256]="";
-        if(strstr(ac,"claude")){snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());
-            const char*actx=getenv("A_CTX");
-            if(actx&&actx[0])snprintf(cpfx,256,"A_CTX=%s a cat >%s 2>/dev/null;",actx,ctxf);
-            else snprintf(cpfx,256,"a cat >%s 2>/dev/null;",ctxf);
-            snprintf(csuf,256," --append-system-prompt-file %s",ctxf);}
-        char c[B]; snprintf(c, B, "tmux new-window -P -F '#{pane_id}' -c '%s' 'unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT;%s %s%s'", wd, cpfx, ac, csuf);
-        char pid[64]; pcmd(c, pid, 64); pid[strcspn(pid,"\n")] = 0;
-        if (pid[0]) {
-            snprintf(c, B, "tmux split-window -v -t '%s' -c '%s' 'sh -c \"ls;exec $SHELL\"'", pid, wd); (void)!system(c);
-            snprintf(c, B, "tmux select-pane -t '%s'", pid); (void)!system(c);
-            send_prefix_bg(pid, s->name, wd, is_prompt ? prompt : NULL);
-        }
-        return 0;
-    }
+    const char *xp = is_prompt ? prompt : NULL;
     /* claim ghost if matches */
     {char gf[P];snprintf(gf,P,"%s/ghost",DDIR);char*gh=readf(gf,NULL);
     if(gh){gh[strcspn(gh,"\n")]=0;if(!strcmp(gh,sn)&&tm_has(sn)){unlink(gf);free(gh);
         if(is_prompt&&prompt[0]){tm_send(sn,prompt);usleep(100000);tm_key(sn,"Enter");}
         tm_go(sn);return 0;}free(gh);}}
-    /* Existing session (no git / fork failed) = attach */
+    /* Existing session = attach, send prompt via keys (already running) */
     if (tm_has(sn)) {
         if (is_prompt && prompt[0]) {
             tm_send(sn, prompt); usleep(100000);
@@ -64,8 +47,7 @@ static int cmd_sess(int argc, char **argv) {
         tm_go(sn);
         return 0;
     }
-    if(!create_sess(sn, wd, s->cmd))
-        send_prefix_bg(sn, s->name, wd, is_prompt ? prompt : NULL);
+    create_sess(sn, wd, s->cmd, xp);
     tm_go(sn);
     return 0;
 }

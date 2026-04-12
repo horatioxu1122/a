@@ -18,13 +18,23 @@ static void fallback_py(const char *mod, int argc, char **argv) {
 }
 
 /* session create — returns 1 if window already existed (restored), 0 if created */
-static int create_sess(const char *sn, const char *wd, const char *cmd) {
+static int create_sess(const char *sn, const char *wd, const char *cmd, const char *extra) {
     int ai = cmd && (strstr(cmd,"claude") || strstr(cmd,"codex") || strstr(cmd,"gemini") || strstr(cmd,"aider"));
     char acmd[B];snprintf(acmd,B,"%s",cmd?cmd:"");
-    char wcmd[B*2],ctxf[P]="",csuf[256]="";
-    if(ai&&strstr(acmd,"claude")){snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());snprintf(csuf,256," --append-system-prompt-file %s",ctxf);}
+    char wcmd[B*2],ctxf[P]="",csuf[512]="";
+    int is_claude=ai&&strstr(acmd,"claude"),is_gemini=ai&&strstr(acmd,"gemini"),is_codex=ai&&strstr(acmd,"codex");
+    if(ai){snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());
+        /* claude: extra goes as positional arg (auto-submits). others: extra appended to file (part of first message) */
+        write_prompt_file(ctxf,wd,is_claude?NULL:extra);
+        if(is_claude){int cl=snprintf(csuf,512," --append-system-prompt-file %s",ctxf);
+            if(extra&&extra[0]){char ef[P];snprintf(ef,P,"%s/a_xtra_%d.txt",TMP,(int)getpid());writef(ef,extra);
+                snprintf(csuf+cl,(size_t)(512-cl)," \"$(cat '%s')\"",ef);}}
+        else if(is_gemini)snprintf(csuf,512," --prompt-interactive \"$(cat '%s')\"",ctxf);
+        else if(is_codex)snprintf(csuf,512," \"$(cat '%s')\"",ctxf);
+    }
+    /* claude: a cat appends codebase to prompt file; others: prompt file already complete */
     if (ai) snprintf(wcmd, sizeof(wcmd),
-        "unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT;%s%s%stmux wait-for -S rdy-%s;while :;do %s%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo -e \"\\n! crash $e [R]estart/[Q]uit:\";read -n1 k;[[ $k =~ [Rr] ]]||break;done", ctxf[0]?ACAT " >":"",ctxf,ctxf[0]?" 2>/dev/null;":"",sn,acmd,csuf,LOGDIR);
+        "unset CLAUDECODE CLAUDE_CODE_ENTRYPOINT;%s%s%stmux wait-for -S rdy-%s;while :;do %s%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo -e \"\\n! crash $e [R]estart/[Q]uit:\";read -n1 k;[[ $k =~ [Rr] ]]||break;done", is_claude?ACAT " >>":"",ctxf,is_claude?" 2>/dev/null;":"",sn,acmd,csuf,LOGDIR);
     else snprintf(wcmd, sizeof(wcmd), "%s", cmd ? cmd : "");
     tm_ensure_conf();
     int r = tm_new(sn, wd, wcmd);
@@ -45,34 +55,6 @@ static int create_sess(const char *sn, const char *wd, const char *cmd) {
     return r;
 }
 
-static void send_prefix_bg(const char *sn, const char *agent, const char *wd, const char *extra) {
-    const char *cp = strstr(agent, "claude") ? cfget("claude_prefix") : "";
-    char pre[B*4]; int n = snprintf(pre, sizeof(pre), "%s%s", dprompt(), cp);
-    n += snprintf(pre+n, sizeof(pre)-(unsigned)n,
-        " When work finished, run the a done command with a message to notify human. In multi turn conversations run a done each time work finished."
-	" a agent manager tools: "
-	" a done <Message>. - tmux bell red dot notification."
-        " a help -\xc2\xad command list."
-        " a diff — tok change vs main."
-        " a push [msg] — commit+push (works in forks without .git)."
-        " a note <text> — l note."
-        " a cat 2 — rd whole codebase."
-	" a cat 3 - read project root and first and last parts of other files"
-	" a ssh - ssh to devices.\n");
-    char af[P]; snprintf(af, P, "%s/AGENTS.md", wd);
-    char *amd = readf(af, NULL);
-    if (amd) { n += snprintf(pre+n, sizeof(pre)-(unsigned)n, "%s ", amd); free(amd); }
-    if (extra) snprintf(pre+n, sizeof(pre)-(unsigned)n, "%s", extra);
-    if (!pre[0]) return;
-    if (fork() == 0) {
-        setsid();
-        char wf[B];snprintf(wf,B,"tmux wait-for rdy-%s",sn);(void)!system(wf);
-        tm_send(sn, pre);
-        if (extra) { sleep(1); tm_key(sn, "Enter"); }
-        _exit(0);
-    }
-}
-
 static void tm_restore(void) {
     char sf[P];snprintf(sf,P,"%s/tmux_wins.txt",DDIR);
     char*d=readf(sf,NULL);if(!d)return;
@@ -86,8 +68,9 @@ static void tm_restore(void) {
         if(dash)snprintf(key,16,"%.*s",(int)(dash-l),l);
         sess_t*se=find_sess(key);if(!se)continue;
         char cmd[1024];
-        snprintf(cmd,1024,strstr(se->cmd,"claude")||strstr(se->cmd,"gemini")?"%s --continue":"%s",se->cmd);
-        create_sess(l,s,cmd);}
+        int resume=strstr(se->cmd,"claude")||strstr(se->cmd,"gemini");
+        snprintf(cmd,1024,resume?"%s --continue":"%s",se->cmd);
+        create_sess(l,s,cmd,NULL);}
     free(d);}
 
 static int cmd_restore(int c,char**v){(void)c;(void)v;

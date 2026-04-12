@@ -413,9 +413,10 @@ static int cmd_j(int c,char**v){
             for(int i=0;i<nt;i++)fprintf(f,"%d. P%s %s\n",i+1,T[i].p,T[i].t);fclose(f);}}
         snprintf(pr,B,"%s/common/prompts/job.txt",SROOT);
         char*ap=readf(pr,NULL);snprintf(pr,B,"%s\nContext: cat %s",ap?ap:"Ask what to work on. cat a.c for source.",cf);if(ap)free(ap);
-        snprintf(cm,B,"tmux split-window -fhP -F '#{pane_id}' -c '%s' 'claude --dangerously-skip-permissions'",SDIR);
-        pcmd(cm,pid,64);pid[strcspn(pid,"\n")]=0;
-        if(pid[0])send_prefix_bg(pid,"claude",SDIR,pr);return 0;}
+        {char ctxf[P];snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());
+        write_prompt_file(ctxf,SDIR,pr);
+        snprintf(cm,B,"tmux split-window -fhP -F '#{pane_id}' -c '%s' '" ACAT " >>%s 2>/dev/null;claude --dangerously-skip-permissions --append-system-prompt-file %s'",SDIR,ctxf,ctxf);
+        pcmd(cm,pid,64);}return 0;}
     {char nb[16]="";pcmd("pgrep -xc claude 2>/dev/null||echo 0",nb,16);
     int nj=atoi(nb)-1;if(nj<0)nj=0;
     if(nj>=100&&!(c>2&&!strcmp(v[2],"--resume"))){printf("x %d/100 slots full, see: a job\n",nj);return 1;}}
@@ -423,7 +424,7 @@ static int cmd_j(int c,char**v){
     if(c>3&&!strcmp(v[2],"--resume")){snprintf(wd,P,"%s",v[3]);
         if(!dexists(wd)){printf("x %s not found\n",wd);return 1;}
         printf("+ resume: %s\n",wd);
-        tm_ensure_conf();char jcmd[B];jcmd_fill(jcmd,1,wd);
+        tm_ensure_conf();char jcmd[B];jcmd_fill(jcmd,1,wd,NULL);
         {char sn[64];snprintf(sn,64,"j-%s",bname(wd));tm_new(sn,wd,jcmd);tm_go(sn);}
         return 0;}
     int si=2,wt=0;if(c>3&&isdigit(*v[2])){int idx=atoi(v[2]);if(idx<NPJ)snprintf(wd,P,"%s",PJ[idx].path);si++;}
@@ -441,9 +442,9 @@ static int cmd_j(int c,char**v){
     printf("+ job: %s\n  %.*s\n",bname(wd),80,pr);
     if(pr[0])pl+=snprintf(pr+pl,(size_t)(B-pl),"\n\nWhen done: write .a_done with summary + test commands");
     tm_ensure_conf();
-    char jcmd[B];jcmd_fill(jcmd,0,wd);
+    char jcmd[B];jcmd_fill(jcmd,0,wd,pr[0]?pr:NULL);
     char sn[64];snprintf(sn,64,"j-%s-%ld",bname(wd),(long)getpid());
-    tm_new(sn,wd,jcmd);send_prefix_bg(sn,"claude",wd,pr);
+    tm_new(sn,wd,jcmd);
     tm_go(sn);
     return 0;}
 static int cmd_job(int c,char**v){return(c>2&&isdigit(*v[2]))?cmd_jobs(c,v):cmd_j(c,v);}

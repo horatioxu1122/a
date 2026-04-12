@@ -24,8 +24,7 @@ static int cmd_project_num(int argc, char **argv, int idx) { (void)argc; (void)a
             char gf[P];snprintf(gf,P,"%s/ghost",DDIR);
             char*og=readf(gf,NULL);if(og){og[strcspn(og,"\n")]=0;
                 char k[B];snprintf(k,B,"tmux kill-session -t '=%s' 2>/dev/null",og);(void)!system(k);free(og);}
-            tm_ensure_conf();create_sess(sn,p->path,gs->cmd);
-            send_prefix_bg(sn,gs->name,p->path,NULL);writef(gf,sn);
+            tm_ensure_conf();create_sess(sn,p->path,gs->cmd,NULL);writef(gf,sn);
             if(!fork()){sleep(30);char*g=readf(gf,NULL);
                 if(g){g[strcspn(g,"\n")]=0;if(!strcmp(g,sn)){
                     char k[B];snprintf(k,B,"tmux kill-session -t '=%s' 2>/dev/null",sn);(void)!system(k);unlink(gf);}free(g);}

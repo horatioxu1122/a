@@ -49,7 +49,7 @@ static int cmd_agent(int argc, char **argv) {
             }
             return 0;
         }
-        create_sess(sn,wd,cmd);
+        create_sess(sn,wd,cmd,NULL);
         tm_go(sn);return 0;
     }
     init_db(); load_cfg(); load_sess();
@@ -65,7 +65,7 @@ static int cmd_agent(int argc, char **argv) {
     CWD(wd);
     char sn[256]; snprintf(sn, 256, "agent-%s-%ld", s->key, (long)time(NULL));
     printf("Agent: %s | Task: %.50s...\n", s->key, taskstr);
-    create_sess(sn, wd, s->cmd);
+    create_sess(sn, wd, s->cmd, NULL);
     /* Wait for agent to start */
     puts("Waiting for agent to start...");
     for (int i = 0; i < 60; i++) {

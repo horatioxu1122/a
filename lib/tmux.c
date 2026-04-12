@@ -42,8 +42,26 @@ static void tm_sk(const char*w,const char*s,int l){char t[256];tm_t(w,t);pid_t p
 #define tm_key(w,s) tm_sk(w,s,0)
 static int tm_read(const char*w,char*buf,int len){char t[256];tm_t(w,t);
     char c[B];snprintf(c,B,"tmux capture-pane -t '%s' -p 2>/dev/null",t);return pcmd(c,buf,len);}
+/* write default prompt + tools info to file */
+static int write_prompt_file(const char *path, const char *wd, const char *extra) {
+    FILE *f=fopen(path,"w");if(!f)return 0;
+    const char *dp=dprompt(),*cp=cfget("claude_prefix");
+    if(dp[0])fprintf(f,"%s\n",dp);
+    if(cp[0])fprintf(f,"%s\n",cp);
+    fprintf(f,"When work finished, run the a done command with a message to notify human."
+        " a tools: a done <msg> a help a diff a push [msg] a note <text> a cat 2|3 a ssh\n");
+    char af[P];snprintf(af,P,"%s/AGENTS.md",wd);
+    char *amd=readf(af,NULL);if(amd){fprintf(f,"%s\n",amd);free(amd);}
+    if(extra&&extra[0])fprintf(f,"\nTask: %s\n",extra);
+    fclose(f);return 1;
+}
 /* job cmd */
-static void jcmd_fill(char*b,int cont,const char*wd){(void)wd;char ctxf[P];snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;" ACAT " >%s 2>/dev/null;while :;do claude --dangerously-skip-permissions --append-system-prompt-file %s%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",ctxf,ctxf,cont?" --continue":"",LOGDIR);}
+static void jcmd_fill(char*b,int cont,const char*wd,const char*extra){
+    char ctxf[P],xsuf[512]="";snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());
+    write_prompt_file(ctxf,wd,NULL);
+    if(extra&&extra[0]){char ef[P];snprintf(ef,P,"%s/a_xtra_%d.txt",TMP,(int)getpid());writef(ef,extra);
+        snprintf(xsuf,512," \"$(cat '%s')\"",ef);}
+    snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;" ACAT " >>%s 2>/dev/null;while :;do claude --dangerously-skip-permissions --append-system-prompt-file %s%s%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",ctxf,ctxf,cont?" --continue":"",xsuf,LOGDIR);}
 
 static void tm_ensure_conf(void) {
     if (strcmp(cfget("tmux_conf"), "y") != 0) return;
