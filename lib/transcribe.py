@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _common import ADATA_ROOT
 
 OUT = str(ADATA_ROOT / 'transcripts')
-TMP = str(ADATA_ROOT / 'local' / 'whisper_tmp')
+TMP = str(ADATA_ROOT / 'local' / 'tmp')
 REMOTE = 'a-gdrive2:Archive/Files/Easy Voice Recorder'
 
 def ensure_deps():
@@ -50,19 +50,26 @@ def run():
             os.remove(lp)
         return
     path = ' '.join(args)
-    if os.path.isfile(path): lp = path
+    if os.path.isfile(path): lp = path; remote_dir = None
     else:
         lp = os.path.join(TMP, os.path.basename(path))
+        remote_dir = path.rsplit('/', 1)[0] if ':' in path and '/' in path else REMOTE
         src = path if ':' in path else f'{REMOTE}/{path}'
         print(f'Downloading {src}...')
         sp.run(['rclone', 'copy', src, TMP], check=True)
     print(f'Transcribing {os.path.basename(lp)}...')
     txt, dur = transcribe(lp)
     if txt:
-        out = os.path.join(OUT, os.path.splitext(os.path.basename(lp))[0] + '.txt')
+        base = os.path.splitext(os.path.basename(lp))[0]
+        out = os.path.join(OUT, base + '.txt')
         open(out, 'w').write(txt + '\n')
         print(f'\n{dur:.0f}s | {len(txt)} chars | {out}')
+        if remote_dir:
+            sp.run(['rclone', 'copy', out, remote_dir], check=True)
+            print(f'uploaded -> {remote_dir}/{base}.txt')
         print(txt)
     else: print('(no speech detected)')
+    if remote_dir and lp.startswith(TMP):
+        os.remove(lp); print(f'deleted local: {lp}')
 
 run()
