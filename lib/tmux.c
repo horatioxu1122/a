@@ -21,7 +21,7 @@ static int tm_has(const char *w) {
     char c[B];snprintf(c,B,"tmux list-windows -t '"TMS"' -F '#{window_name}' 2>/dev/null|grep -qx '%s'",w);
     return !system(c);
 }
-static void tm_t(const char*w,char*t){if(*w=='%')snprintf(t,256,"%s",w);else snprintf(t,256,TMS":%s",w);}
+static void tm_t(const char*w,char*t){if(*w=='%')snprintf(t,256,"%s",w);else snprintf(t,256,":%s",w);}
 static void tm_go(const char *w) {
     perf_disarm();tm_gc();char g[64];snprintf(g,64,TMS"-%d",(int)getpid());
     if(getenv("TMUX")){if(w){char t[256];tm_t(w,t);execlp("tmux","tmux","select-window","-t",t,(char*)NULL);}
@@ -83,6 +83,7 @@ static void tm_ensure_conf(void) {
         "set -g visual-bell off\n"
         "set -g bell-action any\n"
         "set-hook -g alert-bell 'run-shell \"osascript -e \\\"display notification \\\\\\\"#{hook_window_name}\\\\\\\" with title \\\\\\\"a: done\\\\\\\"\\\"\"'\n"
+        "set -g window-size latest\n"
         "set -g automatic-rename off\n"
         "set -g repeat-time 0\n"
         "set -s extended-keys on\n"
