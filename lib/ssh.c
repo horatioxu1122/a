@@ -44,8 +44,16 @@ static int cmd_ssh(int argc,char**argv){
         for(int i=0;i<nh;i++){int s=!strcmp(H[i].name,DEV);
             printf("  %d. %s%s%s: %s%s\n",i,s?"\033[32m":"",H[i].name,s?" (self)\033[0m":"",H[i].host,H[i].pw[0]?" [pw]":"");}
         if(!nh)puts("  (none)");
-        puts("\na ssh <#|name> [cmd]  add/self/start/stop/all/rm\n"
-             "  setup/key/auth/os/info/pw/mv/ping");return 0;}
+        puts("\n  a=add  l=all  s=self  !=start  x=stop  ?=status\n  u=setup  k=key  t=auth");
+        if(!isatty(0))return 0;
+        printf("\n> ");fflush(stdout);
+        struct termios ot,rt;tcgetattr(0,&ot);rt=ot;rt.c_lflag&=~(tcflag_t)(ICANON|ECHO);rt.c_cc[VMIN]=1;tcsetattr(0,TCSAFLUSH,&rt);
+        char ch;int rv=read(0,&ch,1);tcsetattr(0,TCSAFLUSH,&ot);
+        if(rv!=1||ch=='\x1b'||ch==3){putchar('\n');return 0;}putchar('\n');
+        if(ch>='0'&&ch-'0'<nh){execvp("a",(char*[]){"a","ssh",H[ch-'0'].name,NULL});}
+        {static const char km[]="alsx?ukt!";static const char*kv[]={"add","all","self","stop","status","setup","key","auth","start"};
+        for(int i=0;km[i];i++)if(ch==km[i]){execvp("a",(char*[]){"a","ssh",(char*)kv[i],NULL});}}
+        printf("x %c\n",ch);return 1;}
 
     /* start/stop/status */
     if(!strcmp(sub,"start")){int r=system("sshd 2>/dev/null||service ssh start 2>/dev/null||sudo service ssh start 2>/dev/null||/usr/sbin/sshd 2>/dev/null||sudo /usr/sbin/sshd 2>/dev/null");puts(r?"x sshd":"\xe2\x9c\x93 sshd");return r!=0;}
