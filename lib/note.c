@@ -225,7 +225,16 @@ static int cmd_task(int argc,char**argv){
     if(!sub||!strcmp(sub,"top")){int n=load_tasks(dir),k=sub&&argc>3?atoi(argv[3]):10;if(k>n)k=n;
         printf("%d tasks\n",n);
         for(int i=0;i<k;i++)printf("  %2d P%s %.60s\n",i+1,T[i].p,T[i].t);
-        puts("\033[90m  a t top N        top N by priority\n  a t due N        top N by deadline\n  a t l            list all\n  a t r            review (navigate)\n  a t add <text>   add task\n  a t h            help\033[0m");return 0;}
+        puts("\n  l=list  r=review  v=vision  d=due  k=rank  m=manage\n  f=flag  s=sync  h=help  1-9=open task  add <text>");
+        if(!isatty(0))return 0;
+        printf("\n> ");fflush(stdout);
+        struct termios ot,rt;tcgetattr(0,&ot);rt=ot;rt.c_lflag&=~(tcflag_t)(ICANON|ECHO);rt.c_cc[VMIN]=1;tcsetattr(0,TCSAFLUSH,&rt);
+        char ch;int rv=read(0,&ch,1);tcsetattr(0,TCSAFLUSH,&ot);
+        if(rv!=1||ch=='\x1b'||ch==3){putchar('\n');return 0;}putchar('\n');
+        if(ch>='1'&&ch<='9'){char d[2]={ch,0};execvp("a",(char*[]){"a","t",d,NULL});}
+        {static const char km[]="lrvdkmfsh";static const char*kv[]={"l","r","v","due","rank","m","f","sync","h"};
+        for(int i=0;km[i];i++)if(ch==km[i]){execvp("a",(char*[]){"a","t",(char*)kv[i],NULL});}}
+        printf("x %c\n",ch);return 1;}
     if(!strcmp(sub,"v")||!strcmp(sub,"vision")){
         char vf[P];snprintf(vf,P,"%s/vision.txt",SROOT);
         size_t vl;char*vc=readf(vf,&vl);
