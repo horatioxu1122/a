@@ -220,7 +220,7 @@ static void task_repri(int x,int pv){
     rename(T[x].d,dst);printf("\xe2\x9c\x93 P%s %.40s\n",np,T[x].t);
 }
 static int cmd_task(int argc,char**argv){
-    perf_disarm();
+    perf_disarm();pull_bg();
     char dir[P];snprintf(dir,P,"%s/tasks",SROOT);mkdirp(dir);const char*sub=argc>2?argv[2]:NULL;
     if(!sub||!strcmp(sub,"top")){int n=load_tasks(dir),k=sub&&argc>3?atoi(argv[3]):10;if(k>n)k=n;
         printf("%d tasks\n",n);

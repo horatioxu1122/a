@@ -37,11 +37,14 @@ static void ensure_git_id(void) {
 /* sync — flock serializes concurrent git ops */
 static void sync_repo(void) {
     ensure_git_id();
+    int fd=open("/tmp/.a_git.lock",O_CREAT|O_WRONLY,0644);
+    if(fd>=0&&flock(fd,LOCK_EX|LOCK_NB)){close(fd);return;}
     char c[B];
-    snprintf(c,B,"flock /tmp/.a_git.lock sh -c \"D='%s';[ -s \\$D/.git/index ]||git -C \\$D read-tree HEAD;git -C \\$D add -A;git -C \\$D commit -qm sync;git -C \\$D pull --no-rebase --no-edit -q origin main 2>/dev/null;git -C \\$D push -q origin main 2>/dev/null\"",SROOT);
-    (void)!system(c);
+    snprintf(c,B,"D='%s';[ -s \"$D/.git/index\" ]||git -C \"$D\" read-tree HEAD;git -C \"$D\" add -A;git -C \"$D\" commit -qm sync 2>/dev/null;git -C \"$D\" pull --no-rebase --no-edit -q origin main 2>/dev/null;git -C \"$D\" push -q origin main 2>/dev/null",SROOT);
+    (void)!system(c);if(fd>=0)close(fd);
 }
 static void sync_bg(void) {
     pid_t p=fork();if(p<0)return;if(p>0){waitpid(p,NULL,WNOHANG);return;}
     if(fork()>0)_exit(0);setsid();freopen("/dev/null","w",stdout);freopen("/dev/null","w",stderr);sync_repo();_exit(0);
 }
+static void pull_bg(void){char c[P];snprintf(c,P,"git -C '%s' pull -q origin main >/dev/null 2>&1 &",SROOT);(void)!system(c);}
