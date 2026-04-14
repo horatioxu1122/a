@@ -176,7 +176,7 @@ static int cmd_ssh(int argc,char**argv){
             close(pfd[1]);snprintf(S[ns].nm,128,"%s",H[i].name);snprintf(S[ns].host,256,"%s",H[i].host);
             snprintf(S[ns].pw,256,"%s",H[i].pw);S[ns].fd=pfd[0];S[ns].pid=p;ns++;}
         for(int i=0;i<ns;i++){char o[128];int l=(int)read(S[i].fd,o,127);o[l>0?l:0]=0;close(S[i].fd);waitpid(S[i].pid,NULL,0);
-            if(o[0]){ssh_savex(dir,S[i].nm,S[i].host,S[i].pw,"OS",o);printf("\xe2\x9c\x93 %s: %s\n",S[i].nm,o);}
+            if(o[0]){ssh_savex(dir,S[i].nm,S[i].host,S[i].pw,"OS",o);printf("\xe2\x9c\x93 %s\n",S[i].nm);}
             else printf("x %s\n",S[i].nm);}
         return 0;}
 
