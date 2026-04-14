@@ -1,6 +1,7 @@
 """a bg <command...> — run command in a named tmux window, tee'd to a log. Visible to user, other agents, cross-device via tmux ls.
-For memory-risky jobs (ML model loads, gemma, training) wrap with systemd-run to cap RAM via cgroup and avoid system-wide OOM thrash:
-  a bg systemd-run --user --scope --property=MemoryMax=8G --property=MemorySwapMax=0 ./gemma-job"""
+For memory-risky jobs (ML model loads, gemma, training) wrap to cap RAM and avoid system-wide OOM thrash:
+  Linux: a bg systemd-run --user --scope --property=MemoryMax=8G --property=MemorySwapMax=0 ./job
+  macOS: no cgroup equivalent; use  ulimit -v 8000000; ./job  or run in Docker. Mac's jetsam handles OOM reactively, less precise than Linux cgroups."""
 import sys, os, subprocess as sp, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _common import ADATA_ROOT
