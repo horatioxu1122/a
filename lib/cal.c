@@ -1,4 +1,3 @@
-/* ── cal ── */
 static int cmd_cal(int c,char**v){
     char d[P],tf[P];snprintf(d,P,"%s/cal",SROOT);mkdirp(d);
     {struct timespec ts;clock_gettime(CLOCK_REALTIME,&ts);struct tm*tm=localtime(&ts.tv_sec);

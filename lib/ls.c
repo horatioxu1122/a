@@ -6,7 +6,6 @@ static int tm_list(char out[B], char *lines[], int max) {
     while (*p && n < max) { lines[n++]=p; char *e=strchr(p,'\n'); if(e){*e=0;p=e+1;}else break; }
     return n;
 }
-/* ── ls ── */
 static int cmd_ls(int argc, char **argv) {
     if (argc > 2 && argv[2][0] >= '0' && argv[2][0] <= '9') {
         char out[B]; char *lines[64]; int n=tm_list(out,lines,64);
@@ -26,12 +25,11 @@ static int cmd_ls(int argc, char **argv) {
     puts("\nSelect:\n  a ls 0"); return 0;
 }
 
-/* ── kill ── */
 static int cmd_kill(int argc, char **argv) {
     const char *sel = argc > 2 ? argv[2] : NULL;
     if ((sel && !strcmp(sel, "all")) || (argc > 1 && !strcmp(argv[1], "killall"))) {
         (void)!system("pkill -9 tmux 2>/dev/null; sleep 1");
-        (void)!system("clear"); puts("\xe2\x9c\x93"); return 0;
+        (void)!system("clear"); puts("✓"); return 0;
     }
     char out[B]; char *lines[64]; int n=tm_list(out,lines,64);
     if (!n) { puts("No windows"); return 0; }
@@ -39,7 +37,7 @@ static int cmd_kill(int argc, char **argv) {
         int idx = atoi(sel);
         if (idx >= 0 && idx < n) {
             char c[B]; snprintf(c, B, "tmux kill-window -t '%s:%s'", TMS, lines[idx]); (void)!system(c);
-            printf("\xe2\x9c\x93 %s\n", lines[idx]); return 0;
+            printf("✓ %s\n", lines[idx]); return 0;
         }
     }
     for (int i = 0; i < n; i++) printf("  %d  %s\n", i, lines[i]);
@@ -50,13 +48,12 @@ static int cmd_copy(int c,char**v){(void)c;(void)v;char o[B];int ol=0;
     if(!isatty(0)){ssize_t n;while((n=read(0,o+ol,(size_t)(B-ol-1)))>0)ol+=(int)n;}
     else if(getenv("TMUX")){pcmd("tmux capture-pane -pJ -S-99|awk '/[$@].*[$@]|❯/{b=s;s=\"\";next}{s=s?s\"\\n\"$0:$0}END{printf\"%s\",b}'",o,B);ol=(int)strlen(o);}
     else{puts("x Pipe or tmux");return 1;}
-    if(ol<1){puts("x No output");return 0;}o[ol]=0;if(to_clip(o)){puts("x Needs tmux");return 1;}printf("\xe2\x9c\x93 %.50s\n",o);return 0;}
+    if(ol<1){puts("x No output");return 0;}o[ol]=0;if(to_clip(o)){puts("x Needs tmux");return 1;}printf("✓ %.50s\n",o);return 0;}
 
 /* dash removed — tab bar is the dashboard */
 static void ssh_parse(const char*,char*,char*);
 static int ssh_pre(char*,int,const char*,const char*,const char*,const char*);
 
-/* ── watch ── */
 static int cmd_watch(int argc, char **argv) {
     if (argc < 3) { puts("Usage: a watch <session> [duration]"); return 1; }
     const char *sn = argv[2]; int dur = argc > 3 ? atoi(argv[3]) : 0;
@@ -70,7 +67,7 @@ static int cmd_watch(int argc, char **argv) {
         if (strcmp(out, last)) {
             if (strstr(out, "Are you sure?") || strstr(out, "Continue?") || strstr(out, "[y/N]") || strstr(out, "[Y/n]")) {
                 tm_key(sn, "y"); tm_key(sn, "Enter");
-                puts("\xe2\x9c\x93 Auto-responded");
+                puts("✓ Auto-responded");
             }
             snprintf(last, B, "%s", out);
         }
@@ -80,7 +77,6 @@ static int cmd_watch(int argc, char **argv) {
     return 0;
 }
 
-/* ── send ── */
 static int cmd_send(int argc, char **argv) {
     if (argc < 4) { puts("Usage: a send <session> <prompt> [--wait] [--no-enter]"); return 1; }
     const char *sn = argv[2];
@@ -92,7 +88,7 @@ static int cmd_send(int argc, char **argv) {
         else pl+=snprintf(prompt+pl,(size_t)(B-pl),"%s%s",pl?" ":"",argv[i]);}}
     tm_send(sn, prompt);
     if (enter) { usleep(100000); tm_key(sn, "Enter"); }
-    printf("\xe2\x9c\x93 %s '%s'\n", enter?"Sent to":"Inserted into", sn);
+    printf("✓ %s '%s'\n", enter?"Sent to":"Inserted into", sn);
     if (wait) {
         printf("Waiting..."); fflush(stdout);
         time_t last_active = time(NULL);
@@ -159,7 +155,7 @@ static int cmd_jobs(int argc, char **argv) {
         if(fo){fclose(fo);rename(tmp,cf);}
         _exit(0);}}
     if(rm&&*rm>='0'&&*rm<='9'){int x=atoi(rm);
-        if(x<na&&A[x].pid[0]){char c[B];snprintf(c,B,"tmux kill-window -t '%s'",A[x].pid);(void)!system(c);printf("\xe2\x9c\x93 %s\n",A[x].sn);}
+        if(x<na&&A[x].pid[0]){char c[B];snprintf(c,B,"tmux kill-window -t '%s'",A[x].pid);(void)!system(c);printf("✓ %s\n",A[x].sn);}
         return 0;}
     if(sel&&*sel>='0'&&*sel<='9'){int x=atoi(sel);
         if(x<na&&A[x].pid[0]){char c[B];snprintf(c,B,"tmux select-window -t '%s'",A[x].pid);(void)!system(c);tm_go(A[x].sn);}
@@ -171,7 +167,7 @@ static int cmd_jobs(int argc, char **argv) {
     if(NJ){hub_sort();hub_timers();
         if(na)puts("");printf("SCHEDULED\n  %-10s %-6s %-8s  %s\n","Name","Sched","Dev","Cmd");for(int i=0;i<NJ;i++){
         hub_t*j=&HJ[i];char cp[128];hub_trunc(cp,128,j->p,50);
-        printf("  %-10s %-6s %-8.7s%s %s\n",j->n,j->s,j->d,hub_on(j)?"\xe2\x9c\x93":" ",cp);}}
+        printf("  %-10s %-6s %-8.7s%s %s\n",j->n,j->s,j->d,hub_on(j)?"✓":" ",cp);}}
     printf("\n  a j \"prompt\"  new job    a j a  agent    a job #  attach    a job rm #\n  a hub add <name> <sched> <cmd>  schedule recurring    a hub  manage\n  e %s/common/prompts/job.txt\n",SROOT);
     return 0;
 }

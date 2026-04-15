@@ -1,4 +1,3 @@
-/* ── session (c, l, g, co, cp, etc.) ── */
 static int cmd_sess(int argc, char **argv) {
     init_db(); load_cfg(); load_proj(); load_apps(); load_sess();
     const char *key = argv[1];
@@ -52,7 +51,6 @@ static int cmd_sess(int argc, char **argv) {
     return 0;
 }
 
-/* ── dir_file ── */
 static int cmd_dir_file(int argc, char **argv) { (void)argc;
     const char *arg = argv[1];
     char expanded[P];
@@ -74,7 +72,6 @@ static int cmd_dir_file(int argc, char **argv) { (void)argc;
     return 0;
 }
 
-/* ── interactive picker ── */
 typedef struct{char*p;int sc;}fqm_t;
 static FC fq[1024];int nfq;
 static int fq_get(const char*s){int sl=(int)strlen(s),b=0,bl=0;

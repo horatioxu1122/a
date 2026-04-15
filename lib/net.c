@@ -1,4 +1,3 @@
-/* ── bg backup ── */
 static void bg_backup_jsonl(void) {
     char c[B]; snprintf(c, B, "nohup sh -c 'D=%s/backup/%s;mkdir -p $D&&"
         "find ~/.claude/projects -name \"*.jsonl\" 2>/dev/null|while read f;do cp -n \"$f\" $D/ 2>/dev/null;done;"
@@ -8,7 +7,6 @@ static void bg_backup_jsonl(void) {
     (void)!system(c);
 }
 
-/* ── email ── */
 static int cmd_email(int argc, char **argv) { AB;
     char bp[P]; snprintf(bp,P,"%s/scan/base.py",SROOT);
     char **na=malloc(((unsigned)argc+2)*sizeof(char*));
@@ -18,7 +16,6 @@ static int cmd_email(int argc, char **argv) { AB;
     execvp("python3",na); perror("python3"); return 1;
 }
 
-/* ── log ── */
 static int cmd_log(int argc, char **argv) {
     const char *sub = argc > 2 ? argv[2] : NULL;
     if (sub && !strcmp(sub, "backup")) { perf_disarm();
@@ -40,7 +37,7 @@ static int cmd_log(int argc, char **argv) {
             else {
                 snprintf(c, B, "'%s/a' ssh '%s' 'ls ~/a/adata/backup/%s/*.jsonl 2>/dev/null | wc -l' 2>/dev/null", DDIR, dn, dn);
                 pcmd(c, cnt, 64); int rn = atoi(cnt);
-                printf("%-16s %6d %6d  %s\n", dn, loc, rn, rn ? "remote \xe2\x9c\x93" : "remote (no JSONL)");
+                printf("%-16s %6d %6d  %s\n", dn, loc, rn, rn ? "remote ✓" : "remote (no JSONL)");
             }
             if (nl) dp = nl + 1; else break;
         }
@@ -99,7 +96,7 @@ static int cmd_log(int argc, char **argv) {
     char bpath[P]; snprintf(bpath,P,"adata/backup/%s/",DEV);
     char gdu[256]=""; if(gdid[0])snprintf(gdu,256,"https://drive.google.com/drive/folders/%s",gdid);
     #define ROW(t,n,l,p,u) { int a=t?(int)(now-t):-1; if(a>=0)AGO(ago,32,a);else snprintf(ago,32,"never"); \
-        printf("%s %-18s %3d  %-28s last: %s\n",n?"\xe2\x9c\x93":"x",l,n,p,ago); if(u)printf("  \xe2\x86\x92 %s\n",u); }
+        printf("%s %-18s %3d  %-28s last: %s\n",n?"✓":"x",l,n,p,ago); if(u)printf("  → %s\n",u); }
     putchar('\n');
     ROW(llm_new,nlogs,"LLM transcripts",bpath,gdu[0]?gdu:NULL)
     ROW(job_new,jlogs,"Job tmux logs","adata/git/jobs/",git_ok?gurl:NULL)
@@ -110,24 +107,22 @@ static int cmd_log(int argc, char **argv) {
     return 0;
 }
 
-/* ── login ── */
 static int cmd_login(int argc, char **argv) {
     char ld[P];snprintf(ld,P,"%s/login",SROOT);mkdirp(ld);
     const char*sub=argc>2?argv[2]:NULL;
     if(sub&&!strcmp(sub,"save")){char tk[256];pcmd("gh auth token 2>/dev/null",tk,256);tk[strcspn(tk,"\n")]=0;
         if(!*tk){puts("x gh auth token failed");return 1;}
         char fp[P],buf[B];snprintf(fp,P,"%s/gh_%s.txt",ld,DEV);
-        snprintf(buf,B,"Token: %s\nDevice: %s\n",tk,DEV);writef(fp,buf);sync_bg();printf("\xe2\x9c\x93 saved\n");return 0;}
+        snprintf(buf,B,"Token: %s\nDevice: %s\n",tk,DEV);writef(fp,buf);sync_bg();printf("✓ saved\n");return 0;}
     if(sub&&!strcmp(sub,"apply")){char fp[P*2],tk[256]="";
         DIR*d=opendir(ld);struct dirent*e;if(d){while((e=readdir(d))){if(!strncmp(e->d_name,"gh_",3)){
             snprintf(fp,P,"%s/%s",ld,e->d_name);kvs_t kv=kvfile(fp);const char*t=kvget(&kv,"Token");
             if(t&&*t){snprintf(tk,256,"%s",t);break;}}}closedir(d);}
         if(!*tk){puts("x no saved token");return 1;}
         snprintf(fp,P*2,"echo '%s'|gh auth login --with-token 2>&1",tk);(void)!system(fp);
-        (void)!system("gh auth setup-git 2>/dev/null");printf("\xe2\x9c\x93 applied\n");return 0;}
+        (void)!system("gh auth setup-git 2>/dev/null");printf("✓ applied\n");return 0;}
     puts("a login save   save gh token\na login apply  apply from sync");return 0;}
 
-/* ── sync ── */
 static int cmd_sync(int argc, char **argv) { AB;
     printf("%s\n", SROOT);
     ensure_adata();
@@ -156,7 +151,7 @@ static int cmd_sync(int argc, char **argv) { AB;
     if(rc[0]){char cd[P],bd[P];snprintf(cd,P,"%s/context",AROOT);snprintf(bd,P,"%s/books",AROOT);mkdirp(cd);mkdirp(bd);
         snprintf(c,B,"rclone copy '%s' '%s:adata/context/' -q -L 2>/dev/null;rclone copy '%s:adata/context/' '%s' -q 2>/dev/null",cd,rc,rc,cd);(void)!system(c);
         snprintf(c,B,"rclone copy '%s' '%s:adata/books/' --include '*/output/*.txt' -q -L 2>/dev/null;rclone copy '%s:adata/books/' '%s' --include '*/output/*.txt' -q 2>/dev/null",bd,rc,rc,bd);(void)!system(c);
-        puts("\xe2\x9c\x93 context + books");}}
+        puts("✓ context + books");}}
     if (argc > 2 && !strcmp(argv[2], "all")) {
         puts("\n--- Broadcasting to SSH hosts ---");
         char bc[B]; snprintf(bc, B, "%s/lib/a.py", SDIR);
@@ -165,7 +160,6 @@ static int cmd_sync(int argc, char **argv) { AB;
     return 0;
 }
 
-/* ── update ── */
 static int cmd_update(int argc, char **argv) { AB;
     const char *sub = argc > 2 ? argv[2] : NULL;
     if (sub && (!strcmp(sub,"help")||!strcmp(sub,"-h"))) {
@@ -175,7 +169,7 @@ static int cmd_update(int argc, char **argv) { AB;
     if (sub && (!strcmp(sub,"bash")||!strcmp(sub,"zsh")||!strcmp(sub,"shell")||!strcmp(sub,"cache"))) {
         init_db(); load_cfg(); list_all(1, 1);
         gen_icache(); tm_ensure_conf();
-        puts("\xe2\x9c\x93 Cache"); return 0;
+        puts("✓ Cache"); return 0;
     }
     {char g[P];snprintf(g,P,"%s/.git",SDIR);if(access(g,F_OK)!=0){puts("x Not in git repo");init_db();load_cfg();list_all(1,1);gen_icache();return 0;}}
     char c[B],oh[64]={0};
@@ -186,17 +180,17 @@ static int cmd_update(int argc, char **argv) { AB;
     if(strstr(out,"diverged")){puts("Diverged — rebasing...");snprintf(c,B,"git -C '%s' pull --rebase 2>/dev/null",SDIR);(void)!system(c);ch=1;}
     else if(strstr(out,"behind")){puts("Downloading...");snprintf(c,B,"git -C '%s' pull --ff-only 2>/dev/null",SDIR);(void)!system(c);ch=1;}
     /* no-op: up to date + binary exists */
-    {char b[P];snprintf(b,P,"%s/a",DDIR);if(!ch&&!access(b,X_OK)){puts("\xe2\x9c\x93 Up to date");return 0;}}
+    {char b[P];snprintf(b,P,"%s/a",DDIR);if(!ch&&!access(b,X_OK)){puts("✓ Up to date");return 0;}}
     /* detect dep change: a.c modified → pip/shell/node */
     int dc=0;
     if(ch&&oh[0]){snprintf(c,B,"git -C '%s' diff --name-only '%s' HEAD 2>/dev/null",SDIR,oh);char df[B];pcmd(c,df,B);dc=!!strstr(df,"a.c");}
     init_db();load_cfg();
     snprintf(c,B,"sh '%s/a.c'",SDIR);
-    if(system(c)==0){puts("\xe2\x9c\x93 Built");init_migrate();}else puts("x Build failed");
+    if(system(c)==0){puts("✓ Built");init_migrate();}else puts("x Build failed");
     if(dc){
         {char vp[P];snprintf(vp,P,"%s/venv/bin/pip",AROOT);
          if(access(vp,X_OK)==0){snprintf(c,B,"'%s' install -q pexpect prompt_toolkit aiohttp 2>/dev/null",vp);
-          if(system(c)==0)puts("\xe2\x9c\x93 Python deps");else puts("x pip failed");}}
+          if(system(c)==0)puts("✓ Python deps");else puts("x pip failed");}}
         snprintf(c,B,"bash '%s/a.c' shell 2>&-;bash '%s/a.c' node 2>&-",SDIR,SDIR);(void)!system(c);
         if(access("/data/data/com.termux",F_OK)==0){char td[P];snprintf(td,P,"%s/.tmp",HOME);mkdirp(td);
          snprintf(c,B,"tmux set-environment -g CLAUDE_CODE_TMPDIR '%s' 2>/dev/null",td);(void)!system(c);}

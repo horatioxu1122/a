@@ -8,17 +8,17 @@ static void ensure_adata(void) {
     char c[B],out[256];
     if(!git_in_repo(SROOT)){
         snprintf(c,B,"gh repo clone seanpattencode/a-git '%s' 2>/dev/null",SROOT);
-        if(!system(c)){puts("\xe2\x9c\x93 Cloned adata/git");goto link;}
+        if(!system(c)){puts("✓ Cloned adata/git");goto link;}
         mkdirp(SROOT);
         snprintf(c,B,"git -C '%s' init -q&&git -C '%s' checkout -b main 2>/dev/null",SROOT,SROOT);
-        (void)!system(c);puts("\xe2\x9c\x93 Init adata/git (gh auth login for sync)");goto link;
+        (void)!system(c);puts("✓ Init adata/git (gh auth login for sync)");goto link;
     }
     snprintf(c,B,"git -C '%s' remote get-url origin 2>/dev/null",SROOT);
     pcmd(c,out,256);out[strcspn(out,"\n")]=0;
     if(!out[0]){char ghuser[64]="";
         pcmd("gh api user --jq .login 2>/dev/null",ghuser,sizeof(ghuser));ghuser[strcspn(ghuser,"\n")]=0;
         if(ghuser[0]){snprintf(c,B,"git -C '%s' remote add origin https://github.com/%s/a-git.git 2>/dev/null",SROOT,ghuser);
-            (void)!system(c);printf("\xe2\x9c\x93 Added remote adata/git \xe2\x86\x92 %s/a-git\n",ghuser);}
+            (void)!system(c);printf("✓ Added remote adata/git → %s/a-git\n",ghuser);}
     }
 link:{char d[P];snprintf(d,P,"%s/my",SROOT);mkdir(d,0755);snprintf(d,P,"%s/my",SDIR);unlink(d);symlink("adata/git/my",d);}
 }
@@ -32,7 +32,7 @@ static void ensure_git_id(void) {
         if(!e[0]||!strcmp(e,"null"))snprintf(e,128,"%s@users.noreply.github.com",n);
     }else{gethostname(n,128);snprintf(e,128,"%s@local",n);}
     snprintf(c,B,"git config --global user.name '%s'&&git config --global user.email '%s'",n,e);
-    (void)!system(c);printf("\xe2\x9c\x93 git id: %s <%s>\n",n,e);
+    (void)!system(c);printf("✓ git id: %s <%s>\n",n,e);
 }
 /* sync — flock serializes concurrent git ops */
 static void sync_repo(void) {

@@ -1,9 +1,7 @@
-/* ── review ── */
 static int cmd_review(int argc, char **argv) { (void)argc;(void)argv;
     (void)!system("gh pr list 2>/dev/null");
     char*v[]={"a","job",NULL};return cmd_jobs(2,v); }
 
-/* ── docs ── */
 static int cmd_docs(int argc, char **argv) {
     char dir[P]; snprintf(dir, P, "%s/adocs", SROOT); mkdirp(dir);
     if (argc > 2) {
@@ -22,7 +20,6 @@ static int cmd_a_default(int c,char**v){
     init_db();load_cfg();load_sess();const char*k=cfget("default_agent");
     static char kb[16];snprintf(kb,16,"%s",k[0]?k:"c");v[1]=kb;return cmd_sess(c,v);}
 
-/* ── agent ── */
 static int cmd_agent(int argc, char **argv) {
     if(argc<3){char c[B];snprintf(c,B,"ls %s/scan/*.py 2>/dev/null|xargs -I{} basename {} .py|grep -v base",SROOT);
         return system(c);}
@@ -90,7 +87,6 @@ static int cmd_agent(int argc, char **argv) {
     return 0;
 }
 
-/* ── scan: a scan X → a agent run X ── */
 static int cmd_scan(int argc, char **argv) {
     if(argc<3){char c[B];snprintf(c,B,"ls %s/scan/*.py 2>/dev/null|xargs -I{} basename {} .py|grep -v base",SROOT);return system(c);}
     char *nv[64];nv[0]=argv[0];nv[1]=(char*)"agent";nv[2]=(char*)"run";
@@ -98,5 +94,4 @@ static int cmd_scan(int argc, char **argv) {
     return cmd_agent(argc+1,nv);
 }
 
-/* ── multi/all ── */
 static int cmd_all(int argc, char **argv) { fallback_py("multi", argc, argv); }

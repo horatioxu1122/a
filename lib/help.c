@@ -171,10 +171,10 @@ static int cmd_done(int argc,char**argv){AB;
     {char wd[P];if(getcwd(wd,P)){char df[P];snprintf(df,P,"%s/.a_done",wd);
         FILE*f=fopen(df,"w");if(f){fputs(msg[0]?msg:"done",f);fclose(f);}}}
     (void)!write(STDERR_FILENO,"\a",1);
-    puts("\xe2\x9c\x93 done");return 0;}
+    puts("✓ done");return 0;}
 
 static int cmd_dir(int c,char**v){(void)c;(void)v;char w[P];if(getcwd(w,P))puts(w);execlp("ls","ls",(char*)0);return 1;}
-static int cmd_x(int c,char**v){(void)c;(void)v;(void)!system("tmux kill-server 2>/dev/null");puts("\xe2\x9c\x93 All sessions killed");return 0;}
+static int cmd_x(int c,char**v){(void)c;(void)v;(void)!system("tmux kill-server 2>/dev/null");puts("✓ All sessions killed");return 0;}
 static int cmd_search(int c,char**v){AB;char u[B]="https://google.com";
     if(c>2){int l=snprintf(u,B,"https://google.com/search?q=");for(int i=2;i<c&&l<B-1;i++)l+=snprintf(u+l,(size_t)(B-l),"%s%s",i>2?"+":"",v[i]);}
     bg_exec(OPENER,u);return 0;}

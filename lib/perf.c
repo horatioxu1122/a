@@ -1,4 +1,3 @@
-/* ── perf: benchmark + timing display ── */
 static const char *BENCH_CMDS[] = {
     "i","help","config","task","ls","add","agent","copy","done","docs",
     "hi","move","prompt","remove","repo","send","set","setup",
@@ -9,26 +8,21 @@ static const char *BENCH_CMDS[] = {
     "sync","scan","update","install",NULL
 };
 
-/* parse limit (and optionally last bench time) from perf file. format: cmd:limit[:last] */
-static unsigned perf_limit(const char *data, const char *cmd) {
+/* perf file format: cmd:limit[:last]. field 0=limit, 1=last */
+static unsigned perf_field(const char *data, const char *cmd, int field) {
     if (!data) return 0;
     char needle[128]; snprintf(needle, 128, "\n%s:", cmd);
     const char *m = strstr(data, needle);
-    if (!m && !strncmp(data, cmd, strlen(cmd)) && data[strlen(cmd)] == ':')
-        m = data - 1;
-    if (m) return (unsigned)atoi(m + 1 + strlen(cmd) + 1);
-    return 0;
-}
-static unsigned perf_last(const char *data, const char *cmd) {
-    if (!data) return 0;
-    char needle[128]; snprintf(needle, 128, "\n%s:", cmd);
-    const char *m = strstr(data, needle);
-    if (!m && !strncmp(data, cmd, strlen(cmd)) && data[strlen(cmd)] == ':') m = data - 1;
+    size_t cl = strlen(cmd);
+    if (!m && !strncmp(data, cmd, cl) && data[cl] == ':') m = data - 1;
     if (!m) return 0;
-    const char *p = m + 1 + strlen(cmd) + 1;
+    const char *p = m + 1 + cl + 1;
+    if (!field) return (unsigned)atoi(p);
     const char *c = strchr(p, ':');
     return c ? (unsigned)atoi(c + 1) : 0;
 }
+#define perf_limit(d,c) perf_field(d,c,0)
+#define perf_last(d,c)  perf_field(d,c,1)
 
 /* display in ms, enforce in us. 27us overhead × 5B users = 1 human lifetime/year */
 #define fmt_us(us,buf,sz) snprintf(buf,sz,"%.3fms",(us)/1000.0)
@@ -157,7 +151,7 @@ static int cmd_perf(int argc, char **argv) {
             const char *label = res[i].cmd;
             char ft[32], fo[32], fn[32];
             fmt_us(t, ft, 32); fmt_us(old, fo, 32); fmt_us(res[i].new_lim, fn, 32);
-            const char *st = killed ? "\033[31mKILLED\033[0m" : tight ? "\033[32m↓ tight\033[0m" : "\033[32m\xe2\x9c\x93\033[0m";
+            const char *st = killed ? "\033[31mKILLED\033[0m" : tight ? "\033[32m↓ tight\033[0m" : "\033[32m✓\033[0m";
             printf("%-12s %10s %10s %10s  %s\n", label, ft, old ? fo : "-", fn, st);
         }
         puts("─────────────────────────────────────────────────────────────");

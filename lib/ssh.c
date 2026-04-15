@@ -56,13 +56,13 @@ static int cmd_ssh(int argc,char**argv){
         printf("x %c\n",ch);return 1;}
 
     /* start/stop/status */
-    if(!strcmp(sub,"start")){int r=system("sshd 2>/dev/null||service ssh start 2>/dev/null||sudo service ssh start 2>/dev/null||/usr/sbin/sshd 2>/dev/null||sudo /usr/sbin/sshd 2>/dev/null");puts(r?"x sshd":"\xe2\x9c\x93 sshd");return r!=0;}
-    if(!strcmp(sub,"stop")){(void)!system("pkill -x sshd 2>/dev/null||sudo pkill -x sshd");puts("\xe2\x9c\x93");return 0;}
+    if(!strcmp(sub,"start")){int r=system("sshd 2>/dev/null||service ssh start 2>/dev/null||sudo service ssh start 2>/dev/null||/usr/sbin/sshd 2>/dev/null||sudo /usr/sbin/sshd 2>/dev/null");puts(r?"x sshd":"✓ sshd");return r!=0;}
+    if(!strcmp(sub,"stop")){(void)!system("pkill -x sshd 2>/dev/null||sudo pkill -x sshd");puts("✓");return 0;}
     if(!strcmp(sub,"status")||!strcmp(sub,"s")){
         int on=!system("pgrep -x sshd >/dev/null 2>&1");char ip[128];
         pcmd("hostname -I 2>/dev/null|awk '{printf $1}'",ip,128);
         const char*u=getenv("USER");int p=access("/data/data/com.termux",F_OK)?22:8022;
-        printf("%s ssh %s@%s -p %d\n",on?"\xe2\x9c\x93":"x",u?u:"",ip,p);return 0;}
+        printf("%s ssh %s@%s -p %d\n",on?"✓":"x",u?u:"",ip,p);return 0;}
     /* setup — install openssh */
     if(!strcmp(sub,"setup")){
         int on=!system("pgrep -x sshd >/dev/null 2>&1");
@@ -71,7 +71,7 @@ static int cmd_ssh(int argc,char**argv){
                 if(!access("/data/data/com.termux",F_OK))(void)!system("pkg install -y openssh && sshd");
                 else (void)!system("sudo apt install -y openssh-server && sudo systemctl enable --now ssh");}}
         on=!system("pgrep -x sshd >/dev/null 2>&1");
-        printf("SSH: %s\n",on?"\xe2\x9c\x93 running":"x not running");return 0;}
+        printf("SSH: %s\n",on?"✓ running":"x not running");return 0;}
     /* key — generate ed25519 key */
     if(!strcmp(sub,"key")){char kf[P];snprintf(kf,P,"%s/.ssh/id_ed25519",HOME);
         struct stat st;if(stat(kf,&st)){char c[B];snprintf(c,B,"ssh-keygen -t ed25519 -N '' -f '%s'",kf);(void)!system(c);}
@@ -80,7 +80,7 @@ static int cmd_ssh(int argc,char**argv){
     if(!strcmp(sub,"auth")){char k[B];printf("Paste public key: ");if(!fgets(k,B,stdin))return 1;
         k[strcspn(k,"\n")]=0;char af[P];snprintf(af,P,"%s/.ssh/authorized_keys",HOME);
         char d[P];snprintf(d,P,"%s/.ssh",HOME);mkdirp(d);
-        FILE*f=fopen(af,"a");if(f){fprintf(f,"\n%s\n",k);fclose(f);chmod(af,0600);puts("\xe2\x9c\x93");}return 0;}
+        FILE*f=fopen(af,"a");if(f){fprintf(f,"\n%s\n",k);fclose(f);chmod(af,0600);puts("✓");}return 0;}
     /* push-auth — push gh/rclone creds to remote host */
     if(!strcmp(sub,"push-auth")&&argc>3){
         char tok[512];pcmd("gh auth token 2>/dev/null",tok,512);tok[strcspn(tok,"\n")]=0;
@@ -93,7 +93,7 @@ static int cmd_ssh(int argc,char**argv){
         if(fexists(gh)){snprintf(c,B*2,"base64 '%s'|a ssh %s 'mkdir -p ~/.config/gh&&base64 -d>~/.config/gh/hosts.yml'",gh,tgt);(void)!system(c);}}
         /* push gh token */
         if(tok[0]){char c[B*2];snprintf(c,B*2,"a ssh %s 'echo \"%s\"|gh auth login --with-token'",tgt,tok);(void)!system(c);}
-        puts("\xe2\x9c\x93");return 0;}
+        puts("✓");return 0;}
     /* add — interactive */
     if(!strcmp(sub,"add")){char h[256],n[128],pw[256];
         printf("Host: ");if(!fgets(h,256,stdin))return 1;h[strcspn(h,"\n")]=0;
@@ -105,7 +105,7 @@ static int cmd_ssh(int argc,char**argv){
         char tc[B];int l=ssh_pre(tc,B,pw,"-oConnectTimeout=5 -oStrictHostKeyChecking=no",port,hp);
         snprintf(tc+l,(size_t)(B-l)," 'echo ok' 2>&1");
         char o[64];if(pcmd(tc,o,64)||!strstr(o,"ok")){printf("x auth failed: %s",o);return 1;}}
-        ssh_savex(dir,n,h,pw,0,0);printf("\xe2\x9c\x93 %s\n",n);return 0;}
+        ssh_savex(dir,n,h,pw,0,0);printf("✓ %s\n",n);return 0;}
     /* self — register this device */
     if(!strcmp(sub,"self")){char ip[128]="",port[8]="22",h[256];
         const char*u=getenv("USER");const char*nm=argc>3?argv[3]:DEV;
@@ -126,7 +126,7 @@ static int cmd_ssh(int argc,char**argv){
                         "schtasks /create /tn 'WSL SSH Forward' /sc onlogon /rl highest /f /tr (\"powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File C:/Users/$env:USERNAME/.wsl-ssh.ps1\")\n");
                     snprintf(c,B,"powershell.exe -NoProfile -c \"Start-Process powershell -Verb RunAs -Wait -ArgumentList '-ExecutionPolicy','Bypass','-File','C:/Users/%s/.wsl-ssh.ps1'\"",wu);
                     puts("WSL SSH setup (UAC)...");(void)!system(c);}}
-            printf("\xe2\x9c\x93 WSL port forward\n");
+            printf("✓ WSL port forward\n");
 #ifdef __APPLE__
         }else if(1){
             pcmd("ipconfig getifaddr en0 2>/dev/null",ip,128);ip[strcspn(ip,"\n")]=0;
@@ -141,19 +141,19 @@ static int cmd_ssh(int argc,char**argv){
         char os[128];pcmd("uname -sr 2>/dev/null",os,128);os[strcspn(os,"\n")]=0;
         /* preserve existing password */
         const char*epw=NULL;for(int i=0;i<nh;i++)if(!strcmp(H[i].name,nm)){epw=H[i].pw;break;}
-        ssh_savex(dir,nm,h,epw,"OS",os);printf("\xe2\x9c\x93 %s %s [%s]\n",nm,h,os);return 0;}
+        ssh_savex(dir,nm,h,epw,"OS",os);printf("✓ %s %s [%s]\n",nm,h,os);return 0;}
     /* rm */
     if(!strcmp(sub,"rm")&&argc>3){int x=ssh_idx(argv[3],H,nh);
-        if(x>=0&&x<nh){unlink(H[x].path);sync_repo();printf("\xe2\x9c\x93 rm %s\n",H[x].name);}return 0;}
+        if(x>=0&&x<nh){unlink(H[x].path);sync_repo();printf("✓ rm %s\n",H[x].name);}return 0;}
     /* pw — change password */
     if(!strcmp(sub,"pw")&&argc>3){int x=ssh_idx(argv[3],H,nh);
         if(x>=0&&x<nh){char pw[256];printf("Password for %s: ",H[x].name);
-            if(fgets(pw,256,stdin)){pw[strcspn(pw,"\n")]=0;ssh_savex(dir,H[x].name,H[x].host,pw,0,0);printf("\xe2\x9c\x93 %s\n",H[x].name);}}return 0;}
+            if(fgets(pw,256,stdin)){pw[strcspn(pw,"\n")]=0;ssh_savex(dir,H[x].name,H[x].host,pw,0,0);printf("✓ %s\n",H[x].name);}}return 0;}
     /* mv/rename */
     if((!strcmp(sub,"mv")||!strcmp(sub,"rename"))&&argc>4){
         const char*old=argv[3],*nn=argv[4];int x=ssh_idx(old,H,nh);
         if(x>=0&&x<nh){unlink(H[x].path);
-            ssh_savex(dir,nn,H[x].host,H[x].pw,0,0);printf("\xe2\x9c\x93 %s -> %s\n",H[x].name,nn);}return 0;}
+            ssh_savex(dir,nn,H[x].host,H[x].pw,0,0);printf("✓ %s -> %s\n",H[x].name,nn);}return 0;}
     /* info */
     if(!strcmp(sub,"info")||!strcmp(sub,"i")){
         for(int i=0;i<nh;i++){char hp[256],port[8];ssh_parse(H[i].host,hp,port);
@@ -170,7 +170,7 @@ static int cmd_ssh(int argc,char**argv){
             close(pfd[1]);snprintf(S[ns].nm,128,"%s",H[i].name);snprintf(S[ns].host,256,"%s",H[i].host);
             snprintf(S[ns].pw,256,"%s",H[i].pw);S[ns].fd=pfd[0];S[ns].pid=p;ns++;}
         for(int i=0;i<ns;i++){char o[128];int l=(int)read(S[i].fd,o,127);o[l>0?l:0]=0;close(S[i].fd);waitpid(S[i].pid,NULL,0);
-            if(o[0]){ssh_savex(dir,S[i].nm,S[i].host,S[i].pw,"OS",o);printf("\xe2\x9c\x93 %s\n",S[i].nm);}
+            if(o[0]){ssh_savex(dir,S[i].nm,S[i].host,S[i].pw,"OS",o);printf("✓ %s\n",S[i].nm);}
             else printf("x %s\n",S[i].nm);}
         return 0;}
 
@@ -186,7 +186,7 @@ static int cmd_ssh(int argc,char**argv){
                 l=snprintf(c,B,"%c%s",r?'x':'+',o);(void)!write(pfd[1],c,(size_t)l);close(pfd[1]);_exit(0);}
             close(pfd[1]);snprintf(S[ns].nm,128,"%s",H[i].name);S[ns].fd=pfd[0];S[ns].pid=p;ns++;}
         for(int i=0;i<ns;i++){char o[B];int l=(int)read(S[i].fd,o,B-1);o[l>0?l:0]=0;close(S[i].fd);waitpid(S[i].pid,NULL,0);
-            printf("\n%s %s\n",o[0]=='+'?"\xe2\x9c\x93":"x",S[i].nm);if(o[1])printf("%s",o+1);}
+            printf("\n%s %s\n",o[0]=='+'?"✓":"x",S[i].nm);if(o[1])printf("%s",o+1);}
         return 0;}
     /* resolve host by # or name */
     int idx=-1;

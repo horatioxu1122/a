@@ -151,7 +151,6 @@ static int cmd_gui(int argc,char**argv){AB;perf_disarm();
         vcdp(js,o,B);printf("%s\n",o);return 0;}
     printf("unknown: a gui %s\n",s);return 1;}
 
-/* ── web: browser automation via agui.py ── */
 static int cmd_web(int argc,char**argv){AB;perf_disarm();
     char c[B],args[B]="";
     for(int i=2;i<argc;i++){int l=(int)strlen(args);snprintf(args+l,(size_t)(B-l),"%s%s",l?" ":"",argv[i]);}

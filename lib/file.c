@@ -14,4 +14,4 @@ static int cmd_get(int c,char**v){perf_disarm();
     printf("[o]pen [m]ove: ");fflush(stdout);char a[4];if(!fgets(a,4,stdin))return 1;
     if(*a=='o'){bg_exec(OPENER,s);return puts(fn),0;}
     CWD(wd);char dst[P];snprintf(dst,P,"%s/%s",wd,fn);
-    return rename(s,dst)?perror("mv"),1:(printf("\xe2\x9c\x93 → %s\n",wd),0);}
+    return rename(s,dst)?perror("mv"),1:(printf("✓ → %s\n",wd),0);}

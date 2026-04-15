@@ -99,8 +99,8 @@ static int hub_list(int all,const char*q){
         if(q&&!strcasestr(j->n,q)&&!strcasestr(j->p,q)&&!strcasestr(j->d,q))continue;
         int on=hub_on(j);char cp[512];hub_trunc(cp,512,j->p,cw);
         const char*lr=j->lr[0]?j->lr+5:"-";sh++;
-        if(m)printf("%-2d%-9s%-10s%s %s\n",i,j->n,lr,on?"\xe2\x9c\x93":" ",cp);
-        else printf("%-2d%-11s%-7s%-13s%-8s%s %s\n",i,j->n,j->s,lr,j->d,on?"\xe2\x9c\x93":" ",cp);}
+        if(m)printf("%-2d%-9s%-10s%s %s\n",i,j->n,lr,on?"✓":" ",cp);
+        else printf("%-2d%-11s%-7s%-13s%-8s%s %s\n",i,j->n,j->s,lr,j->d,on?"✓":" ",cp);}
     if(q)printf("\n%d/%d match '%s'\n",sh,NJ,q);
     else printf(NJ-sh?"\n%d jobs (+%d disabled, a hub all)\n":"\n%d jobs\n",sh,NJ-sh);
     printf("a hub <#>       run job\na hub on/off #  toggle\na hub add|rm    create/delete\na hub all       show disabled\na hub <query>   search\n");
@@ -120,7 +120,7 @@ static int cmd_hub(int argc, char **argv) {
         for(int i=0;i<NJ;i++)if(strcmp(HJ[i].n,j.n)&&!strcmp(HJ[i].s,j.s)&&HJ[i].en)
             fprintf(stderr,"! %s also at %s\n",HJ[i].n,j.s);
         hub_save(&j); sync_repo(); hub_timer(&j,1);
-        printf("\xe2\x9c\x93 %s @ %s\n",j.n,j.s); return 0;
+        printf("✓ %s @ %s\n",j.n,j.s); return 0;
     }
 
     if(sub[0]>='0'&&sub[0]<='9'){argv[3]=argv[2];argv[2]=(char*)"run";sub="run";argc=4;}
@@ -145,16 +145,16 @@ static int cmd_hub(int argc, char **argv) {
             FILE *lp=fopen(lf,"a"); if(lp) { fprintf(lp,"\n[%s] %s%s\n%s",ts,j->n,fail?" FAILED":"",out); fclose(lp); }
             char sn[128]; snprintf(sn,128,"hub:%s",j->n); alog(sn,"");
             if(fail&&j->s[0]) { char ec[B];snprintf(ec,B,"%s email 'hub: %s failed' '%s failed on %s — see hub.log'",G_argv[0],j->n,j->n,DEV);(void)!system(ec); }
-            if(fail) { printf("\xe2\x9c\x97 %s failed\n",j->n); return 1; }
-            printf("\xe2\x9c\x93\n"); return 0;
+            if(fail) { printf("✗ %s failed\n",j->n); return 1; }
+            printf("✓\n"); return 0;
         }
         if(!strcmp(sub,"on")||!strcmp(sub,"off")) {
             j->en=sub[1]=='n'; hub_save(j); sync_repo(); hub_timer(j,j->en);
-            printf("\xe2\x9c\x93 %s %s\n",j->n,sub); return 0;
+            printf("✓ %s %s\n",j->n,sub); return 0;
         }
         hub_timer(j,0);
         {char c[B];snprintf(c,B,"git -C '%s' rm -qf %s*.txt %s_*.txt 2>/dev/null",HD,j->n,j->n);(void)!system(c);}
-        sync_repo(); printf("\xe2\x9c\x93 rm %s\n",j->n); return 0;
+        sync_repo(); printf("✓ rm %s\n",j->n); return 0;
     }
 
     if(!strcmp(sub,"sync")) {
@@ -166,7 +166,7 @@ static int cmd_hub(int argc, char **argv) {
         for(int i=0;i<NJ;i++) hub_timer(&HJ[i],0);
 #endif
         int m=0; for(int i=0;i<NJ;i++) if(!strcmp(HJ[i].d,DEV)&&HJ[i].en) { hub_timer(&HJ[i],1); m++; }
-        printf("\xe2\x9c\x93 synced %d jobs\n",m); return 0;
+        printf("✓ synced %d jobs\n",m); return 0;
     }
 
     if(!strcmp(sub,"log")) {

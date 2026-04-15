@@ -327,39 +327,39 @@ typedef struct{char n[64];int c;}FC;
 static int ctcmp(const void*a,const void*b){return((const FC*)b)->c-((const FC*)a)->c;}
 static const char*EXT[]={"",".py",".c",".sh",".html",0};
 
-#include "lib/globals.c"  /* path globals */
-#include "lib/init.c"     /* paths, device, db */
-#include "lib/util.c"     /* readf,writef,pcmd,mkdirp */
-#include "lib/kv.c"       /* cfget/cfset ini config */
-#include "lib/data.c"     /* load proj/cfg/sess/notes */
-#include "lib/tmux.c"     /* tm_new/go/send, jcmd_fill */
-#include "lib/git.c"      /* git_in_repo, git_root */
-#include "lib/fork.c"     /* fork copy/rm/run */
-#include "lib/session.c"  /* agent launch, send_prefix_bg */
-#include "lib/alog.c"     /* activity logging */
-#include "lib/help.c"     /* help, TUI picker */
-#include "lib/project.c"  /* pick project by number */
-#include "lib/config.c"   /* agent/model/key settings */
-#include "lib/push.c"     /* git push, tok diff */
-#include "lib/hub.c"      /* multi-device agent fleet */
-#include "lib/ls.c"       /* windows, kill, job review */
-#include "lib/note.c"     /* notes+tasks CRUD */
-#include "lib/ssh.c"      /* device ssh setup+exec */
-#include "lib/net.c"      /* sync, backup, email */
-#include "lib/cal.c"      /* calendar */
-#include "lib/agent.c"    /* code review, scan */
-#include "lib/file.c"     /* Downloads open/move */
-#include "lib/view.c"     /* gui: visual interaction, web: browser/agui */
-#include "lib/cc.c"       /* compiler manager */
-#include "lib/cmd.c"      /* native read+grep, ~25us vs ~100ms native tools */
-#include "lib/perf.c"     /* benchmark, timing limits */
-#include "lib/work.c"     /* workcycle habits */
-#include "lib/sess.c"     /* named sessions c/l/g */
-#include "lib/vm.c"       /* disposable QEMU VM */
-#include "lib/new.c"      /* self-replicate to device */
-#include "lib/bench.c"    /* UI latency benchmark */
-#include "lib/serve.c"   /* C HTTP server for UI */
-#include "lib/tok.c"     /* token count for files/dirs */
+#include "lib/globals.c"
+#include "lib/init.c"
+#include "lib/util.c"
+#include "lib/kv.c"
+#include "lib/data.c"
+#include "lib/tmux.c"
+#include "lib/git.c"
+#include "lib/fork.c"
+#include "lib/session.c"
+#include "lib/alog.c"
+#include "lib/help.c"
+#include "lib/project.c"
+#include "lib/config.c"
+#include "lib/push.c"
+#include "lib/hub.c"
+#include "lib/ls.c"
+#include "lib/note.c"
+#include "lib/ssh.c"
+#include "lib/net.c"
+#include "lib/cal.c"
+#include "lib/agent.c"
+#include "lib/file.c"
+#include "lib/view.c"
+#include "lib/cc.c"
+#include "lib/cmd.c"
+#include "lib/perf.c"
+#include "lib/work.c"
+#include "lib/sess.c"
+#include "lib/vm.c"
+#include "lib/new.c"
+#include "lib/bench.c"
+#include "lib/serve.c"
+#include "lib/tok.c"
 
 static int cmd_freq(int c,char**v){perf_disarm();
     int vb=0,n=0;

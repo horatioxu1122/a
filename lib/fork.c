@@ -28,7 +28,7 @@ static int cmd_fork(int argc, char **argv) {
         char fp[P]; snprintf(fp,P,"%s/%s",fd,argv[3]);
         struct stat st; if(stat(fp,&st)){fprintf(stderr,"x %s?\n",argv[3]);return 1;}
         char c[B]; snprintf(c,B,"rm -rf '%s'",fp); (void)!system(c);
-        printf("\xe2\x9c\x93 rm %s\n",argv[3]); return 0;
+        printf("✓ rm %s\n",argv[3]); return 0;
     }
 
     if(!strcmp(sub,"run")) {
@@ -44,7 +44,7 @@ static int cmd_fork(int argc, char **argv) {
     struct stat st; if(!stat(fp,&st)){printf("exists: %s\n",fp);
         char tf[P];snprintf(tf,P,"%s/cd_target",DDIR);writef(tf,fp);return 0;}
     if(fork_cp(SDIR,fp)){fprintf(stderr,"x copy failed\n");return 1;}
-    printf("\xe2\x9c\x93 %s\n",fp);
+    printf("✓ %s\n",fp);
     char tf[P];snprintf(tf,P,"%s/cd_target",DDIR);writef(tf,fp);
     return 0;
 }

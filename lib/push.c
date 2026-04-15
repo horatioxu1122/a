@@ -1,4 +1,3 @@
-/* ── push ── */
 static int cmd_push(int argc, char **argv) { AB;
     char cwd[P]; if(!getcwd(cwd,P)) snprintf(cwd,P,".");
     char msg[B]="";
@@ -14,7 +13,7 @@ static int cmd_push(int argc, char **argv) { AB;
             snprintf(br,128,"fork-%s",bname(cwd));
             snprintf(c,B,"cd '%s'&&git init -q&&git remote add origin '%s'&&git fetch -q --depth=1 origin main&&git update-ref refs/heads/'%s' origin/main&&git symbolic-ref HEAD refs/heads/'%s'&&git add -A&&git commit -qm '%s'&&git push -u origin '%s' 2>&1",cwd,remote,br,br,msg,br);
             char out[B];pcmd(c,out,B);
-            if(strstr(out,"->")||strstr(out,"new branch"))printf("\xe2\x9c\x93 pushed branch %s\n",br);
+            if(strstr(out,"->")||strstr(out,"new branch"))printf("✓ pushed branch %s\n",br);
             else printf("x %s\n",out);
             return 0;}
         /* Check for sub-repos */
@@ -27,7 +26,7 @@ static int cmd_push(int argc, char **argv) { AB;
             printf(" [y/n]: "); char buf[8]; if (!fgets(buf,8,stdin) || buf[0]!='y') return 0;
             for (int i = 0; i < nsub; i++) {
                 char c[B]; snprintf(c, B, "cd '%s/%s' && git add -A && git commit -m '%s' --allow-empty 2>/dev/null && git push 2>/dev/null", cwd, subs[i], msg);
-                int r = system(c); printf("%s %s\n", r==0?"\xe2\x9c\x93":"x", subs[i]);
+                int r = system(c); printf("%s %s\n", r==0?"✓":"x", subs[i]);
             }
             return 0;
         }
@@ -36,10 +35,10 @@ static int cmd_push(int argc, char **argv) { AB;
         return 0;
     }
     char dirty[64]="";pcmd("git status --porcelain 2>/dev/null",dirty,64);
-    const char*tag=dirty[0]?"\xe2\x9c\x93":"\xe2\x97\x8b";
+    const char*tag=dirty[0]?"✓":"○";
     char ok[P],ef[P],c[B*2];struct stat st;
     snprintf(ok,P,"%s/logs/push.ok",DDIR);snprintf(ef,P,"%s/logs/push.err",DDIR);
-    {char*e=readf(ef,NULL);if(e){unlink(ef);unlink(ok);printf("\xe2\x9c\x97 %s\n",e);free(e);}}
+    {char*e=readf(ef,NULL);if(e){unlink(ef);unlink(ok);printf("✗ %s\n",e);free(e);}}
     #define PUSHCMD "{ git push -u origin HEAD 2>&1||{ git pull --rebase origin HEAD 2>/dev/null&&git push -u origin HEAD 2>&1;}; }"
     if (stat(ok, &st) == 0 && time(NULL) - st.st_mtime < 600) {
         snprintf(c,sizeof(c),"cd '%s'&&git add -A&&git commit -m \"%s\" --allow-empty 2>/dev/null&&"
@@ -54,7 +53,7 @@ static int cmd_push(int argc, char **argv) { AB;
     char out[B];pcmd(c,out,B);
     #undef PUSHCMD
     if(!strstr(out,"->")&&!strstr(out,"up-to-date")&&!strstr(out,"Everything")){
-        printf("\xe2\x9c\x97 push failed\n%s\n",out);
+        printf("✗ push failed\n%s\n",out);
         if(strstr(out,"conflict")||strstr(out,"CONFLICT"))printf("fix: resolve conflicts, git add -A, git commit, then a push\n");
         else if(strstr(out,"rejected"))printf("fix: git pull --rebase origin main, then a push\n");
         return 1;}
@@ -63,12 +62,11 @@ static int cmd_push(int argc, char **argv) { AB;
     printf("%s %s%s\n",tag,msg,strstr(out,"rebase")?" (rebased)":"");
     /* verify push: check our diff actually landed on origin */
     {snprintf(c,B,"cd '%s'&&git fetch origin -q 2>/dev/null&&git diff HEAD origin/HEAD --name-only 2>/dev/null",cwd);
-    char vf[B];pcmd(c,vf,B);if(vf[0]){printf("\xe2\x9c\x97 WARN: push succeeded but origin differs:\n%s  Another agent may have overwritten. Re-run: a push\n",vf);
+    char vf[B];pcmd(c,vf,B);if(vf[0]){printf("✗ WARN: push succeeded but origin differs:\n%s  Another agent may have overwritten. Re-run: a push\n",vf);
     system("a done 'push verify FAILED — changes lost on origin, re-push needed'");}}
     return 0;
 }
 
-/* ── pr ── */
 static void sq(const char *s, char *o, int sz) { int j=0; o[j++]='\'';
     for(;*s&&j<sz-4;s++){if(*s=='\''){o[j++]='\'';o[j++]='\\';o[j++]='\'';o[j++]='\'';}else o[j++]=*s;} o[j++]='\'';o[j]=0; }
 static int cmd_pr(int argc, char **argv) {
@@ -93,7 +91,6 @@ static int cmd_pr(int argc, char **argv) {
     return 0;
 }
 
-/* ── pull ── */
 static int cmd_pull(int argc, char **argv) { AB;
     char cwd[P]; if (!getcwd(cwd, P)) strcpy(cwd, ".");
     if (!git_in_repo(cwd)) { puts("x Not a git repo"); return 1; }
@@ -108,10 +105,9 @@ static int cmd_pull(int argc, char **argv) { AB;
         printf("Continue? (y/n): "); char buf[8]; if (!fgets(buf,8,stdin) || buf[0]!='y') { puts("x Cancelled"); return 1; }
     }
     snprintf(c, B, "git -C '%s' reset --hard %s && git -C '%s' clean -f -d", cwd, ref, cwd); (void)!system(c);
-    printf("\xe2\x9c\x93 Synced: %s\n", out); return 0;
+    printf("✓ Synced: %s\n", out); return 0;
 }
 
-/* ── diff ── */
 static int cmd_diff(int argc, char **argv) { AB;
     const char *sel = argc > 2 ? argv[2] : NULL;
     /* Token history mode */
@@ -154,7 +150,7 @@ static int cmd_diff(int argc, char **argv) { AB;
     #define HR for(int _j=0;_j<60;_j++){putchar(0xe2);putchar(0x94);putchar(0x80);}putchar('\n')
     int fk=in_fork(cwd)&&!git_in_repo(cwd);
     if(fk){
-        printf("%s\nfork \xe2\x86\x92 %s\n",cwd,SDIR);
+        printf("%s\nfork → %s\n",cwd,SDIR);
         {char c[B];snprintf(c,B,"for f in *;do [ \"$f\" = adata ]&&continue;diff -ru '%s/'\"$f\" \"$f\" 2>/dev/null;done|grep -v '^Only in'",SDIR);DS(c);}
     } else {
         char br[128]; pcmd("git rev-parse --abbrev-ref HEAD 2>/dev/null",br,128); br[strcspn(br,"\n")]=0;
@@ -184,7 +180,6 @@ static int cmd_diff(int argc, char **argv) { AB;
     #undef HR
 }
 
-/* ── revert ── */
 static int cmd_revert(int argc, char **argv) { (void)argc; (void)argv;
     char cwd[P]; if (!getcwd(cwd, P)) strcpy(cwd, ".");
     if (!git_in_repo(cwd)) { puts("x Not a git repo"); return 1; }
@@ -198,9 +193,9 @@ static int cmd_revert(int argc, char **argv) { (void)argc; (void)argv;
     char hash[16]; sscanf(lines[idx], "%s", hash);
     snprintf(c, B, "git -C '%s' revert --no-commit '%s..HEAD'", cwd, hash); (void)!system(c);
     snprintf(c, B, "git -C '%s' commit -m 'revert to %s'", cwd, hash); (void)!system(c);
-    printf("\xe2\x9c\x93 Reverted to %s\n", hash);
+    printf("✓ Reverted to %s\n", hash);
     printf("Push to main? (y/n): "); if (fgets(buf,8,stdin) && buf[0]=='y') {
-        snprintf(c, B, "git -C '%s' push", cwd); (void)!system(c); puts("\xe2\x9c\x93 Pushed");
+        snprintf(c, B, "git -C '%s' push", cwd); (void)!system(c); puts("✓ Pushed");
     }
     return 0;
 }

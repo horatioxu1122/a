@@ -1,4 +1,3 @@
-/* ── project_num ── */
 static int cmd_project_num(int argc, char **argv, int idx) { (void)argc; (void)argv;
     init_db(); load_cfg(); load_proj(); load_apps();
     if (idx >= 0 && idx < NPJ) {
@@ -37,7 +36,6 @@ static int cmd_project_num(int argc, char **argv, int idx) { (void)argc; (void)a
     printf("x Invalid index: %d\n", idx); return 1;
 }
 
-/* ── setup ── */
 static int cmd_setup(int argc, char **argv) { (void)argc; (void)argv;
     char cwd[P]; if (!getcwd(cwd, P)) strcpy(cwd, ".");
     if (git_in_repo(cwd)) { puts("x Already a git repo"); return 1; }
