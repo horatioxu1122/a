@@ -252,6 +252,7 @@ exit 0
 #include <signal.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <sys/file.h>
 #include <ctype.h>
 #include <limits.h>
 #ifdef __APPLE__
@@ -488,11 +489,9 @@ static int cmd_ref(int c,char**v){
         char op[P];snprintf(op,P,"%s/%s/output",bd,e->d_name);DIR*od=opendir(op);int has=0;
         if(od){struct dirent*f;while((f=readdir(od)))if(strstr(f->d_name,".txt")){has=1;break;}closedir(od);}
         if(has){snprintf(nm[n],128,"%s",e->d_name);snprintf(pa[n],P,"%s",op);n++;}else nb++;}if(dd)closedir(dd);}
-    if(c<3){for(int i=0;i<n;i++){int hp=0;DIR*sd=opendir(pa[i]);struct dirent*f;
-        if(sd){while((f=readdir(sd))){const char*x=strrchr(f->d_name,'.');if(x&&!strcmp(x,".pdf")){hp=1;break;}}closedir(sd);}
-        printf("  %d. %s%s%s\n",i,nm[i],strstr(pa[i],"/books/")?" (book)":"",hp?" +pdf":"");}if(!n)puts("  (none)");
-        if(nb)printf("\n  %d books need: a book transcribe <name>\n",nb);
-        printf("\na ref <#|name>\nadd: mkdir %s/<name>/\n",d);return 0;}
+    if(c<3){for(int i=0;i<n;i++)printf("  %d. %s%s\n",i,nm[i],strstr(pa[i],"/books/")?" (book)":"");
+        if(nb)printf("  %d need: a book transcribe <name>\n",nb);
+        printf("\na ref <#|name>  add: mkdir %s/<name>/\n",d);return 0;}
     const char*sel=v[2];int si=-1;
     if(isdigit(*sel)){si=atoi(sel);if(si>=n){puts("x");return 1;}}
     else{for(int i=0;i<n;i++)if(!strcmp(nm[i],sel)){si=i;break;}}

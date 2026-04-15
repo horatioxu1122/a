@@ -30,9 +30,10 @@ static void tm_go(const char *w) {
     if(w){char t[256];tm_t(w,t);execlp("tmux","tmux","new-session","-t",TMS,"-s",g,";","select-window","-t",t,(char*)NULL);}
     execlp("tmux","tmux","new-session","-t",TMS,"-s",g,(char*)NULL);}
 static int tm_new(const char *w, const char *wd, const char *cmd) {
-    tm_ensure_sess();if(tm_has(w))return 1;char c[B*2];
-    if(cmd&&*cmd)snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s' '%s'",w,wd,cmd);
-    else snprintf(c,sizeof(c),"tmux new-window -t '"TMS":' -n '%s' -c '%s'",w,wd);
+    tm_ensure_sess();if(tm_has(w))return 1;char c[B*2],ev[P+16]="";
+    const char*xa=getenv("A_CTX");if(xa&&xa[0])snprintf(ev,sizeof(ev),"-e A_CTX='%s' ",xa);
+    if(cmd&&*cmd)snprintf(c,sizeof(c),"tmux new-window %s-t '"TMS":' -n '%s' -c '%s' '%s'",ev,w,wd,cmd);
+    else snprintf(c,sizeof(c),"tmux new-window %s-t '"TMS":' -n '%s' -c '%s'",ev,w,wd);
     return system(c);
 }
 static void tm_sk(const char*w,const char*s,int l){char t[256];tm_t(w,t);pid_t p=fork();
