@@ -319,7 +319,6 @@ exit 0
 static void mkdirp(const char *p);
 static void alog(const char *cmd, const char *cwd);
 static void perf_disarm(void);
-static void perf_arm_for(const char *);
 static int cmd_sess(int, char**);
 static int cmd_restore(int, char**);
 static void tm_unsave_win(const char*);
@@ -592,17 +591,15 @@ static const cmd_t CMDS[] = {
 static char perf_msg[B];
 __attribute__((noreturn)) static void perf_alarm(int sig){(void)sig;
     (void)!write(STDERR_FILENO,perf_msg,strlen(perf_msg));kill(0,SIGTERM);_exit(124);}
-static void perf_arm_for(const char *cmd) {
+static void perf_arm(const char *cmd) {
+    if(getenv("A_BENCH")||isdigit(*cmd))return;
+    char sk[64];snprintf(sk,64,"|%s|",cmd);
+    if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|email|install|send|j|job|pr|hub|create|repo|e|revert|diff|d|perf|scan|review|fork|kill|ls|i|deps|log|serve|bench|c|l|g|co|cp|gp|restore|",sk))return;
     unsigned l=1000000;char pf[P];snprintf(pf,P,"%s/perf/%s.txt",SROOT,DEV);
     {char*d=readf(pf,NULL);unsigned pl=perf_limit(d,cmd);if(pl>=500)l=pl;free(d);}
     snprintf(perf_msg,B,"\n\033[31m✗ PERF KILL\033[0m: 'a %s' >%.1fms (%s)\n  %s\n",cmd,l/1000.0,DEV,pf);
     signal(SIGALRM,perf_alarm);
-    {struct itimerval tv={{0,0},{(long)(l/1000000),(long)(l%1000000)}};setitimer(ITIMER_REAL,&tv,NULL);}
-}
-static void perf_arm(const char *cmd) {
-    if(getenv("A_BENCH")||isdigit(*cmd))return;
-    {char sk[64];snprintf(sk,64,"|%s|",cmd);if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|email|install|send|j|job|pr|hub|create|repo|e|revert|cc|diff|d|perf|scan|review|fork|kill|ls|i|deps|log|serve|bench|c|l|g|co|cp|gp|restore|",sk))return;}
-    perf_arm_for(cmd);
+    struct itimerval tv={{0,0},{(long)(l/1000000),(long)(l%1000000)}};setitimer(ITIMER_REAL,&tv,NULL);
 }
 static void perf_disarm(void) { struct itimerval z={{0,0},{0,0}};setitimer(ITIMER_REAL,&z,NULL);signal(SIGALRM,SIG_DFL); }
 static struct timespec gt0;
