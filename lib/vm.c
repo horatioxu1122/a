@@ -23,12 +23,11 @@ static int cmd_vm(int argc, char **argv) {
     const char*port="2222",*pw="testvm1";
     char usr[128];snprintf(usr,128,"%s@localhost",os->user);
     perf_disarm();
-    if(!strcmp(sub,"kill")){char pat[64];snprintf(pat,64,"hostfwd=tcp::%s",port);
-        execlp("pkill","pkill","-f",pat,(char*)0);return 1;}
+    if(!strcmp(sub,"kill")){char c[B];snprintf(c,B,"pkill -f hostfwd=tcp::%s",port);return system(c);}
     if(!strcmp(sub,"test")){
         char cmd[B];
         snprintf(cmd,B,"sshpass -p '%s' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 -p %s %s 'echo ok' 2>/dev/null",pw,port,usr);
-        if(system(cmd)){char*rv[]={"a","vm","run",(char*)osn,NULL};cmd_vm(4,rv);}
+        if(system(cmd)){char*rv[]={"a","vm","run",(char*)osn,NULL};if(cmd_vm(4,rv))return 1;}
         printf("> replicating a...\n");
         snprintf(cmd,B,"a new -p %s %s:%s",pw,usr,port);system(cmd);
         printf("> setting up claude auth...\n");
@@ -45,10 +44,7 @@ static int cmd_vm(int argc, char **argv) {
         snprintf(cmd,B,"sshpass -p '%s' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p %s %s 'export PATH=$HOME/.local/bin:$HOME/.claude/local/bin:$PATH && export ANTHROPIC_API_KEY=$(grep ANTHROPIC ~/a/adata/git/login/api_keys.env|cut -d= -f2) && cd ~/a && claude -p --dangerously-skip-permissions \"Read the codebase with a cat 3. Describe what this project is and list all commands.\"' 2>&1",pw,port,usr);
         system(cmd);
         printf("\n> tearing down VM...\n");
-        char pat[64];snprintf(pat,64,"hostfwd=tcp::%s",port);
-        char*kv[]={"pkill","-f",pat,NULL};
-        pid_t p2=fork();if(!p2){execvp("pkill",kv);_exit(1);}
-        int st;waitpid(p2,&st,0);
+        snprintf(cmd,B,"pkill -f hostfwd=tcp::%s",port);system(cmd);
         puts("+ done");return 0;
     }
     if(!strcmp(sub,"ssh")){
@@ -56,21 +52,21 @@ static int cmd_vm(int argc, char **argv) {
         char*a2[20];int n=0;for(int i=0;a[i];i++)a2[n++]=a[i];
         for(int i=3;i<argc&&n<19;i++)if(strcmp(argv[i],osn))a2[n++]=argv[i];
         a2[n]=NULL;execvp(a2[0],a2);return 1;}
-    /* run */
     mkdirp(d);
+    char c[B];
     if(!fexists(img)){
         printf("> downloading %s cloud image...\n",os->name);
         if(system("command -v qemu-system-x86_64 >/dev/null")){puts("x install qemu: sudo pacman -S qemu-full cdrtools");return 1;}
-        char c[B];snprintf(c,B,"curl -fsSLo '%s' '%s'&&qemu-img resize '%s' 20G",img,os->url,img);
+        snprintf(c,B,"curl -fsSLo '%s' '%s'&&qemu-img resize '%s' 20G",img,os->url,img);
         if(system(c)){puts("x download failed");return 1;}
-        snprintf(ud,P,"%s/%s-user-data",d,os->name);
-        {FILE*f=fopen(ud,"w");if(!f)return 1;fprintf(f,os->cloudinit,pw);fclose(f);}
-        snprintf(sd,P,"%s/%s-seed",d,os->name);mkdirp(sd);
-        snprintf(c,B,"cp '%s' '%s/user-data'",ud,sd);system(c);
-        snprintf(md,P,"%s/meta-data",sd);writef(md,"{\"instance-id\":\"vm0\"}");
-        snprintf(c,B,"xorriso -as mkisofs -o '%s' -V cidata -J -r '%s/' 2>&1",seed,sd);
-        if(system(c)){puts("x xorriso failed");return 1;}
     }
+    snprintf(ud,P,"%s/%s-user-data",d,os->name);
+    {FILE*f=fopen(ud,"w");if(!f)return 1;fprintf(f,os->cloudinit,pw);fclose(f);}
+    snprintf(sd,P,"%s/%s-seed",d,os->name);mkdirp(sd);
+    snprintf(c,B,"cp '%s' '%s/user-data'",ud,sd);system(c);
+    snprintf(md,P,"%s/meta-data",sd);writef(md,"{\"instance-id\":\"vm0\"}");
+    snprintf(c,B,"xorriso -as mkisofs -o '%s' -V cidata -J -r '%s/' 2>&1",seed,sd);
+    if(system(c)){puts("x xorriso failed");return 1;}
     pid_t p=fork();
     if(p==0){int fd=open(log,O_WRONLY|O_CREAT|O_TRUNC,0644);if(fd>=0){dup2(fd,1);dup2(fd,2);close(fd);}
         char di[P],ds[P];snprintf(di,P,"file=%s,format=qcow2",img);snprintf(ds,P,"file=%s,format=raw",seed);
