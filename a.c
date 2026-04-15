@@ -311,6 +311,7 @@ static const char*EXT[]={"",".py",".c",".sh",".html",0};
 #include "lib/new.c"      /* self-replicate to device */
 #include "lib/bench.c"    /* UI latency benchmark */
 #include "lib/serve.c"   /* C HTTP server for UI */
+#include "lib/tok.c"     /* token count for files/dirs */
 
 static int cmd_freq(int c,char**v){perf_disarm();
     int vb=0,n=0;
@@ -532,7 +533,7 @@ static const cmd_t CMDS[] = {
     {"set",cmd_set},{"settings",cmd_settings},{"setup",cmd_setup},
     {"ssh",cmd_ssh},
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
-    {"tm-unsave",cmd_tm_unsave},{"tutorial",cmd_tutorial},{"u",cmd_update},
+    {"tm-unsave",cmd_tm_unsave},{"tok",cmd_tok},{"tutorial",cmd_tutorial},{"u",cmd_update},
     {"uninstall",cmd_uninstall},{"update",cmd_update},
     {"vm",cmd_vm},
     {"w",cmd_w},{"watch",cmd_watch},{"web",cmd_web},{"work",cmd_w},
