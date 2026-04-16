@@ -19,15 +19,16 @@ static int ssh_idx(const char*a,const void*H_,int nh){
 static int cmd_ssh(int argc,char**argv){
     AB;
     char dir[P];snprintf(dir,P,"%s/ssh",SROOT);mkdirp(dir);sync_bg();
-    typedef struct{char name[128],host[256],pw[256],path[P];}host_t;
+    typedef struct{char name[128],host[256],host2[256],pw[256],path[P];}host_t;
     host_t H[32];int nh=0,arc=0;
     char paths[32][P];int np=listdir(dir,paths,32);
     for(int i=np-1;i>=0&&nh<32;i--){
         kvs_t kv=kvfile(paths[i]);const char*n=kvget(&kv,"Name");if(!n)continue;
         int dup=0;for(int j=0;j<nh;j++)if(!strcmp(H[j].name,n)){dup=1;break;}
         if(dup){do_archive(paths[i]);arc++;continue;}
-        snprintf(H[nh].name,128,"%s",n);const char*h=kvget(&kv,"Host"),*p=kvget(&kv,"Password");
-        snprintf(H[nh].host,256,"%s",h?h:"");snprintf(H[nh].pw,256,"%s",p?p:"");snprintf(H[nh].path,P,"%s",paths[i]);nh++;}
+        snprintf(H[nh].name,128,"%s",n);const char*h=kvget(&kv,"Host"),*p=kvget(&kv,"Password"),*h2=kvget(&kv,"Host2");
+        snprintf(H[nh].host,256,"%s",h?h:"");snprintf(H[nh].host2,256,"%s",h2?h2:"");
+        snprintf(H[nh].pw,256,"%s",p?p:"");snprintf(H[nh].path,P,"%s",paths[i]);nh++;}
     if(arc)sync_bg();
     const char*sub=argc>2?argv[2]:NULL;
     /* list */
@@ -195,16 +196,22 @@ static int cmd_ssh(int argc,char**argv){
     if(isdigit((unsigned char)*sub))idx=atoi(sub);
     else{for(int i=0;i<nh;i++)if(!strcmp(H[i].name,sub)){idx=i;break;}}
     if(idx<0||idx>=nh){printf("x No host %s\n",sub);return 1;}
-    char hp[256],port[8];ssh_parse(H[idx].host,hp,port);
-    if(!H[idx].pw[0]){char tc[B];int l=ssh_pre(tc,B,"","-oBatchMode=yes -oConnectTimeout=3",port,hp);
+    char hp[256],port[8],hp2[256]="",port2[8]="";ssh_parse(H[idx].host,hp,port);
+    if(H[idx].host2[0])ssh_parse(H[idx].host2,hp2,port2);
+    if(!H[idx].pw[0]&&!hp2[0]){char tc[B];int l=ssh_pre(tc,B,"","-oBatchMode=yes -oConnectTimeout=3",port,hp);
         snprintf(tc+l,(size_t)(B-l)," true 2>/dev/null");
         if(system(tc)){char pw[256];printf("Password for %s: ",H[idx].name);
             if(fgets(pw,256,stdin)){pw[strcspn(pw,"\n")]=0;if(pw[0]){snprintf(H[idx].pw,256,"%s",pw);ssh_savex(dir,H[idx].name,H[idx].host,pw,0,0);}}}}
-    {char cmd[B]="",c[B*2],cd[64]="";
+    {char cmd[B]="",c[B*3],cd[64]="",cs[B]="";
         {char cwd[P];size_t hl=strlen(HOME);if(getcwd(cwd,P)&&!strncmp(cwd,HOME,hl)&&cwd[hl]=='/'){char*p=cwd+hl+1;char*s=strchr(p,'/');if(s)*s=0;if(*p&&*p!='.')snprintf(cd,64,"cd ~/%s 2>/dev/null;",p);}}
         for(int i=3;i<argc;i++){int l=(int)strlen(cmd);snprintf(cmd+l,(size_t)(B-l),"%s%s",l?" ":"",argv[i]);}
-        int n=ssh_pre(c,(int)sizeof c,H[idx].pw,"-tt -oConnectTimeout=5 -oStrictHostKeyChecking=accept-new",port,hp);
-        if(cmd[0]||cd[0])snprintf(c+n,(size_t)(sizeof(c)-(size_t)n)," 'bash -c '\"'\"'%sexport PATH=$HOME/.local/bin:$PATH; %s'\"'\"''",cd,cmd[0]?cmd:"exec bash -l");
-        else printf("Connecting to %s...\n",H[idx].name);
+        if(cmd[0]||cd[0])snprintf(cs,B," 'bash -c '\"'\"'%sexport PATH=$HOME/.local/bin:$PATH; %s'\"'\"''",cd,cmd[0]?cmd:"exec bash -l");
+        int n=ssh_pre(c,(int)sizeof c,H[idx].pw,"-tt -oConnectTimeout=2 -oStrictHostKeyChecking=accept-new",port,hp);
+        if(cs[0])n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),"%s",cs);
+        else if(!hp2[0])printf("Connecting to %s...\n",H[idx].name);
+        if(hp2[0]){n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),";ec=$?;[ $ec -eq 255 ]&&exec ");
+            n+=ssh_pre(c+n,(int)(sizeof(c)-(size_t)n),H[idx].pw,"-tt -oConnectTimeout=5 -oStrictHostKeyChecking=accept-new",port2,hp2);
+            if(cs[0])n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),"%s",cs);
+            n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),";exit $ec");}
         execl("/bin/sh","sh","-c",c,(char*)NULL);_exit(127);}
 }
