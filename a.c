@@ -22,6 +22,7 @@ warn() { echo -e "${Y}!${R} $1"; }
 
 _ensure_cc() {
     _cc_ok() { "$1" -x c -fsyntax-only /dev/null 2>/dev/null; }
+    [[ "$OSTYPE" == darwin* && -x /opt/homebrew/opt/llvm/bin/clang ]] && { CC=/opt/homebrew/opt/llvm/bin/clang; return 0; }
     CC=$(compgen -c clang- 2>/dev/null|grep -xE 'clang-[0-9]+'|sort -t- -k2 -rn|head -1) || CC=""
     [[ -n "$CC" ]] && _cc_ok "$CC" && return 0; CC=""
     command -v clang &>/dev/null && _cc_ok clang && { CC=clang; return 0; }
@@ -31,7 +32,7 @@ _ensure_cc() {
     elif [[ -f /etc/debian_version ]]; then [[ -f "$D/adata/git/settings/dev" ]] && sudo find /etc/apt/sources.list.d -name '*llvm*' -delete 2>/dev/null; sudo apt-get update -qq && sudo apt-get install -y clang 2>/dev/null || true
     elif [[ -f /etc/arch-release ]]; then sudo pacman -S --noconfirm clang 2>/dev/null || true
     elif [[ -f /etc/fedora-release ]]; then sudo dnf install -y clang 2>/dev/null || true
-    elif [[ "$OSTYPE" == darwin* ]]; then command -v brew &>/dev/null && brew install tcc 2>/dev/null; command -v tcc &>/dev/null && { CC=tcc; return 0; }; xcode-select --install 2>/dev/null; echo "Run 'xcode-select --install' and retry"; exit 1; fi
+    elif [[ "$OSTYPE" == darwin* ]]; then command -v brew &>/dev/null && brew install llvm 2>/dev/null && [[ -x /opt/homebrew/opt/llvm/bin/clang ]] && { CC=/opt/homebrew/opt/llvm/bin/clang; return 0; }; xcode-select --install 2>/dev/null; echo "Run 'xcode-select --install' and retry"; exit 1; fi
     command -v clang &>/dev/null && _cc_ok clang && { CC=clang; return 0; }
     command -v tcc &>/dev/null && { CC=tcc; return 0; }
     command -v gcc &>/dev/null && _cc_ok gcc && { warn "using gcc"; CC=gcc; return 0; }
@@ -198,7 +199,7 @@ install)
     case $OS in
         mac)
             _brew_ensure
-            brew tap hudochenkov/sshpass 2>/dev/null; brew install git tcc tmux node gh sshpass rclone cppcheck gcc &>/dev/null||brew upgrade git tcc tmux node gh sshpass rclone cppcheck gcc &>/dev/null
+            brew tap hudochenkov/sshpass 2>/dev/null; brew install git llvm tmux node gh sshpass rclone cppcheck gcc &>/dev/null||brew upgrade git llvm tmux node gh sshpass rclone cppcheck gcc &>/dev/null
             command -v clang &>/dev/null || { xcode-select --install 2>/dev/null; warn "Run 'xcode-select --install' then retry"; }
             ok "tmux + node + gh + rclone" ;;
         debian)
