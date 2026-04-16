@@ -63,7 +63,7 @@ static void jcmd_fill(char*b,int cont,const char*wd,const char*extra){
     write_prompt_file(ctxf,wd,NULL);
     if(extra&&extra[0]){char ef[P];snprintf(ef,P,"%s/a_xtra_%d.txt",TMP,(int)getpid());writef(ef,extra);
         snprintf(xsuf,512," \"$(cat '%s')\"",ef);}
-    snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;" ACAT " >>%s 2>/dev/null;while :;do claude --dangerously-skip-permissions --append-system-prompt-file %s%s%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",ctxf,ctxf,cont?" --continue":"",xsuf,LOGDIR);}
+    snprintf(b,B,"tmux splitw -vd -p50 -t $TMUX_PANE;" ACAT " >>%s 2>/dev/null;while :;do claude --dangerously-skip-permissions --effort max --append-system-prompt-file %s%s%s;e=$?;[ $e -eq 0 ]&&break;echo \"$(date) $e $(pwd)\">>%s/crashes.log;echo \"! crash $e, restarting..\";sleep 2;done",ctxf,ctxf,cont?" --continue":"",xsuf,LOGDIR);}
 
 static void tm_ensure_conf(void) {
     if (strcmp(cfget("tmux_conf"), "y") != 0) return;

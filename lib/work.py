@@ -47,7 +47,7 @@ def run():
         if tm.has(e['session']):
             print(f"Attaching: {e['session']}"); tm.go(e['session']); return
         sn = f"work-resume-{int(time.time())}"
-        create_sess(sn, os.getcwd(), 'claude --dangerously-skip-permissions', cfg)
+        create_sess(sn, os.getcwd(), 'claude --dangerously-skip-permissions --effort max', cfg)
         for _ in range(30):
             time.sleep(1)
             out = sp.run(['tmux', 'capture-pane', '-t', sn, '-p'], capture_output=True, text=True).stdout

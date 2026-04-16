@@ -20,7 +20,7 @@ static void fallback_py(const char *mod, int argc, char **argv) {
 /* session create — returns 1 if window already existed (restored), 0 if created */
 static int create_sess(const char *sn, const char *wd, const char *cmd, const char *extra) {
     int ai = cmd && (strstr(cmd,"claude") || strstr(cmd,"codex") || strstr(cmd,"gemini") || strstr(cmd,"aider"));
-    char acmd[B];snprintf(acmd,B,"%s",cmd?cmd:"");
+    char acmd[B];snprintf(acmd,B,"%s%s",cmd?cmd:"",cmd&&strstr(cmd,"claude ")&&!strstr(cmd,"--effort")?" --effort max":"");
     char wcmd[B*2],ctxf[P]="",csuf[512]="";
     int is_claude=ai&&strstr(acmd,"claude"),is_gemini=ai&&strstr(acmd,"gemini"),is_codex=ai&&strstr(acmd,"codex");
     if(ai){snprintf(ctxf,P,"%s/a_ctx_%d.txt",TMP,(int)getpid());

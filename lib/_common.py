@@ -64,7 +64,7 @@ def init_db():
         c.execute("INSERT OR IGNORE INTO config VALUES('multi_default','l:3')")
         c.execute("INSERT OR IGNORE INTO config VALUES('claude_prefix','Ultrathink. ')")
         if not c.execute("SELECT 1 FROM sessions LIMIT 1").fetchone():
-            cdx,cld='codex -c model_reasoning_effort="high" --model gpt-5-codex --dangerously-bypass-approvals-and-sandbox','claude --dangerously-skip-permissions'
+            cdx,cld='codex -c model_reasoning_effort="high" --model gpt-5-codex --dangerously-bypass-approvals-and-sandbox','claude --dangerously-skip-permissions --effort max'
             for k,n,t in[('h','htop','htop'),('t','top','top'),('g','gemini','gemini --yolo'),('gemini','gemini','gemini --yolo'),('gp','gemini-p','gemini --yolo "{GEMINI_PROMPT}"'),('c','claude',cld),('claude','claude',cld),('cp','claude-p',f'{cld} "{{CLAUDE_PROMPT}}"'),('l','claude',cld),('lp','claude-p',f'{cld} "{{CLAUDE_PROMPT}}"'),('o','claude',cld),('co','codex',cdx),('codex','codex',cdx),('cop','codex-p',f'{cdx} "{{CODEX_PROMPT}}"'),('a','aider','OLLAMA_API_BASE=http://127.0.0.1:11434 aider --model ollama_chat/mistral')]:
                 c.execute("INSERT INTO sessions VALUES(?,?,?)",(k,n,t))
         c.commit()
@@ -149,6 +149,7 @@ LOG_DIR = str(ADATA_ROOT/'backup'/DEVICE_ID)
 def ensure_tmux(cfg):
     if cfg.get('tmux_conf')=='y' and not sp.run(['tmux','info'],stdout=sp.DEVNULL,stderr=sp.DEVNULL).returncode: sp.run(['tmux','refresh-client','-S'],capture_output=True)
 def create_sess(sn, wd, cmd, cfg, env=None, skip_prefix=False):
+    if cmd and 'claude ' in cmd and '--effort' not in cmd: cmd = cmd.replace('claude ', 'claude --effort max ', 1)
     ai = cmd and any(a in cmd for a in ['codex','claude','gemini','aider'])
     if ai: cmd = f'while :;do {cmd};e=$?;[ $e -eq 0 ]&&break;echo -e "\\n! Crashed ($e). [R]estart/[Q]uit: ";read -n1 k;[[ $k =~ [Rr] ]]||break;done'
     r = tm.new(sn, wd, cmd or '', env); ensure_tmux(cfg)

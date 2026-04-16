@@ -202,7 +202,7 @@ def _run_local(ak, proj, rn, prompt, jn, br, wp, fkd, sn, watch=False, timeout=6
 
     _db_job(jn, 'agent', 'running', wp, sn)
     env = {k: v for k, v in os.environ.items() if k not in ('TMUX', 'TMUX_PANE')}
-    acmd = 'claude --dangerously-skip-permissions' + (f' --model {model}' if model else '')
+    acmd = 'claude --dangerously-skip-permissions --effort max' + (f' --model {model}' if model else '')
     if not no_wt: acmd = f"a fork run '{jn}' {acmd}"
     S.run(['tmux', 'new-session', '-d', '-s', sn, '-c', wp, acmd], env=env)
     for _ in range(60):
@@ -275,7 +275,7 @@ def _run_remote(dev, ak, proj, rn, prompt, jn, br, ts, sn):
     # Launch agent — detached tmux, wait for ready, send prompt
     _db_job(jn, 'agent', 'running', dev, sn)
     q = prompt.replace("'", "'\\''")
-    rc, _, err = _ssh(dev, f"tmux new-session -d -s '{sn}' -c {fk} 'a fork run {jn} claude --dangerously-skip-permissions'", timeout=15)
+    rc, _, err = _ssh(dev, f"tmux new-session -d -s '{sn}' -c {fk} 'a fork run {jn} claude --dangerously-skip-permissions --effort max'", timeout=15)
     if rc: print(f"x Session: {err}"); return
     print(f"+ Attach: a ssh {dev} \"a {sn}\"")
     print("  Waiting for claude to start...")
