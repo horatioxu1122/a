@@ -154,13 +154,41 @@ install)
     elif [[ -f /etc/arch-release ]]; then OS=arch
     elif [[ -f /etc/fedora-release ]]; then OS=fedora
     else OS=unknown; fi
+    _want() { [[ $# -eq 0 ]] && return 0; local i; for i in "$@"; do [[ "$i" == "$1" ]] && return 0; done; return 1; }
+    shift; SEL=("$@")
+    _w() { [[ ${#SEL[@]} -eq 0 ]] || { local t; for t in "${SEL[@]}"; do [[ "$t" == "$1" ]] && return 0; done; return 1; }; }
+    _brew_ensure() { command -v brew &>/dev/null && return 0; info "Installing Homebrew..."; /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"; }
+    _brew_pkg() { _brew_ensure && { brew install "$@" 2>/dev/null || brew upgrade "$@" 2>/dev/null; } && ok "$*"; }
     SUDO="" NEED_SUDO=0
-    { command -v tmux &>/dev/null && command -v npm &>/dev/null && grep -q 'a\.local' /etc/hosts 2>/dev/null; } || NEED_SUDO=1
-    if [[ $EUID -eq 0 ]]; then SUDO=""
-    elif sudo -n true 2>/dev/null; then SUDO="sudo"
-    elif [[ $NEED_SUDO -eq 1 ]] && command -v sudo &>/dev/null && [[ -t 0 ]]; then info "sudo needed for system packages + /etc/hosts"; sudo -v && SUDO="sudo"
+    if [[ ${#SEL[@]} -eq 0 ]]; then
+        { command -v tmux &>/dev/null && command -v npm &>/dev/null && grep -q 'a\.local' /etc/hosts 2>/dev/null; } || NEED_SUDO=1
+        if [[ $EUID -eq 0 ]]; then SUDO=""
+        elif sudo -n true 2>/dev/null; then SUDO="sudo"
+        elif [[ $NEED_SUDO -eq 1 ]] && command -v sudo &>/dev/null && [[ -t 0 ]]; then info "sudo needed for system packages + /etc/hosts"; sudo -v && SUDO="sudo"
+        fi
     fi
-    info "Detected: $OS ${SUDO:+(sudo)}${SUDO:-"(no root)"}"
+    info "Detected: $OS${SEL:+ [${SEL[*]}]} ${SUDO:+(sudo)}${SUDO:-"(no root)"}"
+    if [[ ${#SEL[@]} -gt 0 ]]; then
+        for pkg in "${SEL[@]}"; do
+            case $pkg in
+                brew) _brew_ensure ;;
+                node) _w node && { local v;v=$(node -v 2>/dev/null)&&[[ "$v" == v2[2-9]*||"$v" == v[3-9]* ]]&&ok "node $v"||_install_node; } ;;
+                claude) command -v claude &>/dev/null&&ok "claude"||{ curl -fsSL https://claude.ai/install.sh|bash&&ok "claude"||warn "claude failed"; } ;;
+                uv) command -v uv &>/dev/null&&ok "uv"||{ curl -LsSf https://astral.sh/uv/install.sh|sh&&export PATH="$HOME/.local/bin:$PATH"&&ok "uv"||warn "uv failed"; } ;;
+                ollama) command -v ollama &>/dev/null&&ok "ollama"||{ curl -fsSL https://ollama.com/install.sh|sh&&ok "ollama"||warn "ollama failed"; } ;;
+                shell) _shell_funcs ;;
+                build) _ensure_cc; sh "$D/a.c" && ok "a compiled" || warn "Build failed" ;;
+                *) case $OS in
+                    mac) _brew_pkg "$pkg" ;;
+                    debian) sudo apt-get install -yqq "$pkg" 2>/dev/null && ok "$pkg" || warn "$pkg" ;;
+                    arch) sudo pacman -S --noconfirm "$pkg" 2>/dev/null && ok "$pkg" || warn "$pkg" ;;
+                    fedora) sudo dnf install -y "$pkg" 2>/dev/null && ok "$pkg" || warn "$pkg" ;;
+                    termux) pkg install -y "$pkg" && ok "$pkg" || warn "$pkg" ;;
+                    esac ;;
+            esac
+        done
+        exit 0
+    fi
     if ! grep -q 'a\.local' /etc/hosts 2>/dev/null; then
         if [[ -n "$SUDO" || $EUID -eq 0 ]]; then echo '127.0.0.1 a.local'|$SUDO tee -a /etc/hosts>/dev/null&&ok "a.local"
         elif [[ "$OS" == termux ]]; then ok "a.local (termux: use localhost:1111)"
@@ -169,7 +197,7 @@ install)
     install_node() { local v;v=$(node -v 2>/dev/null)&&[[ "$v" == v2[2-9]*||"$v" == v[3-9]* ]]&&return 0;_install_node; }
     case $OS in
         mac)
-            command -v brew &>/dev/null || { info "Installing Homebrew..."; INTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"; }
+            _brew_ensure
             brew tap hudochenkov/sshpass 2>/dev/null; brew install git tcc tmux node gh sshpass rclone cppcheck gcc &>/dev/null||brew upgrade git tcc tmux node gh sshpass rclone cppcheck gcc &>/dev/null
             command -v clang &>/dev/null || { xcode-select --install 2>/dev/null; warn "Run 'xcode-select --install' then retry"; }
             ok "tmux + node + gh + rclone" ;;
