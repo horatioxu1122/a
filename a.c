@@ -7,7 +7,8 @@
 # TERMUX: set CLAUDE_CODE_TMPDIR=$HOME/.tmp; build with clang directly.
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
     set -e; A="$HOME/a"
-    command -v git >/dev/null || { [[ "$OSTYPE" == darwin* ]] && { command -v brew &>/dev/null || { INTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"; }; brew install git &>/dev/null; }; command -v git >/dev/null || { echo "Install git first"; exit 1; }; }
+    [[ ! -t 0 ]] && { T="/tmp/_ainst$$.c"; curl -fsSL https://raw.githubusercontent.com/seanpattencode/a/main/a.c -o "$T"; exec sh "$T"; }
+    command -v git >/dev/null || { [[ "$OSTYPE" == darwin* ]] && { command -v brew &>/dev/null || { /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"; }; brew install git &>/dev/null; }; command -v git >/dev/null || { echo "Install git first"; exit 1; }; }
     [ -d "$A/.git" ] && { echo "a already installed at $A"; exec sh "$A/a.c" install; }
     git clone https://github.com/seanpattencode/a.git "$A" && exec sh "$A/a.c" install
     exit 1;; esac
