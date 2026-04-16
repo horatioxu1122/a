@@ -7,9 +7,9 @@
 # TERMUX: set CLAUDE_CODE_TMPDIR=$HOME/.tmp; build with clang directly.
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
     set -e; A="$HOME/a"
-    command -v git >/dev/null || { [[ "$OSTYPE" == darwin* ]] && { command -v brew &>/dev/null || { /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" </dev/tty; eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"; }; brew install git &>/dev/null; }; command -v git >/dev/null || { echo "Install git first"; exit 1; }; }
-    [ -d "$A/.git" ] && { echo "a already installed at $A"; exec sh "$A/a.c" install </dev/tty; }
-    git clone https://github.com/seanpattencode/a.git "$A" && exec sh "$A/a.c" install </dev/tty
+    command -v git >/dev/null || { [[ "$OSTYPE" == darwin* ]] && { command -v brew &>/dev/null || { INTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"; }; brew install git &>/dev/null; }; command -v git >/dev/null || { echo "Install git first"; exit 1; }; }
+    [ -d "$A/.git" ] && { echo "a already installed at $A"; exec sh "$A/a.c" install; }
+    git clone https://github.com/seanpattencode/a.git "$A" && exec sh "$A/a.c" install
     exit 1;; esac
 set -e
 D="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -168,7 +168,7 @@ install)
     install_node() { local v;v=$(node -v 2>/dev/null)&&[[ "$v" == v2[2-9]*||"$v" == v[3-9]* ]]&&return 0;_install_node; }
     case $OS in
         mac)
-            command -v brew &>/dev/null || { info "Installing Homebrew..."; /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"; }
+            command -v brew &>/dev/null || { info "Installing Homebrew..."; INTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"; }
             brew tap hudochenkov/sshpass 2>/dev/null; brew install git tcc tmux node gh sshpass rclone cppcheck gcc &>/dev/null||brew upgrade git tcc tmux node gh sshpass rclone cppcheck gcc &>/dev/null
             command -v clang &>/dev/null || { xcode-select --install 2>/dev/null; warn "Run 'xcode-select --install' then retry"; }
             ok "tmux + node + gh + rclone" ;;
