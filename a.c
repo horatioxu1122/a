@@ -255,6 +255,10 @@ install)
     AROOT="$D/adata"; SROOT="$AROOT/git"
     if [[ ! -d "$SROOT/.git" ]]; then mkdir -p "$AROOT"
         { command -v gh &>/dev/null&&gh auth status &>/dev/null 2>&1&&gh repo clone seanpattencode/a-git "$SROOT" 2>/dev/null&&ok "adata/git cloned";}||{ git init -q "$SROOT" 2>/dev/null;ok "adata/git init";}
+    elif command -v gh &>/dev/null&&gh auth status &>/dev/null 2>&1; then
+        local ur;ur=$(git -C "$SROOT" remote get-url origin 2>/dev/null)
+        if [[ "$ur" != *a-git* ]]; then rm -rf "$SROOT"; gh repo clone seanpattencode/a-git "$SROOT" 2>/dev/null&&ok "adata/git re-cloned"
+        else git -C "$SROOT" pull --ff-only -q 2>/dev/null&&ok "adata/git synced"||ok "adata/git"; fi
     fi
     RC="$HOME/.bashrc"; [[ -n "$ZSH_VERSION" ]] && RC="$HOME/.zshrc"
     source "$RC" 2>/dev/null && ok "shell ready" || warn "run: source $RC"
