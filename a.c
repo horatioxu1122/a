@@ -7,7 +7,7 @@
 # TERMUX: set CLAUDE_CODE_TMPDIR=$HOME/.tmp; build with clang directly.
 case "$0" in *a.c) [ -z "$BASH_VERSION" ] && exec bash "$0" "$@";; *)
     set -e; A="$HOME/a"
-    command -v git >/dev/null || { echo "Install git first"; exit 1; }
+    command -v git >/dev/null || { [[ "$OSTYPE" == darwin* ]] && { command -v brew &>/dev/null || { /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"; }; brew install git &>/dev/null; }; command -v git >/dev/null || { echo "Install git first"; exit 1; }; }
     [ -d "$A/.git" ] && { echo "a already installed at $A"; exec sh "$A/a.c" install; }
     git clone https://github.com/seanpattencode/a.git "$A" && exec sh "$A/a.c" install
     exit 1;; esac
@@ -20,17 +20,20 @@ info() { echo -e "${C}>${R} $1"; }
 warn() { echo -e "${Y}!${R} $1"; }
 
 _ensure_cc() {
+    _cc_ok() { "$1" -x c -fsyntax-only /dev/null 2>/dev/null; }
     CC=$(compgen -c clang- 2>/dev/null|grep -xE 'clang-[0-9]+'|sort -t- -k2 -rn|head -1) || CC=""
-    [[ -z "$CC" ]] && command -v clang &>/dev/null && CC=clang
-    [[ -n "$CC" ]] && return 0
-    info "Installing clang..."
+    [[ -n "$CC" ]] && _cc_ok "$CC" && return 0; CC=""
+    command -v clang &>/dev/null && _cc_ok clang && { CC=clang; return 0; }
+    command -v tcc &>/dev/null && { CC=tcc; return 0; }
+    info "Installing compiler..."
     if [[ -f /data/data/com.termux/files/usr/bin/bash ]]; then pkg install -y clang || true
     elif [[ -f /etc/debian_version ]]; then [[ -f "$D/adata/git/settings/dev" ]] && sudo find /etc/apt/sources.list.d -name '*llvm*' -delete 2>/dev/null; sudo apt-get update -qq && sudo apt-get install -y clang 2>/dev/null || true
     elif [[ -f /etc/arch-release ]]; then sudo pacman -S --noconfirm clang 2>/dev/null || true
     elif [[ -f /etc/fedora-release ]]; then sudo dnf install -y clang 2>/dev/null || true
-    elif [[ "$OSTYPE" == darwin* ]]; then xcode-select --install 2>/dev/null; echo "Run 'xcode-select --install' and retry"; exit 1; fi
-    command -v clang &>/dev/null && { CC=clang; return 0; }
-    command -v gcc &>/dev/null && { warn "using gcc"; CC=gcc; return 0; }
+    elif [[ "$OSTYPE" == darwin* ]]; then command -v brew &>/dev/null && brew install tcc 2>/dev/null; command -v tcc &>/dev/null && { CC=tcc; return 0; }; xcode-select --install 2>/dev/null; echo "Run 'xcode-select --install' and retry"; exit 1; fi
+    command -v clang &>/dev/null && _cc_ok clang && { CC=clang; return 0; }
+    command -v tcc &>/dev/null && { CC=tcc; return 0; }
+    command -v gcc &>/dev/null && _cc_ok gcc && { warn "using gcc"; CC=gcc; return 0; }
     echo "ERROR: no compiler"; exit 1
 }
 _warn_flags() {
@@ -166,7 +169,7 @@ install)
     case $OS in
         mac)
             command -v brew &>/dev/null || { info "Installing Homebrew..."; /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null || /usr/local/bin/brew shellenv)"; }
-            brew tap hudochenkov/sshpass 2>/dev/null; brew install tmux node gh sshpass rclone cppcheck gcc &>/dev/null||brew upgrade tmux node gh sshpass rclone cppcheck gcc &>/dev/null
+            brew tap hudochenkov/sshpass 2>/dev/null; brew install git tcc tmux node gh sshpass rclone cppcheck gcc &>/dev/null||brew upgrade git tcc tmux node gh sshpass rclone cppcheck gcc &>/dev/null
             command -v clang &>/dev/null || { xcode-select --install 2>/dev/null; warn "Run 'xcode-select --install' then retry"; }
             ok "tmux + node + gh + rclone" ;;
         debian)
@@ -227,8 +230,10 @@ install)
     source "$RC" 2>/dev/null && ok "shell ready" || warn "run: source $RC"
     echo -e "\n${G}✓${R} Install complete — type ${G}a${R}\n"
     ;;
+dmg) T=$(mktemp -d);mkdir -p "$T/a.app/Contents/MacOS";printf '<plist><dict><key>CFBundleExecutable</key><string>a</string></dict></plist>'>"$T/a.app/Contents/Info.plist";printf '#!/bin/sh\nosascript -e '\''tell application "Terminal" to do script "curl -fsSL https://raw.githubusercontent.com/seanpattencode/a/main/a.c|sh"'\''&\n'>"$T/a.app/Contents/MacOS/a";chmod +x "$T/a.app/Contents/MacOS/a";hdiutil create -volname a -srcfolder "$T" -ov -format UDZO "$D/a.dmg"&&ok "a.dmg";rm -rf "$T";;
+deb) T=$(mktemp -d);mkdir "$T/DEBIAN";printf 'Package: a\nVersion: 1.0\nArchitecture: all\nMaintainer: seanpatten\nDescription: a\n'>"$T/DEBIAN/control";printf '#!/bin/sh\ncurl -fsSL https://raw.githubusercontent.com/seanpattencode/a/main/a.c|sh\n'>"$T/DEBIAN/postinst";chmod +x "$T/DEBIAN/postinst";dpkg-deb -b "$T" "$D/a.deb"&&ok "a.deb";rm -rf "$T";;
 *)
-    echo "Usage: sh a.c [build|install|analyze|shell|clean]"
+    echo "Usage: sh a.c [build|install|analyze|shell|clean|dmg|deb]"
     ;;
 esac
 exit 0
