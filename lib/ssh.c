@@ -196,9 +196,10 @@ static int cmd_ssh(int argc,char**argv){
     if(isdigit((unsigned char)*sub))idx=atoi(sub);
     else{for(int i=0;i<nh;i++)if(!strcmp(H[i].name,sub)){idx=i;break;}}
     if(idx<0||idx>=nh){printf("x No host %s\n",sub);return 1;}
-    char hp[256],port[8],hp2[256]="",port2[8]="";ssh_parse(H[idx].host,hp,port);
-    if(H[idx].host2[0])ssh_parse(H[idx].host2,hp2,port2);
-    if(!H[idx].pw[0]&&!hp2[0]){char tc[B];int l=ssh_pre(tc,B,"","-oBatchMode=yes -oConnectTimeout=3",port,hp);
+    char hp[2][256]={{0}},port[2][8]={{0}};int nH=1;
+    ssh_parse(H[idx].host,hp[0],port[0]);
+    if(H[idx].host2[0]){ssh_parse(H[idx].host2,hp[1],port[1]);nH=2;}
+    if(!H[idx].pw[0]&&nH==1){char tc[B];int l=ssh_pre(tc,B,"","-oBatchMode=yes -oConnectTimeout=3",port[0],hp[0]);
         snprintf(tc+l,(size_t)(B-l)," true 2>/dev/null");
         if(system(tc)){char pw[256];printf("Password for %s: ",H[idx].name);
             if(fgets(pw,256,stdin)){pw[strcspn(pw,"\n")]=0;if(pw[0]){snprintf(H[idx].pw,256,"%s",pw);ssh_savex(dir,H[idx].name,H[idx].host,pw,0,0);}}}}
@@ -206,12 +207,13 @@ static int cmd_ssh(int argc,char**argv){
         {char cwd[P];size_t hl=strlen(HOME);if(getcwd(cwd,P)&&!strncmp(cwd,HOME,hl)&&cwd[hl]=='/'){char*p=cwd+hl+1;char*s=strchr(p,'/');if(s)*s=0;if(*p&&*p!='.')snprintf(cd,64,"cd ~/%s 2>/dev/null;",p);}}
         for(int i=3;i<argc;i++){int l=(int)strlen(cmd);snprintf(cmd+l,(size_t)(B-l),"%s%s",l?" ":"",argv[i]);}
         if(cmd[0]||cd[0])snprintf(cs,B," 'bash -c '\"'\"'%sexport PATH=$HOME/.local/bin:$PATH; %s'\"'\"''",cd,cmd[0]?cmd:"exec bash -l");
-        int n=ssh_pre(c,(int)sizeof c,H[idx].pw,"-tt -oConnectTimeout=2 -oStrictHostKeyChecking=accept-new",port,hp);
-        if(cs[0])n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),"%s",cs);
-        else if(!hp2[0])printf("Connecting to %s...\n",H[idx].name);
-        if(hp2[0]){n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),";ec=$?;[ $ec -eq 255 ]&&exec ");
-            n+=ssh_pre(c+n,(int)(sizeof(c)-(size_t)n),H[idx].pw,"-tt -oConnectTimeout=5 -oStrictHostKeyChecking=accept-new",port2,hp2);
-            if(cs[0])n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),"%s",cs);
-            n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),";exit $ec");}
+        int n=0;static const char*TO[]={"2","5"};char o[96];
+        for(int i=0;i<nH;i++){
+            if(i)n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),";r=$?;[ $r -eq 255 ]&&exec ");
+            snprintf(o,96,"-tt -oConnectTimeout=%s -oStrictHostKeyChecking=accept-new",TO[i]);
+            n+=ssh_pre(c+n,(int)(sizeof(c)-(size_t)n),H[idx].pw,o,port[i],hp[i]);
+            n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),"%s",cs);}
+        if(nH>1)n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),";exit $r");
+        else if(!cs[0])printf("Connecting to %s...\n",H[idx].name);
         execl("/bin/sh","sh","-c",c,(char*)NULL);_exit(127);}
 }
