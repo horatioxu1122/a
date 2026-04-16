@@ -260,6 +260,15 @@ install)
         if [[ "$ur" != *a-git* ]]; then rm -rf "$SROOT"; gh repo clone seanpattencode/a-git "$SROOT" 2>/dev/null&&ok "adata/git re-cloned"
         else git -C "$SROOT" pull --ff-only -q 2>/dev/null&&ok "adata/git synced"||ok "adata/git"; fi
     fi
+    if command -v rclone &>/dev/null && rclone listremotes 2>/dev/null | grep -q 'a-gdrive'; then
+        _DEV=$(cat "$D/adata/local/.device" 2>/dev/null || hostname)
+        _BDIR="$D/adata/backup/$_DEV"; mkdir -p "$_BDIR"
+        if [[ ! -f "$_BDIR/.gdrive_id" ]]; then
+            rclone mkdir "a-gdrive:/$_DEV" 2>/dev/null
+            _GID=$(rclone lsjson a-gdrive:/ --dirs-only 2>/dev/null | python3 -c "import sys,json;[print(x['ID']) for x in json.load(sys.stdin) if x['Name']=='$_DEV']" 2>/dev/null)
+            [[ -n "$_GID" ]] && { echo "$_GID" > "$_BDIR/.gdrive_id"; ok "gdrive folder: $_DEV"; } || warn "gdrive folder setup failed"
+        else ok "gdrive folder: $_DEV"; fi
+    fi
     RC="$HOME/.bashrc"; [[ -n "$ZSH_VERSION" ]] && RC="$HOME/.zshrc"
     source "$RC" 2>/dev/null && ok "shell ready" || warn "run: source $RC"
     echo -e "\n${G}✓${R} Install complete — type ${G}a${R}\n"
