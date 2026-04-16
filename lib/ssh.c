@@ -12,13 +12,13 @@ static void ssh_savex(const char*dir,const char*n,const char*h,const char*pw,con
     if(k&&v&&v[0])snprintf(d+l,(size_t)(B-l),"%s: %s\n",k,v);
     writef(f,d);sync_repo();}
 static int ssh_idx(const char*a,const void*H_,int nh){
-    typedef struct{char name[128],host[256],pw[256];}ht;const ht*H=(const ht*)H_;
+    typedef struct{char name[128],host[256],pw[256],path[P];}ht;const ht*H=(const ht*)H_;
     if(isdigit((unsigned char)*a))return atoi(a);
     for(int i=0;i<nh;i++)if(!strcmp(H[i].name,a))return i;return -1;}
 static int cmd_ssh(int argc,char**argv){
     AB;
     char dir[P];snprintf(dir,P,"%s/ssh",SROOT);mkdirp(dir);sync_bg();
-    typedef struct{char name[128],host[256],pw[256];}host_t;
+    typedef struct{char name[128],host[256],pw[256],path[P];}host_t;
     host_t H[32];int nh=0,arc=0;
     char paths[32][P];int np=listdir(dir,paths,32);
     for(int i=np-1;i>=0&&nh<32;i--){
@@ -26,7 +26,7 @@ static int cmd_ssh(int argc,char**argv){
         int dup=0;for(int j=0;j<nh;j++)if(!strcmp(H[j].name,n)){dup=1;break;}
         if(dup){do_archive(paths[i]);arc++;continue;}
         snprintf(H[nh].name,128,"%s",n);const char*h=kvget(&kv,"Host"),*p=kvget(&kv,"Password");
-        snprintf(H[nh].host,256,"%s",h?h:"");snprintf(H[nh].pw,256,"%s",p?p:"");nh++;}
+        snprintf(H[nh].host,256,"%s",h?h:"");snprintf(H[nh].pw,256,"%s",p?p:"");snprintf(H[nh].path,P,"%s",paths[i]);nh++;}
     if(arc)sync_bg();
     const char*sub=argc>2?argv[2]:NULL;
     /* list */
@@ -114,24 +114,18 @@ static int cmd_ssh(int argc,char**argv){
         if(wsl){
             pcmd("powershell.exe -c \"ipconfig\"|grep -oP '192\\.168\\.\\d+\\.\\d+'|head -1",ip,128);ip[strcspn(ip,"\n")]=0;
             snprintf(port,8,"2222");
-            /* ensure sshd running */
             (void)!system("pgrep -x sshd >/dev/null||sudo service ssh start");
-            /* check/setup port forward + logon task */
-            char pf[B],wu[128]="";pcmd("powershell.exe -NoProfile -c 'netsh interface portproxy show all' 2>/dev/null",pf,B);
-            pcmd("cmd.exe /c \"echo %USERNAME%\" 2>/dev/null",wu,128);wu[strcspn(wu,"\r\n")]=0;
-            if(!strstr(pf,"2222")){
-                char wip[128];pcmd("hostname -I 2>/dev/null|awk '{printf $1}'",wip,128);
-                if(wu[0]){char ps[P];snprintf(ps,P,"/mnt/c/Users/%s/.wsl-ssh.ps1",wu);
-                    writef(ps,"$ip='';for($i=0;$i -lt 30 -and !$ip;$i++){Start-Sleep 2;try{$ip=(wsl hostname -I).Trim().Split()[0]}catch{}}\nif($ip){netsh interface portproxy delete v4tov4 listenport=2222 listenaddress=0.0.0.0 2>$null;netsh interface portproxy add v4tov4 listenport=2222 listenaddress=0.0.0.0 connectport=22 connectaddress=$ip}\n");}
-                puts("Setting up Windows port forward + logon task (UAC)...");
-                char c[B*2];int n=snprintf(c,B*2,"powershell.exe -NoProfile -c \"Start-Process powershell -Verb RunAs -ArgumentList '-c',"
-                    "'netsh interface portproxy delete v4tov4 listenport=2222 listenaddress=0.0.0.0 2>\\$null;"
-                    "netsh interface portproxy add v4tov4 listenport=2222 listenaddress=0.0.0.0 connectport=22 connectaddress=%s;"
-                    "netsh advfirewall firewall delete rule name=\\\"WSL SSH\\\" 2>\\$null;"
-                    "netsh advfirewall firewall add rule name=\\\"WSL SSH\\\" dir=in action=allow protocol=tcp localport=2222",wip);
-                if(wu[0])n+=snprintf(c+n,(size_t)(B*2-n),";schtasks /create /tn \\\"WSL SSH Forward\\\" /sc onlogon /rl highest /f /tr \\\"powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File C:/Users/%s/.wsl-ssh.ps1\\\"",wu);
-                snprintf(c+n,(size_t)(B*2-n),"'\"");
-                (void)!system(c);printf("Press Enter after admin window completes...");(void)getchar();}
+            char pf[B];pcmd("powershell.exe -NoProfile -c 'netsh interface portproxy show all' 2>/dev/null",pf,B);
+            if(!strstr(pf,"2222")){char wu[128];pcmd("powershell.exe -NoProfile -c '$env:USERNAME'",wu,128);wu[strcspn(wu,"\r\n")]=0;
+                if(wu[0]){char ps[P],c[B];snprintf(ps,P,"/mnt/c/Users/%s/.wsl-ssh.ps1",wu);
+                    writef(ps,"$ip='';1..15|%{if(!$ip){sleep 2;try{$ip=(wsl hostname -I).Trim().Split()[0]}catch{}}};if(!$ip){exit}\n"
+                        "netsh interface portproxy delete v4tov4 listenport=2222 listenaddress=0.0.0.0 2>$null\n"
+                        "netsh interface portproxy add v4tov4 listenport=2222 listenaddress=0.0.0.0 connectport=22 connectaddress=$ip\n"
+                        "netsh advfirewall firewall delete rule name='WSL SSH' 2>$null\n"
+                        "netsh advfirewall firewall add rule name='WSL SSH' dir=in action=allow protocol=tcp localport=2222\n"
+                        "schtasks /create /tn 'WSL SSH Forward' /sc onlogon /rl highest /f /tr (\"powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File C:/Users/$env:USERNAME/.wsl-ssh.ps1\")\n");
+                    snprintf(c,B,"powershell.exe -NoProfile -c \"Start-Process powershell -Verb RunAs -Wait -ArgumentList '-ExecutionPolicy','Bypass','-File','C:/Users/%s/.wsl-ssh.ps1'\"",wu);
+                    puts("WSL SSH setup (UAC)...");(void)!system(c);}}
             printf("\xe2\x9c\x93 WSL port forward\n");
 #ifdef __APPLE__
         }else if(1){
@@ -150,7 +144,7 @@ static int cmd_ssh(int argc,char**argv){
         ssh_savex(dir,nm,h,epw,"OS",os);printf("\xe2\x9c\x93 %s %s [%s]\n",nm,h,os);return 0;}
     /* rm */
     if(!strcmp(sub,"rm")&&argc>3){int x=ssh_idx(argv[3],H,nh);
-        if(x>=0&&x<nh){char f[P];snprintf(f,P,"%s/%s.txt",dir,H[x].name);unlink(f);sync_repo();printf("\xe2\x9c\x93 rm %s\n",H[x].name);}return 0;}
+        if(x>=0&&x<nh){unlink(H[x].path);sync_repo();printf("\xe2\x9c\x93 rm %s\n",H[x].name);}return 0;}
     /* pw — change password */
     if(!strcmp(sub,"pw")&&argc>3){int x=ssh_idx(argv[3],H,nh);
         if(x>=0&&x<nh){char pw[256];printf("Password for %s: ",H[x].name);
@@ -158,7 +152,7 @@ static int cmd_ssh(int argc,char**argv){
     /* mv/rename */
     if((!strcmp(sub,"mv")||!strcmp(sub,"rename"))&&argc>4){
         const char*old=argv[3],*nn=argv[4];int x=ssh_idx(old,H,nh);
-        if(x>=0&&x<nh){char f[P];snprintf(f,P,"%s/%s.txt",dir,H[x].name);unlink(f);
+        if(x>=0&&x<nh){unlink(H[x].path);
             ssh_savex(dir,nn,H[x].host,H[x].pw,0,0);printf("\xe2\x9c\x93 %s -> %s\n",H[x].name,nn);}return 0;}
     /* info */
     if(!strcmp(sub,"info")||!strcmp(sub,"i")){
