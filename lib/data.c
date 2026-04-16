@@ -80,7 +80,9 @@ static void load_proj(void) {
         proj_t *p=&PJ[NPJ];
         snprintf(p->name, 128, "%s", nm); snprintf(p->file, P, "%s", paths[i]);
         {char*pp=p->path;snprintf(pp,512,"%s/%s",HOME,nm);
-        if(!dexists(pp)&&pa){if(pa[0]=='~')snprintf(pp,512,"%s%s",HOME,pa+1);else if(dexists(pa))snprintf(pp,512,"%s",pa);}}
+        if(!dexists(pp)&&pa){if(pa[0]=='~')snprintf(pp,512,"%s%s",HOME,pa+1);
+            else{char rp[512];if(isalpha(pa[0])&&pa[1]==':')snprintf(rp,512,"/mnt/%c%s",(char)tolower(pa[0]),pa+2);else snprintf(rp,512,"%s",pa);
+                for(char*s=rp;*s;s++)if(*s=='\\') *s='/';if(dexists(rp))snprintf(pp,512,"%s",rp);}}}
         snprintf(p->repo, 512, "%s", re ? re : "");
         snprintf(p->gdrive, 512, "%s", gd ? gd : "");
         {const char *o=kvget(&kv,"Order");p->order=o?atoi(o):strcmp(p->path,SDIR)?9999:-1;}
