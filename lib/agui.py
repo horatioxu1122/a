@@ -145,6 +145,8 @@ class CDPPage:
         v = r.get('result', {}).get('value')
         return v
 
+    def evaluate(self, expr): return self._eval(expr)
+
     def query_selector(self, sel):
         return self._eval(f'!!document.querySelector({repr(sel)})')
 
@@ -2072,6 +2074,27 @@ def multi_ai_workflow(query=None, only=None, files=None):
     """Wrapper for async multi-AI (library glue)"""
     return asyncio.run(multi_ai_async(query, only=only, files=files))
 
+LLM_LOGIN_URLS = {'claude':'https://claude.ai/','chatgpt':'https://chatgpt.com/','grok':'https://grok.com/','deepseek':'https://chat.deepseek.com/','gemini':'https://gemini.google.com/app','perplexity':'https://www.perplexity.ai/','qwen':'https://chat.qwen.ai/','aistudio':'https://aistudio.google.com/','ernie':'https://ernie.baidu.com/','kimi':'https://www.kimi.com/','zai':'https://chat.z.ai/'}
+
+def status(only=None):
+    """Login status across LLM_LOGIN_URLS. Dumps screenshot+HTML when logged out."""
+    launch_browser_with_positioning();pg=get_page();r={}
+    targets={k:v for k,v in LLM_LOGIN_URLS.items() if not only or k in only}
+    for nm,url in targets.items():
+        try:
+            pg.goto(url,wait_until='domcontentloaded',timeout=15000);time.sleep(2)
+            body=(pg.evaluate('document.body.innerText') or '')[:3000]
+            lo=any(t in body for t in('Sign in','Log in','Sign up','Get started','Continue with'))
+            r[nm]='out' if lo else 'in'
+            print(f"{'x' if lo else '+'} {nm}: {r[nm]}")
+            if lo:
+                d=f'/tmp/login_{nm}';os.makedirs(d,exist_ok=True)
+                pg.screenshot(path=f'{d}/shot.png')
+                open(f'{d}/body.html','w').write(pg.evaluate('document.documentElement.outerHTML') or '')
+                print(f"  → {d}/")
+        except Exception as e:r[nm]='err';print(f"? {nm}: {str(e)[:60]}")
+    return r
+
 
 # ═══════════════════════════════════════════════════════════════════
 # DEEP RESEARCH - Parallel launch, save URLs, exit
@@ -2861,7 +2884,7 @@ if __name__ == "__main__":
 """
         print(examples)
 
-    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary','me'}
+    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary','me','status'}
     sys.argv = [a if a.startswith('-') or a not in _cmds else f'--{a}' for a in sys.argv]
     parser = argparse.ArgumentParser(
         description='agui - GUI Automation with XWayland Tools',
@@ -2891,6 +2914,7 @@ if __name__ == "__main__":
     parser.add_argument('--pw', action='store_true', help='Use Playwright instead of raw CDP')
     parser.add_argument('--canary', action='store_true', help='Use Chrome Canary')
     parser.add_argument('--me', action='store_true', help='Use real Chrome profile (logged in)')
+    parser.add_argument('--status', action='store_true', help='Login status across LLM platforms')
     args, extra = parser.parse_known_args(); args.ask = args.ask or (' '.join(extra) if extra and not args.say else None)
 
     if args.demo: show_examples(); sys.exit(0)
@@ -2909,7 +2933,8 @@ if __name__ == "__main__":
         print(f"  → Files to upload: {[os.path.basename(f) for f in upload_files]}")
 
     try:
-        if args.log: launch_browser_with_positioning(); input("\n✓ Sign in anywhere. Press Enter or Ctrl+C to save & exit.\n")
+        if args.status: status(only=set(args.pick.lower().split(',')) if args.pick else None)
+        elif args.log: launch_browser_with_positioning(); input("\n✓ Sign in anywhere. Press Enter or Ctrl+C to save & exit.\n")
         elif args.go: google_workflow()
         elif args.bing: bing_workflow(args.runs)
         elif args.art: pixai_workflow()

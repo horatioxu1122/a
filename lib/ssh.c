@@ -1,5 +1,6 @@
 /* ── ssh ── */
 #define SMUX " -oControlMaster=auto -oControlPath=%%d/.ssh/a-%%C -oControlPersist=300"
+#define IP_CMD "(hostname -I 2>/dev/null||python3 -c 'import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.connect((\"8.8.8.8\",80));print(s.getsockname()[0])' 2>/dev/null)|awk '{print $1;exit}'"
 static void ssh_parse(const char*h,char*hp,char*port){
     snprintf(hp,256,"%s",h);char*c=strrchr(hp,':');if(c){snprintf(port,8,"%s",c+1);*c=0;}else snprintf(port,8,"22");}
 static int ssh_pre(char*c,int sz,const char*pw,const char*opts,const char*port,const char*hp){
@@ -30,15 +31,17 @@ static int cmd_ssh(int argc,char**argv){
     if(arc)sync_bg();
     const char*sub=argc>2?argv[2]:NULL;
     /* list */
-    if(!sub){/* auto-register self */
-        {int f=0;for(int i=0;i<nh;i++)if(!strcmp(H[i].name,DEV)){f=1;break;}
-        if(!f&&nh<32){char ip[128]="",port[8]="22",h[256];const char*u=getenv("USER");
-            char pv[64];pcmd("grep -ci microsoft /proc/version 2>/dev/null",pv,64);
-            if(atoi(pv)>0){pcmd("powershell.exe -c \"ipconfig\"|grep -oP '192\\.168\\.\\d+\\.\\d+'|head -1",ip,128);ip[strcspn(ip,"\n")]=0;snprintf(port,8,"2222");}
-            else{pcmd("hostname -I 2>/dev/null|awk '{printf $1}'",ip,128);
-                if(!access("/data/data/com.termux",F_OK))snprintf(port,8,"8022");}
-            if(ip[0]){snprintf(h,256,!strcmp(port,"22")?"%s@%s":"%s@%s:%s",u?u:"",ip,port);
-                ssh_savex(dir,DEV,h,NULL,0,0);snprintf(H[nh].name,128,"%s",DEV);snprintf(H[nh].host,256,"%s",h);H[nh].pw[0]=0;nh++;}}}
+    if(!sub){/* auto-refresh self */
+        char ip[128]="",port[8]="22",h[256];const char*u=getenv("USER");
+        char pv[64];pcmd("grep -ci microsoft /proc/version 2>/dev/null",pv,64);
+        if(atoi(pv)>0){pcmd("powershell.exe -c \"ipconfig\"|grep -oP '192\\.168\\.\\d+\\.\\d+'|head -1",ip,128);ip[strcspn(ip,"\n")]=0;snprintf(port,8,"2222");}
+        else{pcmd(IP_CMD,ip,128);ip[strcspn(ip,"\n")]=0;
+            if(!access("/data/data/com.termux",F_OK))snprintf(port,8,"8022");}
+        if(ip[0]){snprintf(h,256,!strcmp(port,"22")?"%s@%s":"%s@%s:%s",u?u:"",ip,port);
+            int f=-1;for(int i=0;i<nh;i++)if(!strcmp(H[i].name,DEV)){f=i;break;}
+            if(f<0||strcmp(H[f].host,h)){ssh_savex(dir,DEV,h,f>=0?H[f].pw:NULL,0,0);
+                if(f<0&&nh<32){snprintf(H[nh].name,128,"%s",DEV);snprintf(H[nh].host,256,"%s",h);H[nh].pw[0]=0;nh++;}
+                else if(f>=0)snprintf(H[f].host,256,"%s",h);}}
         int on=!system("pgrep -x sshd >/dev/null 2>&1");
         printf("SSH sshd:%s\n\n",on?" \033[32mon\033[0m":" \033[31moff\033[0m");
         for(int i=0;i<nh;i++){int s=!strcmp(H[i].name,DEV);
@@ -60,7 +63,7 @@ static int cmd_ssh(int argc,char**argv){
     if(!strcmp(sub,"stop")){(void)!system("pkill -x sshd 2>/dev/null||sudo pkill -x sshd");puts("✓");return 0;}
     if(!strcmp(sub,"status")||!strcmp(sub,"s")){
         int on=!system("pgrep -x sshd >/dev/null 2>&1");char ip[128];
-        pcmd("hostname -I 2>/dev/null|awk '{printf $1}'",ip,128);
+        pcmd(IP_CMD,ip,128);ip[strcspn(ip,"\n")]=0;
         const char*u=getenv("USER");int p=access("/data/data/com.termux",F_OK)?22:8022;
         printf("%s ssh %s@%s -p %d\n",on?"✓":"x",u?u:"",ip,p);return 0;}
     /* setup — install openssh */
@@ -133,8 +136,7 @@ static int cmd_ssh(int argc,char**argv){
 #else
         }else{
 #endif
-            pcmd("hostname -I 2>/dev/null|awk '{printf $1}'",ip,128);
-            if(!ip[0])pcmd("ifconfig 2>/dev/null|awk '/inet /{if($2!~/^127/){printf $2;exit}}'",ip,128);
+            pcmd(IP_CMD,ip,128);ip[strcspn(ip,"\n")]=0;
             if(!access("/data/data/com.termux",F_OK))snprintf(port,8,"8022");
             else{char pp[8];pcmd("awk '/^Port /{printf $2}' /etc/ssh/sshd_config 2>/dev/null",pp,8);if(pp[0])snprintf(port,8,"%s",pp);}}
         snprintf(h,256,!strcmp(port,"22")?"%s@%s":"%s@%s:%s",u?u:"",ip,port);
