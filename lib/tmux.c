@@ -24,7 +24,7 @@ static int tm_has(const char *w) {
 }
 static void tm_t(const char*w,char*t){if(*w=='%')snprintf(t,256,"%s",w);else snprintf(t,256,":%s",w);}
 static void tm_go(const char *w) {
-    perf_disarm();tm_gc();char g[64];snprintf(g,64,TMS"-%d",(int)getpid());
+    perf_disarm();tm_gc();tm_ensure_sess();char g[64];snprintf(g,64,TMS"-%d",(int)getpid());
     if(getenv("TMUX")){if(w){char t[256];tm_t(w,t);execlp("tmux","tmux","select-window","-t",t,(char*)NULL);}
         else execlp("tmux","tmux","switch-client","-t",TMS,(char*)NULL);}
     if(w){char t[256];tm_t(w,t);execlp("tmux","tmux","new-session","-t",TMS,"-s",g,";","select-window","-t",t,(char*)NULL);}

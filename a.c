@@ -449,6 +449,7 @@ static int cmd_j(int c,char**v){
     tm_go(sn);
     return 0;}
 static int cmd_job(int c,char**v){return(c>2&&isdigit(*v[2]))?cmd_jobs(c,v):cmd_j(c,v);}
+static int cmd_tmux(int c,char**v){(void)c;(void)v;tm_go(NULL);return 0;}
 static int cmd_tm_unsave(int c,char**v){
     if(c<3)return 1;tm_unsave_win(v[2]);return 0;}
 static int cmd_adb(int c,char**v){
@@ -532,7 +533,7 @@ static const cmd_t CMDS[] = {
     {"set",cmd_set},{"settings",cmd_settings},{"setup",cmd_setup},
     {"ssh",cmd_ssh},
     {"sync",cmd_sync},{"t",cmd_task},{"task",cmd_task},
-    {"tm-unsave",cmd_tm_unsave},{"tutorial",cmd_tutorial},{"u",cmd_update},
+    {"tm-unsave",cmd_tm_unsave},{"tmux",cmd_tmux},{"tutorial",cmd_tutorial},{"u",cmd_update},
     {"uninstall",cmd_uninstall},{"update",cmd_update},
     {"vm",cmd_vm},
     {"w",cmd_w},{"watch",cmd_watch},{"web",cmd_web},{"work",cmd_w},
