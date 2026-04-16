@@ -502,6 +502,27 @@ static int cmd_tm_unsave(int c,char**v){
     if(c<3)return 1;tm_unsave_win(v[2]);return 0;}
 static int cmd_adb(int c,char**v){
     if(c>2&&!strcmp(v[2],"ssh"))return system("for s in $(adb devices|awk '/\\tdevice$/{print$1}');do printf '\\033[36m→ %s\\033[0m ' \"$s\";adb -s \"$s\" shell 'am broadcast -n com.termux/.app.TermuxOpenReceiver -a com.termux.RUN_COMMAND --es com.termux.RUN_COMMAND_PATH /data/data/com.termux/files/usr/bin/sshd --ez com.termux.RUN_COMMAND_BACKGROUND true' 2>&1|tail -1;done");
+    if(c>3&&!strcmp(v[2],"cmd")){perf_disarm();
+        char u[64];pcmd("adb shell cmd package list packages -U com.termux 2>/dev/null",u,64);
+        const char*uc=strstr(u,"uid:");int uid=uc?atoi(uc+4):0;
+        char cmd[B]="";ajoin(cmd,B,c,v,3);
+        if(uid>=10000){
+            (void)!system("adb forward tcp:18022 tcp:8022 >/dev/null 2>&1");
+            char ul[64];snprintf(ul,64,"u0_a%d@localhost",uid-10000);
+            pid_t p=fork();int st=1;
+            if(!p){execlp("ssh","ssh","-oConnectTimeout=4","-oStrictHostKeyChecking=accept-new","-p","18022",ul,cmd,(char*)0);_exit(127);}
+            waitpid(p,&st,0);(void)!system("adb forward --remove tcp:18022 >/dev/null 2>&1");
+            if(!WIFEXITED(st)||WEXITSTATUS(st)!=255)return WIFEXITED(st)?WEXITSTATUS(st):1;
+            fprintf(stderr,"\033[33m! ssh failed, fallback input+screenshot\033[0m\n");}
+        (void)!system("adb shell am start -n com.termux/.HomeActivity >/dev/null 2>&1");sleep(2);
+        char ec[B*2];int k=0;
+        for(int i=0;cmd[i]&&k<(int)sizeof(ec)-3;i++){
+            if(cmd[i]==' ')ec[k++]='%',ec[k++]='s';
+            else if(strchr("\"\\$`",cmd[i]))ec[k++]='\\',ec[k++]=cmd[i];
+            else ec[k++]=cmd[i];}
+        ec[k]=0;char sc[B*3],pf[P];snprintf(pf,P,"%s/a_adb.png",TMP);
+        snprintf(sc,B*3,"adb shell \"input text \\\"%s\\\"&&input keyevent 66\";sleep 3;adb exec-out screencap -p >%s;echo %s",ec,pf,pf);
+        return system(sc);}
     execlp("adb","adb","devices","-l",(char*)0);return 1;
 }
 static int cmd_run_once(int c,char**v){
