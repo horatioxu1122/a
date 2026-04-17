@@ -2075,6 +2075,52 @@ def signin(only=None):
     else: print("\n✓ all logged in")
 
 
+_DEEPTHINK_CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'adata', 'local', 'agui_deepthink_acct.txt')
+
+async def _probe_gemini_deepthink(ctx, n):
+    """Open /u/{n}/app, click Tools, return page if Deep Think present else None."""
+    p = await ctx.new_page()
+    try:
+        await p.goto(f'https://gemini.google.com/u/{n}/app', wait_until='domcontentloaded', timeout=15000)
+        await p.wait_for_selector('div[role="textbox"]', timeout=8000)
+        await p.locator('text="Tools"').first.click(timeout=3000)
+        await asyncio.sleep(0.5)
+        if await p.get_by_text('Deep Think', exact=False).count():
+            print(f"  ✓ /u/{n}/app has Deep Think")
+            return p
+        print(f"  - /u/{n}/app: no Deep Think")
+    except Exception as e: print(f"  ? /u/{n}/app: {str(e)[:60]}")
+    try: await p.close()
+    except: pass
+    return None
+
+async def gemini_deepthink_async(prompt):
+    """Probe cached then /u/0..2 for Deep Think, activate, submit. Cache the winner."""
+    try: cached = open(_DEEPTHINK_CACHE).read().strip()
+    except: cached = None
+    _launch_chrome_positioned()
+    pw = await async_playwright().start()
+    ctx = (await pw.chromium.connect_over_cdp('http://localhost:9222')).contexts[0]
+    page = None
+    order = ([cached] if cached else []) + [c for c in ('0','1','2') if c != cached]
+    for n in order:
+        page = await _probe_gemini_deepthink(ctx, n)
+        if page:
+            if n != cached:
+                os.makedirs(os.path.dirname(_DEEPTHINK_CACHE), exist_ok=True)
+                open(_DEEPTHINK_CACHE, 'w').write(n)
+                print(f"  → cached account /u/{n}")
+            break
+    if not page: print("x no Gemini account has Deep Think available"); return
+    await page.get_by_text('Deep Think', exact=False).first.click(timeout=3000)
+    await asyncio.sleep(1)
+    elem = page.locator('div[role="textbox"]').last
+    await elem.click(timeout=2000); await elem.fill(prompt); await page.keyboard.press('Enter')
+    print(f"  ✓ submitted, conversation: {page.url}")
+    print(f"  → revisit URL when done (Deep Think takes minutes)")
+
+def gemini_deepthink(prompt): asyncio.run(gemini_deepthink_async(prompt))
+
 # ═══════════════════════════════════════════════════════════════════
 # DEEP RESEARCH - Parallel launch, save URLs, exit
 # ═══════════════════════════════════════════════════════════════════
@@ -2863,7 +2909,7 @@ if __name__ == "__main__":
 """
         print(examples)
 
-    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary','status','signin'}
+    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary','status','signin','deepthink'}
     sys.argv = [a if a.startswith('-') or a not in _cmds else f'--{a}' for a in sys.argv]
     parser = argparse.ArgumentParser(
         description='agui - GUI Automation with XWayland Tools',
@@ -2894,6 +2940,7 @@ if __name__ == "__main__":
     parser.add_argument('--canary', action='store_true', help='(legacy, no-op) automation now picks chrome-beta or -dev automatically')
     parser.add_argument('--status', action='store_true', help='Login status across LLM platforms')
     parser.add_argument('--signin', action='store_true', help='Light auto sign-in for logged-out platforms')
+    parser.add_argument('--deepthink', action='store_true', help='Gemini Deep Think (probes /u/0..2 + caches)')
     args, extra = parser.parse_known_args(); args.ask = args.ask or (' '.join(extra) if extra and not args.say else None)
 
     if args.demo: show_examples(); sys.exit(0)
@@ -2912,6 +2959,10 @@ if __name__ == "__main__":
     try:
         if args.status: status(only=set(args.pick.lower().split(',')) if args.pick else None)
         elif args.signin: signin(only=set(args.pick.lower().split(',')) if args.pick else None)
+        elif args.deepthink:
+            p = args.say or args.ask
+            if not p: print("x need --ask or --say with prompt"); sys.exit(1)
+            gemini_deepthink(p)
         elif args.log: launch_browser_with_positioning(); input("\n✓ Sign in anywhere. Press Enter or Ctrl+C to save & exit.\n")
         elif args.go: google_workflow()
         elif args.bing: bing_workflow(args.runs)
