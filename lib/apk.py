@@ -35,6 +35,7 @@ tab("Web").also{it.setOnTouchListener{_,e->if(e.action==MotionEvent.ACTION_DOWN)
 tab("Native").also{it.setOnTouchListener{_,e->if(e.action==MotionEvent.ACTION_DOWN){w.visibility=View.GONE;nv.visibility=View.VISIBLE;nv.invalidate()};false};bar.addView(it)}
 val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
 root.addView(fr,LinearLayout.LayoutParams(-1,0,1f));root.addView(bar);setContentView(root)}}
+class C:Activity(){override fun onCreate(b:Bundle?){super.onCreate(b);val c=intent.getStringExtra("cmd")?:"";if(c.isNotEmpty())try{val o=intent.getStringExtra("out")?:"/sdcard/a_out.txt";startForegroundService(Intent().apply{setClassName(T,"$T.app.RunCommandService");action="$T.RUN_COMMAND";putExtra("$T.RUN_COMMAND_PATH","/data/data/$T/files/usr/bin/bash");putExtra("$T.RUN_COMMAND_ARGUMENTS",arrayOf("-l","-c","($c)>$o 2>&1;touch $o.done"));putExtra("$T.RUN_COMMAND_BACKGROUND",true)})}catch(_:Exception){};finish()}}
 '''
 NC=r'''#include <jni.h>
 #include <string.h>
@@ -59,7 +60,7 @@ tw=(int)strlen("agent manager")*F.cw;dt(p,(W-tw)/2,H/3+F.ch+20,"agent manager");
 (*e)->ReleaseIntArrayElements(e,px,p,0);}
 '''
 CML='cmake_minimum_required(VERSION 3.22)\nproject(anative)\nadd_library(anative SHARED native.c)\ntarget_compile_options(anative PRIVATE -O3 -flto)\ntarget_link_options(anative PRIVATE -flto)\ntarget_link_libraries(anative log)\n'
-MF='<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="com.termux.permission.RUN_COMMAND"/><application android:usesCleartextTraffic="true" android:label="a apk"><activity android:name=".M" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity></application></manifest>'
+MF='<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="com.termux.permission.RUN_COMMAND"/><application android:usesCleartextTraffic="true" android:label="a apk"><activity android:name=".M" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity><activity android:name=".C" android:exported="true"/></application></manifest>'
 GS='pluginManagement{repositories{google();mavenCentral()};plugins{id("com.android.application") version "8.2.0";id("org.jetbrains.kotlin.android") version "1.9.22"}}\ndependencyResolutionManagement{repositories{google();mavenCentral()}}\ninclude(":app")\n'
 H=os.path.expanduser("~");IT=os.path.exists("/data/data/com.termux")
 _CMK='externalNativeBuild{cmake{path=file("src/main/cpp/CMakeLists.txt")}}\n'

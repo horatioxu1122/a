@@ -26,8 +26,13 @@ static void init_paths(void) {
     char df[P]; snprintf(df, P, "%s/.device", DDIR);
     FILE *f = fopen(df, "r");
     if (f) { if (fgets(DEV, 128, f)) DEV[strcspn(DEV, "\n")] = 0; fclose(f); }
-    if (!DEV[0]) {
-        gethostname(DEV, 128);
+    if (!DEV[0] || !strcmp(DEV, "localhost")) {
+        DEV[0] = 0;
+        if (!access("/data/data/com.termux", F_OK)) {
+            FILE *p = popen("getprop ro.product.model 2>/dev/null", "r");
+            if (p) { if (fgets(DEV, 128, p)) { DEV[strcspn(DEV, "\n")] = 0; for (char *c = DEV; *c; c++) *c = (*c == ' ') ? '-' : (char)tolower((unsigned char)*c); } pclose(p); }
+        }
+        if (!DEV[0]) gethostname(DEV, 128);
         f = fopen(df, "w"); if (f) { fputs(DEV, f); fclose(f); }
     }
     snprintf(LOGDIR, P, "%s/backup/%s", AROOT, DEV);

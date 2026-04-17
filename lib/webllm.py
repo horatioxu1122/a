@@ -139,13 +139,12 @@ def test_site(name, query='What is 2+2? Answer in one word.'):
 
 if __name__ == '__main__':
     args = set(sys.argv[1:])
-    if 'me' in args: agui._use_real_profile = True; args.discard('me')
-    if 'canary' in args: agui._chrome_variant = 'canary'; args.discard('canary')
+    args.discard('me'); args.discard('canary')  # legacy no-ops; agui auto-picks chrome-beta or -dev now
 
     # Specific sites or all
     sites = [s for s in args if s in SITES] or list(SITES.keys())
 
-    print(f'CDP mode | profile={"user" if agui._use_real_profile else "isolated"} | variant={agui._chrome_variant}')
+    print(f'CDP mode | shared real profile (chosen by agui._automation_choice)')
     agui.launch_browser_with_positioning()
     page = agui.get_page()
 

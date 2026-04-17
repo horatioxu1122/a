@@ -503,6 +503,18 @@ static int cmd_tm_unsave(int c,char**v){
     if(c<3)return 1;tm_unsave_win(v[2]);return 0;}
 static int cmd_adb(int c,char**v){
     if(c>2&&!strcmp(v[2],"ssh"))return system("for s in $(adb devices|awk '/\\tdevice$/{print$1}');do printf '\\033[36m→ %s\\033[0m ' \"$s\";adb -s \"$s\" shell 'am broadcast -n com.termux/.app.TermuxOpenReceiver -a com.termux.RUN_COMMAND --es com.termux.RUN_COMMAND_PATH /data/data/com.termux/files/usr/bin/sshd --ez com.termux.RUN_COMMAND_BACKGROUND true' 2>&1|tail -1;done");
+    if(c>3&&!strcmp(v[2],"cmd")){perf_disarm();
+        char cmd[B]="";ajoin(cmd,B,c,v,3);
+        execl("/bin/sh","sh","-c",
+          "u=$(adb shell cmd package list packages -U com.termux 2>/dev/null|grep -oE 'uid:[0-9]+'|cut -d: -f2);"
+          "adb forward tcp:18022 tcp:8022 >/dev/null 2>&1;"
+          "ssh -oConnectTimeout=4 -oStrictHostKeyChecking=accept-new -p 18022 u0_a$((u-10000))@localhost \"$1\";r=$?;"
+          "adb forward --remove tcp:18022 >/dev/null 2>&1;"
+          "[ $r -ne 255 ]&&exit $r;"
+          "echo '! ssh failed, input+screenshot' >&2;"
+          "adb shell am start -n com.termux/.HomeActivity >/dev/null 2>&1;sleep 2;"
+          "adb shell input text \"$(printf %s \"$1\"|sed 's/ /%s/g')\";adb shell input keyevent 66;sleep 3;"
+          "f=/tmp/a_adb.png;adb exec-out screencap -p >$f;echo $f","a",cmd,(char*)0);_exit(127);}
     execlp("adb","adb","devices","-l",(char*)0);return 1;
 }
 static int cmd_run_once(int c,char**v){
