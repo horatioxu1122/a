@@ -117,6 +117,24 @@ def get_repos():
                     repos.append({"name": p.name, "url": r.stdout.strip(), "parent": str(p.parent)})
     return repos
 
+def get_source_builds():
+    """Executables under /opt/*/bin and /usr/local/bin not owned by any package manager."""
+    out, dirs = [], [Path("/usr/local/bin"), *sorted(Path("/opt").glob("*/bin"))]
+    dpkg, pm = has("dpkg"), has("pacman")
+    for d in dirs:
+        if not d.exists(): continue
+        for f in d.iterdir():
+            if not (f.is_file() and os.access(f, os.X_OK) and not f.is_symlink()): continue
+            if dpkg and run(f"dpkg -S '{f}' 2>/dev/null").returncode == 0: continue
+            if pm and run(f"pacman -Qo '{f}' 2>/dev/null").returncode == 0: continue
+            src = next((p for p in [HOME/f"{f.name}-build", HOME/f.name, HOME/"projects"/f.name, HOME/"src"/f.name] if (p/".git").exists()), None)
+            out.append({"name": f.name, "path": str(f),
+                "version": run(f"'{f}' --version 2>&1 | head -1").stdout.strip()[:120],
+                "source": str(src) if src else None,
+                "origin": run(f"git -C '{src}' remote get-url origin").stdout.strip() if src else None,
+                "commit": run(f"git -C '{src}' rev-parse HEAD").stdout.strip() if src else None})
+    return out
+
 # ── save ──
 def save():
     MIG.mkdir(parents=True, exist_ok=True)
@@ -127,7 +145,7 @@ def save():
     # temporarily point writes to device subdir
     global MIG_ORIG
     MIG_ORIG = MIG
-    items = [("Git repos", get_repos, "repos.json")]
+    items = [("Git repos", get_repos, "repos.json"), ("Source builds", get_source_builds, "source_builds.json")]
     if IS_MAC:
         items += [("Brew", get_brew, "brew.json"), ("Mac App Store", get_mas, "mas.txt"),
                   ("macOS defaults", get_mac_defaults, "defaults.json"),
@@ -181,6 +199,10 @@ def restore(source=None):
                 print(f"  clone: {repo['name']}")
                 run(f"gh repo clone {slug} '{dest}'" if has("gh") else f"git clone '{repo['url']}' '{dest}'")
 
+    sb = sd/"source_builds.json"
+    if sb.exists():
+        for b in json.loads(sb.read_text()):
+            print(f"  build: {b['name']} ({b['version'][:40]}) → {b.get('origin') or '?'}@{(b.get('commit') or '')[:8]} at {b.get('source') or '?'}")
     if IS_MAC: _restore_mac(sd)
     elif IS_DEB: _restore_deb(sd)
     elif IS_ARCH: _restore_arch(sd)
