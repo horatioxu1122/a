@@ -158,6 +158,7 @@ static int cmd_web(int argc,char**argv){AB;perf_disarm();
     if(!isatty(0))return system(c);
     tm_ensure_conf();
     char wn[64];time_t tt=time(NULL);struct tm*lt=localtime(&tt);
-    snprintf(wn,64,"web-%02d%02d",lt->tm_hour,lt->tm_min);
-    CWD(wd);char wc[B*2];snprintf(wc,B*2,"%s;echo;echo '[done] press enter';read",c);
-    tm_new(wn,wd,wc);tm_go(wn);return 0;}
+    snprintf(wn,64,"web-%02d%02d%02d",lt->tm_hour,lt->tm_min,lt->tm_sec);
+    CWD(wd);char wc[B*2];snprintf(wc,B*2,"%s;echo;echo \"[done] press enter\";read",c);
+    if(tm_new(wn,wd,wc))return system(c);
+    tm_go(wn);return 0;}
