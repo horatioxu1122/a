@@ -1615,7 +1615,7 @@ async def upload_files_to_page(page, name, file_paths):
         return False
 
 
-async def multi_ai_async(query=None, _tabs=3, only=None, files=None):
+async def multi_ai_async(query=None, _tabs=1, only=None, files=None):
     """Multi-AI platforms workflow - FAST parallel with positioning (library glue - async)"""
     print("═" * 50)
     print("Multi-AI Platforms (Fast Parallel)")
@@ -1668,35 +1668,28 @@ async def multi_ai_async(query=None, _tabs=3, only=None, files=None):
     if only:
         only_list = [o.strip().lower() for o in (only.split(',') if isinstance(only, str) else only)]
         platforms = [(n,u) for n,u in platforms if n.lower() in only_list]
-        _tabs = 1  # single tab for individual testing (avoids multi-tab race)
 
     # Grant clipboard permissions so navigator.clipboard.readText() works after copy button click
     for _, url in platforms:
         try: await context.grant_permissions(['clipboard-read', 'clipboard-write'], origin=url.rstrip('/'))
         except: pass
 
-    print(f"\nOpening {len(platforms)} platforms × {_tabs} tabs in PARALLEL...\n")
+    print(f"\nOpening {len(platforms)} platforms sequentially (parallel goto overwhelms Chrome)...\n")
 
     async def open_platform(name, url, page=None):
-        """Open platform - event driven, no sleeps (library glue)"""
         try:
             page = page or await context.new_page()
-            await page.goto(url, wait_until='domcontentloaded', timeout=15000)
+            await page.goto(url, wait_until='domcontentloaded', timeout=30000)
             print(f"  ✓ [{name}] Loaded")
             return (name, page, True)
         except Exception as e:
             print(f"  ✗ [{name}] {str(e)[:40]}")
             return (name, page, False)
 
-    # Open _tabs instances per platform in parallel (first reuses existing page)
-    tasks = [open_platform(n, u, first_page if j+i == 0 else None) for j, (n, u) in enumerate(platforms) for i in range(_tabs)]
-    results = await asyncio.gather(*tasks)
-
-    # Include ALL pages that have a page object (we'll check URL before queries - library glue)
-    pages = [(n, p) for n, p, success in results if p is not None]
-    failed = [n for n, p, success in results if p is None]
-
-    print(f"\n✓ {len(pages)}/{len(platforms)*_tabs} tabs loaded")
+    results = [await open_platform(n, u, first_page if j == 0 else None) for j, (n, u) in enumerate(platforms)]
+    pages = [(n, p) for n, p, ok in results if p is not None]
+    failed = [n for n, p, ok in results if p is None]
+    print(f"\n✓ {len(pages)}/{len(platforms)} tabs loaded")
     if failed:
         print(f"  ✗ Completely failed (no page): {', '.join(failed)}")
 
@@ -1811,16 +1804,11 @@ async def multi_ai_async(query=None, _tabs=3, only=None, files=None):
                             response_ready = True
                             print(f"  ✓ [{name}] <answer> tag in HTML at {attempt*0.5:.0f}s")
                             break
-                    # Also check copy button as secondary signal (after 3s to skip stale buttons)
+                    # Copy button INSIDE assistant container (not user msg) — fires only on real response
                     if attempt >= 6:
-                        _copy_sels = ['button[aria-label="Copy"]', 'button[aria-label*="opy"]',
-                                      '#copy-container', '#answer_text_id', 'svg[name="Copy"]']
-                        for _cs in _copy_sels:
-                            if await page.locator(_cs).count() > 0:
-                                response_ready = True
-                                print(f"  ✓ [{name}] Copy button at {attempt*0.5:.0f}s")
-                                break
-                        if response_ready:
+                        if await page.evaluate("""(()=>{const A=document.querySelectorAll('[data-message-author-role="assistant"],message-content,.font-claude-message,.ds-markdown,.segment-assistant,.message-text,.prose,.markdown-body,#answer_text_id');for(const a of A)if(a.querySelector('button[aria-label*="opy"],#copy-container,svg[name="Copy"],[class*="copy"]'))return true;return false})()"""):
+                            response_ready = True
+                            print(f"  ✓ [{name}] Assistant copy button at {attempt*0.5:.0f}s")
                             break
                 except:
                     pass
