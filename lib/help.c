@@ -75,6 +75,7 @@ static void gen_icache(void) {
     fputs("diff\tgit diff\ncat\tcodebase dump\nfreq\tusage frequency\n"
     "jobs\tlist jobs\ndash\tdashboard\nperf\tperformance\n"
     "ui\tweb dashboard\nterm\tterminal (a ui /term)\n"
+    "web status\tLLM login status\nweb signin\tLLM auto sign-in\nweb log\tmanual sign-in mode\n"
     "cal add\tadd event\nhub add\tadd\nhub run\trun\nhub rm\trm\nhub log\tlog\n"
     "note l\tlist\nnote r\treview\nssh add\tadd host\nssh all\tall hosts\n"
     "task add\tadd\ntask l\tlist\ntask r\treview\ntask rank\trank\n"
