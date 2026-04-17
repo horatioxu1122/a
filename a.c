@@ -248,6 +248,7 @@ install)
         elif command -v apt-get &>/dev/null; then sudo apt-get install -y libxcomposite1 libgtk-3-0t64 libasound2t64 libnss3 2>/dev/null && ok "playwright deps" || warn "playwright deps"; fi
     else ok "playwright deps"; fi
     command -v ollama &>/dev/null&&ok "ollama"||{ [[ -n "$SUDO" || $EUID -eq 0 ]]&&{ info "Installing ollama...";curl -fsSL https://ollama.com/install.sh|sh&&ok "ollama"||warn "ollama failed";}||warn "ollama needs sudo";}
+    command -v gh &>/dev/null&&ok "gh"||[[ "$OS" == termux ]]||{ info "Installing gh...";A_=$(uname -m);[[ "$A_" == x86_64 ]]&&A_=amd64;[[ "$A_" == aarch64||"$A_" == arm64 ]]&&A_=arm64;O_=linux;[[ "$OSTYPE" == darwin* ]]&&O_=macOS;V_=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest 2>/dev/null|grep -m1 tag_name|cut -d\" -f4|tr -d v);[[ -z "$V_" ]]&&V_=2.63.2;T_=$(mktemp -d);curl -fsSL "https://github.com/cli/cli/releases/download/v$V_/gh_${V_}_${O_}_${A_}.tar.gz"|tar -xzf - -C "$T_"&&mv "$T_"/*/bin/gh "$HOME/.local/bin/gh" 2>/dev/null&&ok "gh $V_"||warn "gh failed";rm -rf "$T_";}
     "$BIN/a" ui on 2>/dev/null && ok "UI service (localhost:1111)" || :
     [[ ! -s "$HOME/.tmux.conf" ]] && "$BIN/a" config tmux_conf y 2>/dev/null && ok "tmux config (mouse enabled)" || :
     "$BIN/a" >/dev/null 2>&1 && ok "cache generated" || :

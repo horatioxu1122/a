@@ -24,9 +24,16 @@ static int cmd_new(int argc, char **argv) {
     snprintf(cmd,B,"%sssh %s %s 'sh ~/a/a.c install' 2>&1",sp,so,hp);
     int r=system(cmd);
     if(r)puts("! install had warnings");else puts("+ installed");
-    /* setup git credentials if gh available */
-    snprintf(cmd,B,"%sssh %s %s 'command -v gh >/dev/null && gh auth status >/dev/null 2>&1 && gh auth setup-git 2>/dev/null' 2>/dev/null",sp,so,hp);
-    system(cmd);
+    /* push gh token + git user to target */
+    {char tok[512]="",nm[128]="",em[128]="";int l;
+    pcmd("gh auth token 2>/dev/null",tok,512);tok[strcspn(tok,"\n")]=0;
+    pcmd("git config --global user.name",nm,128);nm[strcspn(nm,"\n")]=0;
+    pcmd("git config --global user.email",em,128);em[strcspn(em,"\n")]=0;
+    l=snprintf(cmd,B,"%sssh %s %s 'export PATH=$HOME/.local/bin:$PATH;",sp,so,hp);
+    if(tok[0])l+=snprintf(cmd+l,(size_t)(B-l)," echo %s|gh auth login --with-token 2>/dev/null&&gh auth setup-git 2>/dev/null;",tok);
+    if(nm[0])l+=snprintf(cmd+l,(size_t)(B-l)," git config --global user.name \"%s\";",nm);
+    if(em[0])l+=snprintf(cmd+l,(size_t)(B-l)," git config --global user.email \"%s\";",em);
+    snprintf(cmd+l,(size_t)(B-l),"' 2>&1");system(cmd);}
     /* capture device info */
     char dev[P];snprintf(dev,P,"%s/git/devices",AROOT);mkdirp(dev);
     snprintf(cmd,B,"%sssh %s %s 'hostname;uname -m;cat /etc/os-release 2>/dev/null|head -3;which tmux git clang node claude 2>/dev/null' 2>/dev/null",sp,so,hp);
