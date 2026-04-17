@@ -1712,7 +1712,7 @@ async def multi_ai_async(query=None, _tabs=1, only=None, files=None):
     # Data logging directory (library glue)
     from datetime import datetime as _dt
     _run_ts = _dt.now().strftime('%Y%m%d_%H%M%S')
-    _data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', _run_ts)
+    _data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'adata', 'local', 'agui', _run_ts)
     os.makedirs(_data_dir, exist_ok=True)
     print(f"  → Logging to: {_data_dir}\n")
 
@@ -2288,7 +2288,7 @@ async def deep_research_async(query, only=None):
 
     # Data directory
     _run_ts = _dt.now().strftime('%Y%m%d_%H%M%S')
-    _data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', _run_ts)
+    _data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'adata', 'local', 'agui', _run_ts)
     os.makedirs(_data_dir, exist_ok=True)
 
     # Open tabs in parallel
