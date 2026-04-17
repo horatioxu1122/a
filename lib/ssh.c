@@ -11,7 +11,7 @@ static void ssh_savex(const char*dir,const char*n,const char*h,const char*pw,con
     int l=snprintf(d,B,"Name: %s\nHost: %s\n",n,h);
     if(pw&&pw[0])l+=snprintf(d+l,(size_t)(B-l),"Password: %s\n",pw);
     if(k&&v&&v[0])snprintf(d+l,(size_t)(B-l),"%s: %s\n",k,v);
-    writef(f,d);sync_repo();}
+    writef(f,d);sync_repo();snprintf(f,P,"%s/i_cache.txt",DDIR);unlink(f);}
 static int ssh_idx(const char*a,const void*H_,int nh){
     typedef struct{char name[128],host[256],pw[256],path[P];}ht;const ht*H=(const ht*)H_;
     if(isdigit((unsigned char)*a))return atoi(a);
@@ -207,13 +207,14 @@ static int cmd_ssh(int argc,char**argv){
         {char cwd[P];size_t hl=strlen(HOME);if(getcwd(cwd,P)&&!strncmp(cwd,HOME,hl)&&cwd[hl]=='/'){char*p=cwd+hl+1;char*s=strchr(p,'/');if(s)*s=0;if(*p&&*p!='.')snprintf(cd,64,"cd ~/%s 2>/dev/null;",p);}}
         for(int i=3;i<argc;i++){int l=(int)strlen(cmd);snprintf(cmd+l,(size_t)(B-l),"%s%s",l?" ":"",argv[i]);}
         if(cmd[0]||cd[0])snprintf(cs,B," 'bash -c '\"'\"'%sexport PATH=$HOME/.local/bin:$PATH; %s'\"'\"''",cd,cmd[0]?cmd:"exec bash -l");
-        int n=0;static const char*TO[]={"2","5"};char o[96];
+        int n=0;char o[96];
         for(int i=0;i<nH;i++){
             if(i)n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),";r=$?;[ $r -eq 255 ]&&exec ");
-            snprintf(o,96,"-tt -oConnectTimeout=%s -oStrictHostKeyChecking=accept-new",TO[i]);
+            snprintf(o,96,"-tt -oConnectTimeout=%d -oStrictHostKeyChecking=accept-new",i?3:2);
             n+=ssh_pre(c+n,(int)(sizeof(c)-(size_t)n),H[idx].pw,o,port[i],hp[i]);
             n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),"%s",cs);}
         if(nH>1)n+=snprintf(c+n,(size_t)(sizeof(c)-(size_t)n),";exit $r");
         else if(!cs[0])printf("Connecting to %s...\n",H[idx].name);
+        if(cmd[0])alarm(30);
         execl("/bin/sh","sh","-c",c,(char*)NULL);_exit(127);}
 }
