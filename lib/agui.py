@@ -2059,6 +2059,33 @@ def status(only=None):
         except Exception as e:r[nm]='err';print(f"? {nm}: {str(e)[:60]}")
     return r
 
+def _click_text(pg, regex):
+    """Click first button/a/div whose visible text matches case-insensitive regex. Returns True if clicked."""
+    js = f'(()=>{{const r=new RegExp({regex!r},"i");const e=Array.from(document.querySelectorAll("button,a,div,span")).find(x=>x.innerText&&r.test(x.innerText.trim().slice(0,80)));if(e){{e.click();return true}}return false}})()'
+    return bool(pg.evaluate(js))
+
+def signin(only=None):
+    """Light auto sign-in attempt on logged-out platforms. Two clicks max (Sign in → Continue with Google).
+    Recommends manual sign-in for failures."""
+    out=[k for k,v in status(only=only).items() if v=='out']
+    if not out: print("\n✓ all logged in"); return
+    pg=get_page();failed=[]
+    print(f"\n→ attempting auto sign-in for: {', '.join(out)}")
+    for nm in out:
+        try:
+            pg.goto(LLM_LOGIN_URLS[nm],wait_until='domcontentloaded',timeout=15000);time.sleep(3)
+            if _click_text(pg,r'^(sign in|log in|get started)$'): time.sleep(3)
+            if _click_text(pg,r'continue with google|sign in with google'): time.sleep(5)
+            body=(pg.evaluate('document.body.innerText') or '')[:3000]
+            ok=not any(t in body for t in ('Sign in','Log in','Sign up','Get started','Continue with'))
+            print(f"{'+' if ok else 'x'} {nm}: {'in' if ok else 'still out'}")
+            if not ok: failed.append(nm)
+        except Exception as e: print(f"? {nm}: {str(e)[:60]}"); failed.append(nm)
+    if failed:
+        print(f"\n→ recommend manual sign-in for: {', '.join(failed)}")
+        print(f"  python3 lib/agui.py log   # browser stays open, sign in to each, Ctrl+C to save")
+    else: print("\n✓ all logged in")
+
 
 # ═══════════════════════════════════════════════════════════════════
 # DEEP RESEARCH - Parallel launch, save URLs, exit
@@ -2848,7 +2875,7 @@ if __name__ == "__main__":
 """
         print(examples)
 
-    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary','status'}
+    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary','status','signin'}
     sys.argv = [a if a.startswith('-') or a not in _cmds else f'--{a}' for a in sys.argv]
     parser = argparse.ArgumentParser(
         description='agui - GUI Automation with XWayland Tools',
@@ -2874,10 +2901,11 @@ if __name__ == "__main__":
     parser.add_argument('--add', '--files', nargs='+', help='Upload files to AI platforms')
     parser.add_argument('--demo', '--examples', action='store_true', help='Show examples')
     parser.add_argument('--pick', '--only', type=str, help='Filter AI platforms')
-    parser.add_argument('--log', '--signin', action='store_true', help='Sign-in mode')
+    parser.add_argument('--log', action='store_true', help='Open browser, wait for manual sign-in (Ctrl+C to save)')
     parser.add_argument('--pw', action='store_true', help='Use Playwright instead of raw CDP')
     parser.add_argument('--canary', action='store_true', help='(legacy, no-op) automation now picks chrome-beta or -dev automatically')
     parser.add_argument('--status', action='store_true', help='Login status across LLM platforms')
+    parser.add_argument('--signin', action='store_true', help='Light auto sign-in for logged-out platforms')
     args, extra = parser.parse_known_args(); args.ask = args.ask or (' '.join(extra) if extra and not args.say else None)
 
     if args.demo: show_examples(); sys.exit(0)
@@ -2895,6 +2923,7 @@ if __name__ == "__main__":
 
     try:
         if args.status: status(only=set(args.pick.lower().split(',')) if args.pick else None)
+        elif args.signin: signin(only=set(args.pick.lower().split(',')) if args.pick else None)
         elif args.log: launch_browser_with_positioning(); input("\n✓ Sign in anywhere. Press Enter or Ctrl+C to save & exit.\n")
         elif args.go: google_workflow()
         elif args.bing: bing_workflow(args.runs)
