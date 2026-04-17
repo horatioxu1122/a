@@ -79,9 +79,8 @@ _profile_dir = None
 _center_mode = True  # Default: open on primary/center monitor
 _headless_mode = False
 _copy_profile = False  # Default: separate session (isolated profile)
-_chrome_variant = 'beta'  # 'beta' | 'stable' — controls binary AND profile source
+_chrome_variant = 'beta'  # legacy; no longer drives binary/profile choice (see _automation_choice)
 _use_cdp = True  # True = pure CDP (default), False = playwright over CDP (--pw)
-_use_real_profile = False  # True = user's real Chrome profile (logged in)
 
 # ═══════════════════════════════════════════════════════════
 # CDP DIRECT — Pure Chrome DevTools Protocol, no Playwright
@@ -397,35 +396,34 @@ def check_tool_available(tool):
     """Check if tool is available (library glue)"""
     return run_cmd(['which', tool]).returncode == 0
 
-def _resolve_chrome_binary():
-    """Pick Chrome binary based on _chrome_variant setting and platform"""
-    if IS_MAC:
-        # Mac Chrome paths (check various versions)
-        mac_paths = [
-            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-            '/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta',
-            '/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev',
-            '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary',
-            '/Applications/Chromium.app/Contents/MacOS/Chromium',
-        ]
-        for path in mac_paths:
-            if os.path.exists(path):
-                return path
-        # Also check if chromium is in PATH
-        if shutil.which('chromium'):
-            return shutil.which('chromium')
-        raise RuntimeError("Chrome/Chromium not found on Mac. Install Google Chrome or Chromium.")
+_automation_cache = None
+def _automation_choice():
+    """Pick (profile_variant, launch_binary). Profile = idle Chrome variant; binary = a different variant
+    so Chrome 136+ doesn't silently disable --remote-debugging-port on its own default profile dir."""
+    global _automation_cache
+    if _automation_cache: return _automation_cache
+    for v in ('unstable','beta'):
+        d = os.path.expanduser(f'~/.config/google-chrome-{v}')
+        if not os.path.isdir(d): continue
+        if subprocess.run(['pgrep','-f',f'/opt/google/chrome-{v}/chrome --type='],capture_output=True).returncode == 0: continue
+        for lv in ('beta','unstable','canary',''):
+            if lv == v: continue
+            b = shutil.which(f'google-chrome-{lv}' if lv else 'google-chrome')
+            if b: _automation_cache = (v, b); return _automation_cache
+    raise RuntimeError("No free Chrome profile. Close google-chrome-beta or -unstable, or install both.")
 
-    # Linux Chrome binaries
-    if _chrome_variant == 'canary':
-        binaries = ('google-chrome-canary', 'google-chrome-unstable', 'google-chrome-beta', 'google-chrome')
-    elif _chrome_variant == 'beta':
-        binaries = ('google-chrome-beta', 'google-chrome', 'chromium-browser', 'chromium')
-    else:
-        binaries = ('google-chrome', 'google-chrome-beta', 'chromium-browser', 'chromium')
-    for b in binaries:
-        if shutil.which(b): return b
-    raise RuntimeError("Chrome/Chromium not found. Install with: sudo apt install chromium-browser")
+def _resolve_chrome_binary():
+    """Pick Chrome binary — Mac uses any installed; Linux uses the cross-binary chosen by _automation_choice."""
+    if IS_MAC:
+        for p in ('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                   '/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta',
+                   '/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev',
+                   '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary',
+                   '/Applications/Chromium.app/Contents/MacOS/Chromium'):
+            if os.path.exists(p): return p
+        if shutil.which('chromium'): return shutil.which('chromium')
+        raise RuntimeError("Chrome/Chromium not found on Mac.")
+    return _automation_choice()[1]
 
 def _terminate_profile_processes(user_data_dir, wait_timeout=5):
     """
@@ -655,31 +653,10 @@ def verify_window_on_monitor(window_id, monitor, tolerance=100):
 # BROWSER LIFECYCLE - Native Wayland with CDP
 # ═══════════════════════════════════════════════════════════
 
-def _real_chrome_profile():
-    """Find user's real Chrome profile dir"""
-    if IS_MAC:
-        for p in ['~/Library/Application Support/Google/Chrome', '~/Library/Application Support/Google/Chrome Beta',
-                   '~/Library/Application Support/Google/Chrome Canary']:
-            ep = os.path.expanduser(p)
-            if os.path.isdir(ep): return ep
-    paths = {'canary': '~/.config/google-chrome-canary', 'beta': '~/.config/google-chrome-beta',
-             'stable': '~/.config/google-chrome'}
-    for v in [_chrome_variant] + [k for k in paths if k != _chrome_variant]:
-        ep = os.path.expanduser(paths.get(v, paths['stable']))
-        if os.path.isdir(ep): return ep
-    return os.path.expanduser('~/.config/google-chrome')
-
 def get_profile_path():
-    """Get profile path — copy of user profile with --me, isolated otherwise.
-    Chrome refuses --remote-debugging-port on default profile dir, so --me
-    copies cookies/logins to a separate dir."""
-    if _use_real_profile:
-        suffix = f'-{_chrome_variant}' if _chrome_variant != 'beta' else ''
-        return os.path.expanduser(f'~/.waylandauto/chrome-me{suffix}')
-    if IS_MAC:
-        return os.path.expanduser('~/Library/Application Support/agui/chrome-profile')
-    suffix = f'-{_chrome_variant}' if _chrome_variant != 'beta' else ''
-    return os.path.expanduser(f'~/.waylandauto/chrome-profile-wayland{suffix}')
+    """Real Chrome profile dir of the chosen automation variant. Persistent — login once, reuse forever."""
+    if IS_MAC: return os.path.expanduser('~/Library/Application Support/agui/chrome-profile')
+    return os.path.expanduser(f'~/.config/google-chrome-{_automation_choice()[0]}')
 
 # ─── EXPERIMENTAL: Profile Grabbing ───────────────────────────
 # These functions copy cookies/passwords from real Chrome profile.
@@ -743,26 +720,13 @@ def _launch_chrome_positioned():
 
     user_data_dir = get_profile_path()
     _profile_dir = user_data_dir
-    print(f"  → Profile: {user_data_dir}{' (user)' if _use_real_profile else ''}")
-
-    if _use_real_profile:
-        # Copy only small auth files — skip Extensions/IndexedDB (200MB+, slow)
-        src = _real_chrome_profile()
-        _terminate_profile_processes(user_data_dir)
-        os.makedirs(os.path.join(user_data_dir, 'Default'), exist_ok=True)
-        for item in ['Default/Cookies', 'Default/Login Data', 'Default/Web Data',
-                      'Default/Preferences', 'Default/Secure Preferences', 'Local State']:
-            s, d = os.path.join(src, item), os.path.join(user_data_dir, item)
-            if os.path.exists(s):
-                try: shutil.copy2(s, d)
-                except: pass
-        print(f"  → Synced auth from {src}")
+    if IS_MAC:
+        print(f"  → Profile: {user_data_dir}")
     else:
-        _terminate_profile_processes(user_data_dir)
-        os.makedirs(user_data_dir, exist_ok=True)
-        for session_file in ['Last Session', 'Last Tabs', 'Current Session', 'Current Tabs']:
-            try: os.remove(os.path.join(user_data_dir, session_file))
-            except: pass
+        v, b = _automation_choice()
+        print(f"  → Automation: chrome-{v} profile via {os.path.basename(b)} ({user_data_dir})")
+    _terminate_profile_processes(user_data_dir)
+    os.makedirs(user_data_dir, exist_ok=True)
     time.sleep(0.5)
 
     target_monitor = _get_target_monitor()
@@ -2884,7 +2848,7 @@ if __name__ == "__main__":
 """
         print(examples)
 
-    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary','me','status'}
+    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary','status'}
     sys.argv = [a if a.startswith('-') or a not in _cmds else f'--{a}' for a in sys.argv]
     parser = argparse.ArgumentParser(
         description='agui - GUI Automation with XWayland Tools',
@@ -2912,15 +2876,12 @@ if __name__ == "__main__":
     parser.add_argument('--pick', '--only', type=str, help='Filter AI platforms')
     parser.add_argument('--log', '--signin', action='store_true', help='Sign-in mode')
     parser.add_argument('--pw', action='store_true', help='Use Playwright instead of raw CDP')
-    parser.add_argument('--canary', action='store_true', help='Use Chrome Canary')
-    parser.add_argument('--me', action='store_true', help='Use real Chrome profile (logged in)')
+    parser.add_argument('--canary', action='store_true', help='(legacy, no-op) automation now picks chrome-beta or -dev automatically')
     parser.add_argument('--status', action='store_true', help='Login status across LLM platforms')
     args, extra = parser.parse_known_args(); args.ask = args.ask or (' '.join(extra) if extra and not args.say else None)
 
     if args.demo: show_examples(); sys.exit(0)
     if args.pw: globals()['_use_cdp'] = False
-    if args.canary: globals()['_chrome_variant'] = 'canary'
-    if args.me: globals()['_use_real_profile'] = True
     if args.side: globals()['_center_mode'] = False
     if args.hide: globals()['_headless_mode'] = True
     if args.solo: globals()['_copy_profile'] = False
