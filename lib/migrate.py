@@ -7,7 +7,7 @@
 import subprocess, sys, json, os, shutil, platform
 from pathlib import Path
 
-AROOT = Path(os.environ.get("AROOT", Path.home() / "adata"))
+AROOT = Path(os.environ.get("AROOT") or next((p for p in [Path(__file__).resolve().parent.parent/'adata', Path.home()/'a'/'adata', Path.home()/'adata'] if (p/'git').exists()), Path.home()/'adata'))
 MIG = AROOT / "git" / "migration"
 DEV = Path(os.environ.get("A_DEVICE", platform.node()))
 IS_MAC = sys.platform == "darwin"
@@ -283,6 +283,17 @@ def _restore_vscode(sd):
     if exts and confirm(f"Install {len(exts)} VS Code extensions?"):
         for e in exts: run(f"{cmd} --install-extension {e}")
 
+# ── live-sync dotfiles ── symlink target → adata/git/settings/<name>/<basename>
+DOTFILES = {"sway": HOME/".config/sway/config"}
+def link_dotfiles(names=None):
+    for n, dst in DOTFILES.items():
+        if names and n not in names: continue
+        src = AROOT/"git"/"settings"/n/dst.name; src.parent.mkdir(parents=True, exist_ok=True)
+        if not src.exists() and dst.exists() and not dst.is_symlink(): src.write_text(dst.read_text())
+        if dst.is_symlink() or dst.exists(): dst.unlink()
+        dst.parent.mkdir(parents=True, exist_ok=True); dst.symlink_to(src)
+        print(f"  {n}: {dst} → {src}")
+
 # ── list ──
 def ls():
     if not MIG.exists(): print("No migration data."); return
@@ -300,4 +311,5 @@ if __name__ == "__main__":
     if cmd in ("save", "s", "get_info"): save()
     elif cmd in ("restore", "r", "apply"): restore(src)
     elif cmd in ("ls", "list", "l"): ls()
-    else: print("Usage: a migrate [save|restore|ls]")
+    elif cmd in ("link", "dot", "dotfile"): link_dotfiles(args[1:] or None)
+    else: print("Usage: a migrate [save|restore|ls|link [name...]]")
