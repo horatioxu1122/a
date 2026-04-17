@@ -2127,13 +2127,13 @@ def gemini_deepthink(prompt): asyncio.run(gemini_deepthink_async(prompt))
 
 async def _launch_deep_gemini(page, query):
     """Activate Gemini Deep Research, type query, return conversation URL"""
-    await page.wait_for_selector('div[role="textbox"]', timeout=10000)
-    await asyncio.sleep(1)
+    await page.wait_for_selector('button[aria-label="Tools"]', timeout=10000)
+    await asyncio.sleep(2)
 
-    # Tools -> Deep Research
-    await page.locator('text="Tools"').click(timeout=3000)
-    await page.wait_for_selector('text="Deep Research"', timeout=3000)
-    await page.locator('text="Deep Research"').click(timeout=2000)
+    # Tools button has empty innerText, only aria-label; menu items use mixed-case "Deep research"
+    await page.evaluate('document.querySelector(\'button[aria-label="Tools"]\').click()')
+    await asyncio.sleep(1)
+    await page.evaluate("(()=>{const e=Array.from(document.querySelectorAll('*')).find(x=>x.children.length===0 && /^deep research$/i.test((x.innerText||'').trim()));if(e)e.click()})()")
     print(f"  ✓ [Gemini] Deep Research mode active")
     await asyncio.sleep(1)
 
@@ -2337,11 +2337,10 @@ async def deep_research_async(query, only=None):
     _data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'adata', 'local', 'agui', _run_ts)
     os.makedirs(_data_dir, exist_ok=True)
 
-    # Open tabs in parallel
     async def open_platform(name, url, page=None):
         try:
             page = page or await context.new_page()
-            await page.goto(url, wait_until='domcontentloaded', timeout=15000)
+            await page.goto(url, wait_until='domcontentloaded', timeout=30000)
             print(f"  ✓ [{name}] Loaded")
             return (name, page, True)
         except Exception as e:
@@ -2402,17 +2401,11 @@ async def deep_research_async(query, only=None):
         else:
             print(f"  ✗ {name}: Failed")
     print(f"\n  Data: {_data_dir}")
-    print(f"  Revisit URLs above when research completes (2-5 min).")
+    print(f"  Revisit URLs above when research completes (5-15 min).")
     print("=" * 50)
-    print("Press Ctrl+C to exit...")
-    print("=" * 50)
-
-    try:
-        while True:
-            await asyncio.sleep(1)
-    except KeyboardInterrupt:
-        pass
-
+    # Deep Research takes minutes — keep chrome alive after exit so user can revisit URLs
+    global _profile_dir, _chrome_process
+    _profile_dir = None; _chrome_process = None
     await browser.close()
     await playwright.stop()
 
