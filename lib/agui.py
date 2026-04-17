@@ -2038,7 +2038,7 @@ def multi_ai_workflow(query=None, only=None, files=None):
     """Wrapper for async multi-AI (library glue)"""
     return asyncio.run(multi_ai_async(query, only=only, files=files))
 
-LLM_LOGIN_URLS = {'claude':'https://claude.ai/','chatgpt':'https://chatgpt.com/','grok':'https://grok.com/','deepseek':'https://chat.deepseek.com/','gemini':'https://gemini.google.com/app','perplexity':'https://www.perplexity.ai/','qwen':'https://chat.qwen.ai/','aistudio':'https://aistudio.google.com/','ernie':'https://ernie.baidu.com/','kimi':'https://www.kimi.com/','zai':'https://chat.z.ai/'}
+LLM_LOGIN_URLS = {'claude':'https://claude.ai/','chatgpt':'https://chatgpt.com/','grok':'https://grok.com/','deepseek':'https://chat.deepseek.com/','gemini':'https://gemini.google.com/app','gemini1':'https://gemini.google.com/u/1/app','perplexity':'https://www.perplexity.ai/','qwen':'https://chat.qwen.ai/','aistudio':'https://aistudio.google.com/','ernie':'https://ernie.baidu.com/','kimi':'https://www.kimi.com/','zai':'https://chat.z.ai/'}
 
 def status(only=None):
     """Login status across LLM_LOGIN_URLS. Dumps screenshot+HTML when logged out."""
