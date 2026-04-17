@@ -1792,17 +1792,12 @@ async def multi_ai_async(query=None, _tabs=1, only=None, files=None):
             for attempt in range(120):  # 60s max
                 await asyncio.sleep(0.5)
                 try:
-                    # Check for <answer> tags (skip for platforms with thinking text false positives)
+                    # <answer> tag INSIDE an assistant container (skip thinking-mode noise in body)
                     if name not in _skip_answer_tag_wait and attempt >= 10:
-                        has_answer = await page.evaluate(f"""(function(){{var m=document.body.innerText.match(/<answer>([\\s\\S]+?)<\\/answer>/);return m&&m[1].indexOf('{_q_snippet}')===-1}})()""")
+                        has_answer = await page.evaluate(f"""(()=>{{const A=document.querySelectorAll('[data-message-author-role="assistant"],message-content,.font-claude-message,.ds-markdown,.segment-assistant,.message-text,.markdown-body,.prose,#answer_text_id,.response-content');if(!A.length)return false;for(const a of A){{const t=a.innerText||'',h=a.innerHTML||'';const m=t.match(/<answer>([\\s\\S]+?)<\\/answer>/);if(m&&m[1].indexOf('{_q_snippet}')===-1)return true;const m2=h.match(/&lt;answer&gt;((?:(?!&lt;answer&gt;)[\\s\\S])+?)&lt;\\/answer&gt;/);if(m2&&m2[1].indexOf('{_q_snippet}')===-1)return true}}return false}})()""")
                         if has_answer:
                             response_ready = True
-                            print(f"  ✓ [{name}] <answer> tag in text at {attempt*0.5:.0f}s")
-                            break
-                        has_escaped = await page.evaluate(f"""(function(){{var m=document.body.innerHTML.match(/&lt;answer&gt;((?:(?!&lt;answer&gt;)[\\s\\S])+?)&lt;\\/answer&gt;/);return m&&m[1].indexOf('{_q_snippet}')===-1}})()""")
-                        if has_escaped:
-                            response_ready = True
-                            print(f"  ✓ [{name}] <answer> tag in HTML at {attempt*0.5:.0f}s")
+                            print(f"  ✓ [{name}] <answer> in assistant element at {attempt*0.5:.0f}s")
                             break
                     # Copy button INSIDE assistant container (not user msg) — fires only on real response
                     if attempt >= 6:
