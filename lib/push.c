@@ -92,20 +92,17 @@ static int cmd_pr(int argc, char **argv) {
 }
 
 static int cmd_pull(int argc, char **argv) { AB;
-    char cwd[P]; if (!getcwd(cwd, P)) strcpy(cwd, ".");
-    if (!git_in_repo(cwd)) { puts("x Not a git repo"); return 1; }
-    char c[B], out[B];
-    snprintf(c, B, "git -C '%s' fetch origin 2>/dev/null", cwd); (void)!system(c);
-    snprintf(c, B, "git -C '%s' rev-parse --verify origin/main 2>/dev/null", cwd);
-    const char *ref = (system(c) == 0) ? "origin/main" : "origin/master";
-    snprintf(c, B, "git -C '%s' log -1 --format='%%h %%s' %s", cwd, ref); pcmd(c, out, B);
-    out[strcspn(out,"\n")] = 0;
-    printf("! DELETE local changes -> %s\n", out);
-    if (argc < 3 || (strcmp(argv[2],"--yes") && strcmp(argv[2],"-y"))) {
-        printf("Continue? (y/n): "); char buf[8]; if (!fgets(buf,8,stdin) || buf[0]!='y') { puts("x Cancelled"); return 1; }
-    }
-    snprintf(c, B, "git -C '%s' reset --hard %s && git -C '%s' clean -f -d", cwd, ref, cwd); (void)!system(c);
-    printf("✓ Synced: %s\n", out); return 0;
+    char cwd[P]; if(!getcwd(cwd,P)) strcpy(cwd,".");
+    if(!git_in_repo(cwd)){ puts("x Not a git repo"); return 1; }
+    char c[B*2],o[B];
+    snprintf(c,B*2,"cd '%s'&&git config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*';git fetch origin -q;git log -1 --format='%%h %%s' origin/main 2>/dev/null||git log -1 --format='%%h %%s' origin/master",cwd);
+    pcmd(c,o,B); o[strcspn(o,"\n")]=0;
+    if(!o[0]){ puts("x no origin ref"); return 1; }
+    printf("! DELETE local -> %s\n",o);
+    if(argc<3||(strcmp(argv[2],"--yes")&&strcmp(argv[2],"-y"))){
+        printf("Continue? y/n: "); char b[8]; if(!fgets(b,8,stdin)||b[0]!='y'){ puts("x"); return 1; } }
+    snprintf(c,B*2,"cd '%s'&&git reset --hard origin/main 2>/dev/null||git reset --hard origin/master;git clean -f -d",cwd); (void)!system(c);
+    printf("✓ %s\n",o); return 0;
 }
 
 static int cmd_diff(int argc, char **argv) { AB;
