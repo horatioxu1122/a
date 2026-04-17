@@ -402,7 +402,7 @@ def _automation_choice():
     so Chrome 136+ doesn't silently disable --remote-debugging-port on its own default profile dir."""
     global _automation_cache
     if _automation_cache: return _automation_cache
-    for v in ('unstable','beta'):
+    for v in ('beta','unstable'):
         d = os.path.expanduser(f'~/.config/google-chrome-{v}')
         if not os.path.isdir(d): continue
         if subprocess.run(['pgrep','-f',f'/opt/google/chrome-{v}/chrome --type='],capture_output=True).returncode == 0: continue
