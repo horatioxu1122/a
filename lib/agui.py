@@ -2073,14 +2073,15 @@ def signin(only=None):
 _DEEPTHINK_CACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'adata', 'local', 'agui_deepthink_acct.txt')
 
 async def _probe_gemini_deepthink(ctx, n):
-    """Open /u/{n}/app, click Tools, return page if Deep Think present else None."""
+    """Open /u/{n}/app, click Tools (aria-label), check body for 'Deep think' (case-insens)."""
     p = await ctx.new_page()
     try:
-        await p.goto(f'https://gemini.google.com/u/{n}/app', wait_until='domcontentloaded', timeout=15000)
-        await p.wait_for_selector('div[role="textbox"]', timeout=8000)
-        await p.locator('text="Tools"').first.click(timeout=3000)
-        await asyncio.sleep(0.5)
-        if await p.get_by_text('Deep Think', exact=False).count():
+        await p.goto(f'https://gemini.google.com/u/{n}/app', wait_until='domcontentloaded', timeout=30000)
+        await p.wait_for_selector('button[aria-label="Tools"]', timeout=10000)
+        await asyncio.sleep(2)  # Gemini SPA needs time to fully hydrate
+        await p.evaluate('document.querySelector(\'button[aria-label="Tools"]\').click()')
+        await asyncio.sleep(1)
+        if await p.evaluate("/deep think/i.test(document.body.innerText)"):
             print(f"  ✓ /u/{n}/app has Deep Think")
             return p
         print(f"  - /u/{n}/app: no Deep Think")
@@ -2107,12 +2108,16 @@ async def gemini_deepthink_async(prompt):
                 print(f"  → cached account /u/{n}")
             break
     if not page: print("x no Gemini account has Deep Think available"); return
-    await page.get_by_text('Deep Think', exact=False).first.click(timeout=3000)
+    # Click Deep Think menu item by case-insensitive text match
+    await page.evaluate("(()=>{const e=Array.from(document.querySelectorAll('*')).find(x=>x.children.length===0 && /^deep think$/i.test((x.innerText||'').trim()));if(e)e.click()})()")
     await asyncio.sleep(1)
     elem = page.locator('div[role="textbox"]').last
     await elem.click(timeout=2000); await elem.fill(prompt); await page.keyboard.press('Enter')
     print(f"  ✓ submitted, conversation: {page.url}")
     print(f"  → revisit URL when done (Deep Think takes minutes)")
+    # Deep Think takes minutes — keep chrome alive after script exit so user can revisit
+    global _profile_dir, _chrome_process
+    _profile_dir = None; _chrome_process = None
 
 def gemini_deepthink(prompt): asyncio.run(gemini_deepthink_async(prompt))
 
