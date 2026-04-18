@@ -4,26 +4,31 @@ P="com.aios.a"
 KT=r'''@file:Suppress("DEPRECATION","OVERRIDE_DEPRECATION")
 package com.aios.a
 import android.app.Activity;import android.content.*;import android.os.*;import android.webkit.*;import android.view.*;import android.graphics.*;import android.widget.*
-private const val U="http://localhost:1111/term";private const val T="com.termux"
+import java.io.File
+private const val U="http://127.0.0.1:1111/term"
 class M:Activity(){
 companion object{init{System.loadLibrary("anative")}}
 private external fun nResize(w:Int,h:Int)
 private external fun nRender(px:IntArray)
 private external fun nFont(d:IntArray)
 private lateinit var w:WebView;private val h=Handler(Looper.getMainLooper());private var n=0
-private fun tx(){try{startForegroundService(Intent().apply{setClassName(T,"$T.app.RunCommandService");action="$T.RUN_COMMAND";putExtra("$T.RUN_COMMAND_PATH","/data/data/$T/files/usr/bin/bash");putExtra("$T.RUN_COMMAND_ARGUMENTS",arrayOf("-l","-c","\$HOME/.local/bin/a ui on"));putExtra("$T.RUN_COMMAND_BACKGROUND",true)})}catch(_:Exception){}}
 private fun pg(s:String)=w.loadDataWithBaseURL(null,"<body style='font:18px monospace;padding:20px;background:#000;color:#0f0'>$s","text/html","utf-8",null)
-@JavascriptInterface fun copy(){(getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("","a ui on"))}
-@JavascriptInterface fun termux(){try{startActivity(Intent().apply{setClassName(T,"$T.app.TermuxActivity");addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)})}catch(_:Exception){}}
 @JavascriptInterface fun retry(){h.post{boot()}}
 override fun onBackPressed(){if(w.canGoBack())w.goBack() else super.onBackPressed()}
 override fun onResume(){super.onResume();boot()}
-private fun boot(){if(checkSelfPermission("$T.permission.RUN_COMMAND")!=0){pg("<h2>Permission needed</h2>Settings→Apps→a→enable Run commands in Termux<br><br>In Termux:<br><code style='color:#ff0'>echo 'allow-external-apps=true'>>~/.termux/termux.properties</code><br>Reopen app");return};tx();n=0;w.loadUrl(U)}
+private val nl by lazy{applicationInfo.nativeLibraryDir}
+private fun setup(){val ui=File(filesDir,"lib/ui");ui.mkdirs();val up=File(ui,"ui_full.py");if(!up.exists())assets.open("ui_full.py").use{i->up.outputStream().use{o->i.copyTo(o)}}
+val ti=File(filesDir,"terminfo");if(!File(ti,"x/xterm-256color").exists()){ti.deleteRecursively();ti.mkdirs();val src=File(filesDir,"terminfo.src");if(!src.exists())assets.open("terminfo.src").use{i->src.outputStream().use{o->i.copyTo(o)}}
+ProcessBuilder("$nl/libtic.so","-o",ti.absolutePath,src.absolutePath).redirectErrorStream(true).redirectOutput(File(filesDir,"tic.log")).start().waitFor()}}
+private fun spawn(){val pb=ProcessBuilder("$nl/liba.so","serve","1111");pb.environment().apply{put("PATH","$nl:/system/bin");put("TMUX_BIN","$nl/libtmux.so");put("TIC_BIN","$nl/libtic.so");put("TMUX_TMPDIR",filesDir.absolutePath);put("TERMINFO","${filesDir}/terminfo");put("HOME",filesDir.absolutePath);put("A_SDIR",filesDir.absolutePath)};pb.redirectErrorStream(true);pb.redirectOutput(File(filesDir,"serve.log"));try{pb.start()}catch(x:Exception){pg("spawn failed: $x")}}
+private fun boot(){setup();spawn();n=0;h.postDelayed({w.loadUrl(U)},1800)}
 private fun atlas(sz:Float):IntArray{val p=Paint().apply{textSize=sz;color=-1;isAntiAlias=true;typeface=Typeface.MONOSPACE};val cw=p.measureText("M").toInt()+1;val ch=(-p.ascent()+p.descent()).toInt()+1;val b=Bitmap.createBitmap(cw*95,ch,Bitmap.Config.ARGB_8888);Canvas(b).let{c->for(i in 0 until 95)c.drawText(((32+i).toChar()).toString(),(i*cw).toFloat(),-p.ascent(),p)};val r=IntArray(2+cw*95*ch);r[0]=cw;r[1]=ch;b.getPixels(r,2,cw*95,0,0,cw*95,ch);b.recycle();return r}
 @android.annotation.SuppressLint("ClickableViewAccessibility")
 override fun onCreate(b:Bundle?){super.onCreate(b)
+WebView.setWebContentsDebuggingEnabled(true)
 w=WebView(this).apply{settings.javaScriptEnabled=true;addJavascriptInterface(this@M,"A")
-webViewClient=object:WebViewClient(){override fun onReceivedError(v:WebView,r:WebResourceRequest,e:WebResourceError){if(r.isForMainFrame){if(n++<5){pg("<h2>Starting...</h2>attempt $n/5");h.postDelayed({v.loadUrl(U)},2000)}else pg("<h2>run: a ui on</h2><button onclick='A.copy()'>Copy</button> <button onclick='A.termux()'>Termux</button> <button onclick='A.retry()'>Retry</button>")}}}}
+webChromeClient=object:WebChromeClient(){override fun onConsoleMessage(m:ConsoleMessage):Boolean{android.util.Log.w("AWV","[${m.messageLevel()}] ${m.message()} @ ${m.sourceId()}:${m.lineNumber()}");return true}}
+webViewClient=object:WebViewClient(){override fun onReceivedError(v:WebView,r:WebResourceRequest,e:WebResourceError){if(r.isForMainFrame){if(n++<8){pg("<h2>Starting a serve...</h2>$n/8");h.postDelayed({v.loadUrl(U)},1500)}else pg("<h2>a serve not reachable</h2><button onclick='A.retry()'>Retry</button><br><br>log: $filesDir/serve.log")}}}}
 val nv=object:View(this){private lateinit var bm:Bitmap;private var px:IntArray?=null
 override fun onSizeChanged(w:Int,h:Int,ow:Int,oh:Int){if(::bm.isInitialized)bm.recycle();bm=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);px=IntArray(w*h);nResize(w,h);nFont(atlas(48f))}
 override fun onDraw(c:Canvas){val a=px?:return;nRender(a);bm.setPixels(a,0,width,0,0,width,height);c.drawBitmap(bm,0f,0f,null)}}
@@ -35,7 +40,6 @@ tab("Web").also{it.setOnTouchListener{_,e->if(e.action==MotionEvent.ACTION_DOWN)
 tab("Native").also{it.setOnTouchListener{_,e->if(e.action==MotionEvent.ACTION_DOWN){w.visibility=View.GONE;nv.visibility=View.VISIBLE;nv.invalidate()};false};bar.addView(it)}
 val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
 root.addView(fr,LinearLayout.LayoutParams(-1,0,1f));root.addView(bar);setContentView(root)}}
-class C:Activity(){override fun onCreate(b:Bundle?){super.onCreate(b);val c=intent.getStringExtra("cmd")?:"";if(c.isNotEmpty())try{val o=intent.getStringExtra("out")?:"/sdcard/a_out.txt";startForegroundService(Intent().apply{setClassName(T,"$T.app.RunCommandService");action="$T.RUN_COMMAND";putExtra("$T.RUN_COMMAND_PATH","/data/data/$T/files/usr/bin/bash");putExtra("$T.RUN_COMMAND_ARGUMENTS",arrayOf("-l","-c","($c)>$o 2>&1;touch $o.done"));putExtra("$T.RUN_COMMAND_BACKGROUND",true)})}catch(_:Exception){};finish()}}
 '''
 NC=r'''#include <jni.h>
 #include <string.h>
@@ -60,7 +64,8 @@ tw=(int)strlen("agent manager")*F.cw;dt(p,(W-tw)/2,H/3+F.ch+20,"agent manager");
 (*e)->ReleaseIntArrayElements(e,px,p,0);}
 '''
 CML='cmake_minimum_required(VERSION 3.22)\nproject(anative)\nadd_library(anative SHARED native.c)\ntarget_compile_options(anative PRIVATE -O3 -flto)\ntarget_link_options(anative PRIVATE -flto)\ntarget_link_libraries(anative log)\n'
-MF='<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="com.termux.permission.RUN_COMMAND"/><application android:usesCleartextTraffic="true" android:label="a apk"><activity android:name=".M" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity><activity android:name=".C" android:exported="true"/></application></manifest>'
+MF='<manifest xmlns:android="http://schemas.android.com/apk/res/android"><uses-permission android:name="android.permission.INTERNET"/><application android:usesCleartextTraffic="true" android:extractNativeLibs="true" android:networkSecurityConfig="@xml/nsc" android:label="a apk"><activity android:name=".M" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity></application></manifest>'
+NSC='<?xml version="1.0" encoding="utf-8"?><network-security-config><base-config cleartextTrafficPermitted="true"><trust-anchors><certificates src="system"/></trust-anchors></base-config><domain-config cleartextTrafficPermitted="true"><domain includeSubdomains="true">127.0.0.1</domain><domain includeSubdomains="true">localhost</domain></domain-config></network-security-config>'
 GS='pluginManagement{repositories{google();mavenCentral()};plugins{id("com.android.application") version "8.2.0";id("org.jetbrains.kotlin.android") version "1.9.22"}}\ndependencyResolutionManagement{repositories{google();mavenCentral()}}\ninclude(":app")\n'
 H=os.path.expanduser("~");IT=os.path.exists("/data/data/com.termux")
 _CMK='externalNativeBuild{cmake{path=file("src/main/cpp/CMakeLists.txt")}}\n'
@@ -129,12 +134,21 @@ def run():
         w(D+"/settings.gradle.kts",GS);w(D+"/app/build.gradle.kts",GB);w(D+"/local.properties",f"sdk.dir={SDK}\n")
         gp="android.useAndroidX=true\norg.gradle.jvmargs=-Xmx4g\n"
         if IT:gp+="android.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2\n"
-        w(D+"/gradle.properties",gp);w(D+"/app/src/main/AndroidManifest.xml",MF);w(D+"/app/src/main/java/com/aios/a/M.kt",KT)
+        w(D+"/gradle.properties",gp);w(D+"/app/src/main/AndroidManifest.xml",MF);w(D+"/app/src/main/java/com/aios/a/M.kt",KT);w(D+"/app/src/main/res/xml/nsc.xml",NSC)
         if IT:
             sf=D+"/app/src/main/jniLibs/arm64-v8a";os.makedirs(sf,exist_ok=True)
             w(D+"/native.c",NC);so=sf+"/libanative.so"
             S.run(f"clang -shared -O3 -flto -w -o '{so}' '{D}/native.c'&&patchelf --remove-rpath '{so}'",shell=True,check=True)
         else:w(D+"/app/src/main/cpp/native.c",NC);w(D+"/app/src/main/cpp/CMakeLists.txt",CML)
+        # Stage bundled bins + terminfo source (from a droid/droidtmux output)
+        sf=D+"/app/src/main/jniLibs/arm64-v8a";os.makedirs(sf,exist_ok=True)
+        ad=D+"/app/src/main/assets";os.makedirs(ad,exist_ok=True)
+        stage={"/tmp/a-droid":"liba.so","/tmp/dsrc/tmux-build-a/tmux":"libtmux.so","/tmp/dsrc/ncurses-6.4/progs/tic":"libtic.so"}
+        miss=[s for s in stage if not os.path.exists(s)]
+        if miss:sys.exit(f"x run 'a droid && a droidtmux' first: missing {miss}")
+        for s,n in stage.items():shutil.copy(s,f"{sf}/{n}")
+        shutil.copy("/tmp/dsrc/ncurses-6.4/misc/terminfo.src",f"{ad}/terminfo.src")
+        shutil.copy(R+"/lib/ui/ui_full.py",f"{ad}/ui_full.py")
         if not os.path.exists(D+"/gradlew"):
             for s in glob.glob(H+"/*/gradlew")+glob.glob(R+"/adata/git/my/*/gradlew"):
                 d=os.path.dirname(s);shutil.copy(s,D+"/gradlew");os.chmod(D+"/gradlew",0o755)

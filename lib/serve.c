@@ -84,7 +84,7 @@ static int _ws_upgrade(int c,const char*req){
         acc[j++]=b64[v>>18&63];acc[j++]=b64[v>>12&63];acc[j++]=b64[v>>6&63];acc[j++]=b64[v&63];}
     {unsigned v=(unsigned)(sha[18]<<16|sha[19]<<8);acc[j++]=b64[v>>18&63];acc[j++]=b64[v>>12&63];acc[j++]=b64[v>>6&63];acc[j++]='=';}
     acc[j]=0;
-    char r[256];int rl=snprintf(r,256,"HTTP/1.1 101 Switching Protocols\r\nUpgrade:websocket\r\nConnection:Upgrade\r\nSec-WebSocket-Accept:%s\r\n\r\n",acc);
+    char r[256];int rl=snprintf(r,256,"HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n",acc);
     (void)!write(c,r,(size_t)rl);return 1;
 }
 static void _ws_send(int c,const char*d,int n){
@@ -107,10 +107,12 @@ static void _ws_term(int c){
     int m,s;if(openpty(&m,&s,NULL,NULL,NULL)<0)return;
     pid_t p=fork();
     if(!p){close(m);setsid();ioctl(s,TIOCSCTTY,0);dup2(s,0);dup2(s,1);dup2(s,2);close(s);
-        char*env[]={"TERM=xterm-256color","PATH=/data/local/tmp:/usr/local/bin:/usr/bin:/bin","TMUX_TMPDIR=/data/local/tmp","TERMINFO=/data/local/tmp/terminfo","HOME=/data/local/tmp",NULL};
-        execle("/data/local/tmp/tmux","tmux","new-session","-A","-s","main",(char*)0,env);
-        execle("/usr/bin/tmux","tmux","new-session","-A","-s","main",(char*)0,env);
-        execle("/bin/bash","bash","-l",(char*)0,env);execle("/system/bin/sh","sh","-l",(char*)0,env);_exit(1);}
+        setenv("TERM","xterm-256color",0);
+        const char*tb=getenv("TMUX_BIN");
+        if(tb)execl(tb,"tmux","new-session","-A","-s","main",(char*)0);
+        char*a[]={"tmux","new-session","-A","-s","main",NULL};execvp("tmux",a);
+        char*b[]={"bash","-l",NULL};execvp("bash",b);
+        char*cc[]={"sh","-l",NULL};execvp("sh",cc);execl("/system/bin/sh","sh",(char*)0);_exit(1);}
     close(s);
     struct pollfd pf[2]={{c,POLLIN,0},{m,POLLIN,0}};char buf[4096];
     while(poll(pf,2,-1)>0){
@@ -128,7 +130,7 @@ static void _handle(int c){
     int one=1;setsockopt(c,IPPROTO_TCP,TCP_NODELAY,&one,4);
     if(!strncmp(req,"GET / ",6)||!strncmp(req,"GET /jobs",9)||!strncmp(req,"GET /note",9)||!strncmp(req,"GET /tasks",10)||!strncmp(req,"GET /term",9)){
         if(_shtml)_sresp(c,200,"text/html",_shtml,_shlen);else _sresp(c,503,"text/plain","starting",8);return;}
-    if(!strncmp(req,"GET /ws",7)&&strstr(req,"Upgrade: websocket")){if(_ws_upgrade(c,req))_ws_term(c);return;}
+    if(!strncmp(req,"GET /ws",7)&&(strstr(req,"Upgrade: websocket")||strstr(req,"upgrade: websocket"))){if(_ws_upgrade(c,req))_ws_term(c);return;}
     if(!strncmp(req,"GET /api/u-status",17)){_sresp(c,200,"application/json","{\"ok\":true}",11);return;}
     if(!strncmp(req,"POST /api/omni",14)||!strncmp(req,"POST /note",10)){
         char*body=strstr(req,"\r\n\r\n");if(!body){_sresp(c,400,"text/plain","bad",3);return;}

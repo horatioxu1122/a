@@ -19,6 +19,7 @@ static void init_paths(void) {
             snprintf(SROOT, P, "%s/git", AROOT);
         }
     }
+    {const char*e=getenv("A_SDIR");if(e&&*e){snprintf(SDIR,P,"%s",e);snprintf(AROOT,P,"%s/adata",e);snprintf(SROOT,P,"%s/git",AROOT);}}
     if (!SROOT[0]) { snprintf(AROOT, P, "%s/a/adata", h); snprintf(SROOT, P, "%s/git", AROOT); }
     snprintf(DDIR, P, "%s/local", AROOT);
     mkdirp(DDIR);
