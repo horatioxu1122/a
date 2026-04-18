@@ -2324,22 +2324,42 @@ async def _launch_deep_claude(page, query):
 
 
 async def _launch_deep_perplexity(page, query):
-    """Submit Perplexity query in Deep Research mode (prompt-prefix activation; Pro tier honors it).
-    Dismiss cookie modal, click input, type via keyboard, press Enter."""
-    await page.wait_for_selector('textarea, div[contenteditable="true"]', timeout=15000)
+    """Activate REAL Perplexity Deep Research: + menu (Add files or tools) → Deep research item.
+    Uses CDP Input.dispatchMouseEvent — Playwright .click() and JS .click() both miss the
+    React handler on Perplexity's button. Pro tier required for Deep research item to appear."""
+    await page.wait_for_selector('button[aria-label="Add files or tools"]', timeout=15000)
     await asyncio.sleep(2)
-    # Dismiss cookie modal if present (blocks subsequent clicks)
+    # Dismiss cookie modal if present
     await page.evaluate("(()=>{const b=Array.from(document.querySelectorAll('button')).find(x=>(x.innerText||'').trim()==='Got it');if(b)b.click()})()")
     await asyncio.sleep(0.5)
-    # Native click + keyboard.type — fill() / dispatchEvent both fail on Perplexity's input
+    cdp = await page.context.new_cdp_session(page)
+    async def _cdp_click(sel):
+        box = await page.evaluate(f"(()=>{{const e=document.querySelector({sel!r});if(!e)return null;const r=e.getBoundingClientRect();return{{x:r.x+r.width/2,y:r.y+r.height/2}}}})()")
+        if not box: return False
+        await cdp.send('Input.dispatchMouseEvent',{'type':'mouseMoved','x':box['x'],'y':box['y']})
+        await cdp.send('Input.dispatchMouseEvent',{'type':'mousePressed','x':box['x'],'y':box['y'],'button':'left','clickCount':1})
+        await cdp.send('Input.dispatchMouseEvent',{'type':'mouseReleased','x':box['x'],'y':box['y'],'button':'left','clickCount':1})
+        return True
+    # 1) Open + menu via CDP click
+    await _cdp_click('button[aria-label="Add files or tools"]')
+    await asyncio.sleep(1.5)
+    # 2) Click "Deep research" menu item by text match
+    found = await page.evaluate("(()=>{const e=Array.from(document.querySelectorAll('[role=menuitem],div,button,span')).find(x=>x.children.length===0&&/^deep research$/i.test((x.innerText||'').trim()));if(e){const r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}}return null})()")
+    if found:
+        await cdp.send('Input.dispatchMouseEvent',{'type':'mousePressed','x':found['x'],'y':found['y'],'button':'left','clickCount':1})
+        await cdp.send('Input.dispatchMouseEvent',{'type':'mouseReleased','x':found['x'],'y':found['y'],'button':'left','clickCount':1})
+        print(f"  ✓ [Perplexity] Deep Research mode activated")
+    else:
+        print(f"  ⚠ [Perplexity] Deep research item not found (Pro tier required?)")
+    await asyncio.sleep(1)
+    # 3) Type prompt + submit via Playwright keyboard
     elem = page.locator('textarea, div[contenteditable="true"]').first
     await elem.click(timeout=3000)
     await asyncio.sleep(0.3)
-    # Prefix prompt so Perplexity routes to Deep Research; honored on Pro tier
-    await page.keyboard.type(f'Use Deep Research mode. {query}', delay=10)
+    await page.keyboard.type(query, delay=10)
     await asyncio.sleep(0.5)
     await page.keyboard.press('Enter')
-    print(f"  ✓ [Perplexity] Query submitted (Deep Research prefix)")
+    print(f"  ✓ [Perplexity] Query submitted")
     await asyncio.sleep(5)
     return page.url
 
