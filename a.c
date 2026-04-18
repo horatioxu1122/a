@@ -357,6 +357,7 @@ static const char*EXT[]={"",".py",".c",".sh",".html",0};
 #include "lib/sess.c"
 #include "lib/vm.c"
 #include "lib/new.c"
+#include "lib/op.c"
 #include "lib/bench.c"
 #include "lib/serve.c"
 #include "lib/tok.c"
@@ -586,7 +587,8 @@ static const cmd_t CMDS[] = {
     {"install",cmd_install},{"j",cmd_j},{"job",cmd_job},{"jobs",cmd_job},
     {"kill",cmd_kill},{"log",cmd_log},{"login",cmd_login},{"ls",cmd_ls},
     {"mono",cmd_cat},{"monolith",cmd_cat},{"move",cmd_move},{"my",cmd_my},
-    {"n",cmd_note},{"new",cmd_new},{"note",cmd_note},{"once",cmd_run_once},
+    {"n",cmd_note},{"new",cmd_new},{"note",cmd_note},
+    {"o",cmd_op},{"once",cmd_run_once},{"op",cmd_op},{"operator",cmd_op},
     {"p",cmd_push},{"perf",cmd_perf},{"pr",cmd_pr},{"prompt",cmd_prompt},
     {"pull",cmd_pull},{"push",cmd_push},
     {"ref",cmd_ref},{"remove",cmd_remove},{"repo",cmd_create},{"restore",cmd_restore},{"revert",cmd_revert},{"review",cmd_review},
