@@ -2303,32 +2303,22 @@ async def _launch_deep_chatgpt(page, query):
 
 
 async def _launch_deep_claude(page, query):
-    """Activate Claude Research mode, type query, return conversation URL"""
+    """Activate REAL Claude Deep Research: + menu (Add files, connectors, and more) → Research."""
     await page.wait_for_selector('div[contenteditable="true"]', timeout=15000)
     await asyncio.sleep(2)
-
-    # Try "Research" button/link directly, or "Learn" quick action at bottom
-    activated = False
-
-    # "Learn" quick action enables web search + extended thinking (research mode)
-    try:
-        learn = page.locator('button:has-text("Learn")')
-        await learn.first.click(timeout=3000)
-        await asyncio.sleep(1)
-        activated = True
-        print(f"  ✓ [Claude] Research mode active (Learn)")
-    except:
-        print(f"  → [Claude] Learn button not found - using Opus Extended")
-
+    # Open the + menu
+    await page.evaluate("(()=>{const b=Array.from(document.querySelectorAll('button')).find(x=>(x.ariaLabel||'').toLowerCase().includes('add files'));if(b)b.click()})()")
     await asyncio.sleep(1)
-
-    # Type and submit query
+    # Click the Research menuitem (case-insensitive exact match to avoid 'Web search'/'Use style')
+    clicked = await page.evaluate("(()=>{const e=Array.from(document.querySelectorAll('[role=menuitem],button,div')).find(x=>x.children.length===0&&/^research$/i.test((x.innerText||'').trim()));if(e){e.click();return true}return false})()")
+    if clicked: print(f"  ✓ [Claude] Deep Research mode activated (+ menu → Research)")
+    else: print(f"  ⚠ [Claude] Research item not found in + menu")
+    await asyncio.sleep(1)
     elem = page.locator('div[contenteditable="true"]').last
     await elem.click(timeout=3000)
     await elem.press_sequentially(query, delay=5)
     await page.keyboard.press('Enter')
     print(f"  ✓ [Claude] Query submitted")
-
     await asyncio.sleep(5)
     return page.url
 
