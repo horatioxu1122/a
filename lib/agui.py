@@ -2134,21 +2134,37 @@ def _latest_gemini_url():
     return None
 
 async def drfetch_async(url=None, watch=False):
-    """Resume a Deep Research conversation: navigate to URL, extract longest .markdown
-    (the report). watch=True polls every 15s until report length stabilizes."""
+    """Resume DR conversation. Gemini: longest .markdown element. ChatGPT: response is in a
+    cross-origin sandbox iframe — extract via printToPDF + pdftotext. Claude: longest .markdown
+    or .font-claude-message. watch=True polls every 15s until length stabilizes."""
     url = url or _latest_gemini_url()
-    if not url: print("x no saved gemini url; provide one or run 'deep' first"); return
+    if not url: print("x no saved url; provide one or run 'deep' first"); return
     print(f"  url: {url}")
-    if not _cdp_already_running():
-        _launch_chrome_positioned()
+    is_chatgpt = 'chatgpt.com' in url
+    if not _cdp_already_running(): _launch_chrome_positioned()
     pw = await async_playwright().start()
     ctx = (await pw.chromium.connect_over_cdp('http://localhost:9222')).contexts[0]
     page = await ctx.new_page()
     await page.goto(url, wait_until='domcontentloaded', timeout=30000)
-    await asyncio.sleep(3)
+    await asyncio.sleep(5 if is_chatgpt else 3)
+    async def _extract():
+        if is_chatgpt:
+            import base64, subprocess, tempfile
+            # Expand the DR iframe so its full content renders within the PDF
+            await page.evaluate("(()=>{const f=document.querySelector('iframe[title*=\"deep-research\"]');if(f){f.style.height='10000px';if(f.parentElement)f.parentElement.style.height='10000px'}})()")
+            await asyncio.sleep(3)
+            cdp = await page.context.new_cdp_session(page)
+            r = await cdp.send('Page.printToPDF', {'printBackground': True, 'preferCSSPageSize': True, 'paperHeight': 100, 'paperWidth': 8.5})
+            data = base64.b64decode(r.get('data', ''))
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f: f.write(data); pdfp = f.name
+            try: txt = subprocess.check_output(['pdftotext', pdfp, '-']).decode(errors='replace')
+            finally: os.unlink(pdfp)
+            return txt
+        # Gemini / Claude: longest .markdown or .font-claude-message
+        return await page.evaluate("(()=>{const sels=['.markdown','.font-claude-message','.prose'];let b='';for(const s of sels)for(const m of document.querySelectorAll(s)){const t=m.innerText||'';if(t.length>b.length)b=t}return b})()") or ''
     last_len = -1; rep = ''
     while True:
-        rep = await page.evaluate("(()=>{const ms=document.querySelectorAll('.markdown');let b='';for(const m of ms){const t=m.innerText||'';if(t.length>b.length)b=t}return b})()") or ''
+        rep = await _extract()
         cur = len(rep)
         print(f"  report: {cur} chars{'' if not watch else ' (watching)'}")
         if not watch: break
