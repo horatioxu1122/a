@@ -40,8 +40,8 @@ def _svc_off():
         u = _unit()
         if exists(u): os.remove(u)
 
-def _svc_on(m='ui_full', p=PORT):
-    rc = _cmd(m, p); cmd = shlex.join(rc)
+def _svc_on(p=PORT):
+    rc = [expanduser('~/.local/bin/a'), 'serve', str(p)]; cmd = shlex.join(rc)
     if _MAC:
         pf = _plist(); _svc_off()
         os.makedirs(dirname(pf), exist_ok=True)
@@ -54,9 +54,6 @@ def _svc_on(m='ui_full', p=PORT):
     <key>Label</key><string>com.a.ui</string>
     <key>ProgramArguments</key><array>{args}
     </array>
-    <key>EnvironmentVariables</key><dict>
-        <key>PYTHONPATH</key><string>{_LIB}</string>
-    </dict>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
     <key>StandardErrorPath</key><string>/tmp/a-ui.err</string>
@@ -66,12 +63,12 @@ def _svc_on(m='ui_full', p=PORT):
     if _TERMUX:
         sd = _svdir(); _svc_off(); os.makedirs(sd, exist_ok=True); rs = join(sd, 'run')
         prefix = os.environ.get('PREFIX', '/data/data/com.termux/files/usr')
-        with open(rs, 'w') as f: f.write(f'#!{prefix}/bin/sh\nexport PYTHONPATH={_LIB}\nexec {cmd}\n')
+        with open(rs, 'w') as f: f.write(f'#!{prefix}/bin/sh\nexec {cmd}\n')
         os.chmod(rs, 0o755); _r(['sv', 'up', 'a-ui']).returncode and S.Popen(['sh', rs], start_new_session=True, stdout=S.DEVNULL, stderr=S.DEVNULL); return True
     if _r(['systemctl', '--user', '--version']).returncode == 0:
         _svc_off(); ud = dirname(_unit()); os.makedirs(ud, exist_ok=True)
         with open(_unit(), 'w') as f:
-            f.write(f'[Unit]\nDescription=a UI server\n[Service]\nExecStart={cmd}\nEnvironment=PYTHONPATH={_LIB}\nRestart=always\nRestartSec=2\n[Install]\nWantedBy=default.target\n')
+            f.write(f'[Unit]\nDescription=a UI server\n[Service]\nExecStart={cmd}\nRestart=always\nRestartSec=2\n[Install]\nWantedBy=default.target\n')
         _r(['systemctl', '--user', 'daemon-reload']); _r(['systemctl', '--user', 'enable', '--now', 'a-ui']); return True
     return False
 
