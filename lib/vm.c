@@ -1,4 +1,16 @@
-/* a vm [run|ssh|kill|test] [debian|arch|fedora] — disposable QEMU VM */
+/* a vm [run|ssh|kill|test] [debian|arch|fedora|android] — disposable QEMU VM */
+static int vm_android(void){
+    char sdk[P];const char*e=getenv("ANDROID_HOME");
+    if(e)snprintf(sdk,P,"%s",e);else snprintf(sdk,P,"%s/Android/Sdk",HOME);
+    char em[P];snprintf(em,P,"%s/emulator/emulator",sdk);
+    if(!fexists(em)){printf("x install Android SDK + emulator first (sdkmanager 'emulator' 'system-images;android-34;default;x86_64')\n");return 1;}
+    char ls[B];snprintf(ls,B,"%s -list-avds 2>/dev/null|head -1",em);
+    char avd[64]={0};FILE*f=popen(ls,"r");if(f){(void)!fgets(avd,64,f);pclose(f);}avd[strcspn(avd,"\n")]=0;
+    if(!*avd){printf("x no AVD. create: %s/cmdline-tools/latest/bin/avdmanager create avd -n droid -k 'system-images;android-34;default;x86_64'\n",sdk);return 1;}
+    char go[B];snprintf(go,B,"%s -avd %s -no-window -no-audio -no-snapshot >/tmp/avd-%s.log 2>&1 &",em,avd,avd);
+    if(system(go))return 1;
+    printf("> booting AVD %s — wait ~30s, then 'adb -s emulator-5554 shell' or 'a adb setup' (after Termux install)\n",avd);return 0;
+}
 typedef struct{const char*name,*url,*user,*cloudinit;}vmos_t;
 static const vmos_t VMOS[]={
     {"debian","https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2","debian",
@@ -12,6 +24,7 @@ static const vmos_t VMOS[]={
 static const vmos_t*vm_find(const char*n){for(int i=0;i<(int)NVMOS;i++)if(!strcmp(VMOS[i].name,n))return&VMOS[i];return&VMOS[0];}
 
 static int cmd_vm(int argc, char **argv) {
+    if(argc>2&&!strcmp(argv[2],"android")){perf_disarm();return vm_android();}
     const char*sub=argc>2?argv[2]:"run";
     /* find OS arg */
     const char*osn="debian";
