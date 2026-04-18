@@ -107,7 +107,9 @@ static void _ws_term(int c){
     int m,s;if(openpty(&m,&s,NULL,NULL,NULL)<0)return;
     pid_t p=fork();
     if(!p){close(m);setsid();ioctl(s,TIOCSCTTY,0);dup2(s,0);dup2(s,1);dup2(s,2);close(s);
-        char*env[]={"TERM=xterm-256color","PATH=/usr/local/bin:/usr/bin:/bin",NULL};
+        char*env[]={"TERM=xterm-256color","PATH=/data/local/tmp:/usr/local/bin:/usr/bin:/bin","TMUX_TMPDIR=/data/local/tmp","TERMINFO=/data/local/tmp/terminfo","HOME=/data/local/tmp",NULL};
+        execle("/data/local/tmp/tmux","tmux","new-session","-A","-s","main",(char*)0,env);
+        execle("/usr/bin/tmux","tmux","new-session","-A","-s","main",(char*)0,env);
         execle("/bin/bash","bash","-l",(char*)0,env);execle("/system/bin/sh","sh","-l",(char*)0,env);_exit(1);}
     close(s);
     struct pollfd pf[2]={{c,POLLIN,0},{m,POLLIN,0}};char buf[4096];
