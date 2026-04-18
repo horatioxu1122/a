@@ -108,7 +108,7 @@ static void _ws_term(int c){
     pid_t p=fork();
     if(!p){close(m);setsid();ioctl(s,TIOCSCTTY,0);dup2(s,0);dup2(s,1);dup2(s,2);close(s);
         char*env[]={"TERM=xterm-256color","PATH=/usr/local/bin:/usr/bin:/bin",NULL};
-        execle("/bin/bash","bash","-l",(char*)0,env);_exit(1);}
+        execle("/bin/bash","bash","-l",(char*)0,env);execle("/system/bin/sh","sh","-l",(char*)0,env);_exit(1);}
     close(s);
     struct pollfd pf[2]={{c,POLLIN,0},{m,POLLIN,0}};char buf[4096];
     while(poll(pf,2,-1)>0){
