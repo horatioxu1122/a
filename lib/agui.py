@@ -2123,6 +2123,18 @@ def gemini_deepthink(prompt): asyncio.run(gemini_deepthink_async(prompt))
 
 _AGUI_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'adata', 'local', 'agui')
 
+def _extract_via_ollama(text, model='gemma4:latest'):
+    """Ask local ollama to pull the headline answer from a DR report. Returns string or None."""
+    import urllib.request, json as _j
+    prompt = f"Extract the single headline answer to the question asked at the top of this report. Reply with ONLY the answer (a number, name, or short phrase), nothing else, no explanation.\n\n{text[:8000]}"
+    try:
+        req = urllib.request.Request('http://localhost:11434/api/generate',
+            data=_j.dumps({'model':model,'prompt':prompt,'stream':False,'options':{'temperature':0}}).encode(),
+            headers={'content-type':'application/json'})
+        return _j.loads(urllib.request.urlopen(req, timeout=60).read()).get('response','').strip()
+    except Exception as e:
+        print(f"  ollama extract failed: {e}"); return None
+
 def _latest_gemini_url():
     """Find the most recent gemini conversation URL saved by deep_research_async."""
     if not os.path.isdir(_AGUI_DIR): return None
@@ -2187,6 +2199,12 @@ async def drfetch_async(url=None, watch=False):
             # In DR exec summaries this is almost always the headline figure.
             m = _re.search(r'\b(\d{1,3}(?:,\d{3})+(?:\.\d+)?)\b', rep)
             if m: ans = m.group(1)
+        if not ans:
+            print("  regex didn't match — falling back to ollama gemma4...")
+            raw = _extract_via_ollama(rep)
+            if raw:
+                m = _re.search(r'<answer>([^<]+)</answer>', raw)
+                ans = (m.group(1) if m else raw).strip()
         if ans:
             af = os.path.join(out, ts+'.answer.txt'); open(af,'w').write(ans)
             print(f"  answer: {ans}")
