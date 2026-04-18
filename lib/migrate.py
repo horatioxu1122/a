@@ -4,8 +4,9 @@
 # Enclave per-install. Only Time Machine full restore preserves these because
 # it restores the exact Keychain + encryption keys. On nuke-and-pave you
 # re-login (~60s each). Browser bookmarks/passwords restore via cloud sync.
-import subprocess, sys, json, os, shutil, platform
+import subprocess, sys, json, os, shutil, platform, re, socket
 from pathlib import Path
+_x=lambda s:Path(os.path.expanduser(s))
 
 AROOT = Path(os.environ.get("AROOT") or next((p for p in [Path(__file__).resolve().parent.parent/'adata', Path.home()/'a'/'adata', Path.home()/'adata'] if (p/'git').exists()), Path.home()/'adata'))
 MIG = AROOT / "git" / "migration"
@@ -84,27 +85,46 @@ def get_vscode():
             return {"cmd": cmd.split('/')[-1], "extensions": exts}
     return None
 
+def _find_keyring(stem, content):
+    k=stem.split('-')[0].lower()
+    cand=[Path(m) for m in re.findall(r'^Signed-By:\s*(/\S+)',content,re.M)]+[f for d in ["/etc/apt/keyrings","/usr/share/keyrings","/etc/apt/trusted.gpg.d"] if Path(d).exists() for f in sorted(Path(d).iterdir()) if f.is_file() and f.stem.lower().startswith(k)]
+    p=next((c for c in cand if c.is_file()),None)
+    return p and {"name":p.name,"path":str(p),"data":p.read_bytes().hex()}
+
 def get_apt_repos():
-    repos, src, keys = [], Path("/etc/apt/sources.list.d"), Path("/etc/apt/keyrings")
-    if not src.exists(): return repos
-    for f in src.iterdir():
-        if f.suffix in ['.list', '.sources'] and not f.name.endswith('.save') and not f.name.startswith('ubuntu'):
-            try:
-                kr = next(({"name": k.name, "data": k.read_bytes().hex()} for k in keys.glob(f"{f.stem.split('-')[0]}*.gpg")), None) if keys.exists() else None
-                repos.append({"name": f.name, "content": f.read_text(), "keyring": kr})
+    src = Path("/etc/apt/sources.list.d"); r=[]
+    for f in src.iterdir() if src.exists() else []:
+        if f.suffix in ('.list','.sources') and not f.name.endswith('.save') and not f.name.startswith('ubuntu'):
+            try: c=f.read_text(); r.append({"name":f.name,"content":c,"keyring":_find_keyring(f.stem,c)})
             except: pass
-    return repos
+    return r
 
 def get_apt(): r = run("apt-mark showmanual"); return sorted(r.stdout.strip().split('\n')) if r.returncode == 0 else []
 def get_snap(): r = run("snap list"); return [l.split()[0] for l in r.stdout.strip().split('\n')[1:] if l] if r.returncode == 0 else []
 def get_flatpak(): return [l.strip() for l in run("flatpak list --app --columns=application").stdout.split('\n') if l.strip()] if has("flatpak") else []
 def get_pacman(): return run("pacman -Qqe").stdout.strip().split('\n') if has("pacman") else []
 def get_gnome():
-    if not has("gnome-extensions"): return None
-    exts = [e for e in run("gnome-extensions list --enabled").stdout.strip().split('\n') if e]
-    dconf = run("dconf dump /org/gnome/shell/").stdout
-    favs = run("gsettings get org.gnome.shell favorite-apps").stdout.strip()
-    return {"extensions": exts, "dconf": dconf, "favorites": favs}
+    d=run("dconf dump /org/gnome/shell/").stdout
+    if not d.strip(): return None
+    exts=run("gnome-extensions list --enabled 2>/dev/null").stdout.split() or [x.strip("'\" ") for m in re.findall(r"enabled-extensions=\[(.*)\]",d) for x in m.split(",") if x.strip()]
+    return {"extensions":exts,"dconf":d,"favorites":run("gsettings get org.gnome.shell favorite-apps 2>/dev/null").stdout.strip()}
+
+def get_cloud_tokens():
+    return {n:{"path":p,"data":x.read_bytes().hex(),"mode":oct(x.stat().st_mode)[-3:]}
+        for n,p in [("gh","~/.config/gh/hosts.yml"),("claude","~/.claude/.credentials.json"),("codex","~/.codex/auth.json"),("gemini","~/.gemini/oauth_creds.json"),("gcloud","~/.config/gcloud/credentials.db")]
+        if (x:=_x(p)).is_file()}
+
+def get_dotfiles():
+    return {f:x.read_text(errors='replace') for f in ("~/.bashrc","~/.bash_profile","~/.zshrc","~/.profile","~/.gitconfig","~/.ssh/config","~/.tmux.conf","~/.inputrc") if (x:=_x(f)).is_file()}
+
+def get_system_misc():
+    hn=socket.gethostname(); rd=lambda p:Path(p).read_text(errors='replace') if Path(p).is_file() else ""; r=lambda c:run(c+" 2>/dev/null").stdout
+    desk=Path.home()/".local/share/applications"
+    return {"hosts_user_lines":[l for l in rd("/etc/hosts").splitlines() if (q:=l.strip()) and not q.startswith("#") and not all(h in ("localhost",hn) or h.startswith("ip6-") for h in q.split()[1:])],
+        "crontab":r("crontab -l"),"timezone":r("timedatectl show -p Timezone --value").strip(),
+        "systemd_user_enabled":sorted({l.split()[0] for l in r("systemctl --user list-unit-files --state=enabled --no-pager --no-legend").split('\n') if l.strip()}),
+        "locale":r("localectl status"),"keyboard":rd("/etc/default/keyboard"),
+        "user_desktops":{p.name:rd(p) for p in desk.glob("*.desktop")} if desk.exists() else {}}
 
 def get_repos():
     repos = []
@@ -157,8 +177,10 @@ def save():
     elif IS_ARCH:
         items += [("Pacman", get_pacman, "pacman.txt")]
     if not IS_MAC:
+        items += [("Dotfiles", get_dotfiles, "dotfiles.json"), ("System misc", get_system_misc, "system.json")]
         vs = get_vscode()
         if vs: items.append(("VS Code", lambda: vs, "vscode.json"))
+    items += [("Cloud tokens", get_cloud_tokens, "cloud_tokens.json")]
     for name, fn, file in items:
         try:
             data = fn() if callable(fn) else fn
