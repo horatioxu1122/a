@@ -2324,49 +2324,23 @@ async def _launch_deep_claude(page, query):
 
 
 async def _launch_deep_perplexity(page, query):
-    """Activate Perplexity Deep Research via Model dropdown, type query, return URL"""
+    """Submit Perplexity query in Deep Research mode (prompt-prefix activation; Pro tier honors it).
+    Dismiss cookie modal, click input, type via keyboard, press Enter."""
     await page.wait_for_selector('textarea, div[contenteditable="true"]', timeout=15000)
     await asyncio.sleep(2)
-
-    # Try Model dropdown -> Deep Research
-    activated = False
-    try:
-        model_btn = page.locator('button:has-text("Model")')
-        await model_btn.first.click(timeout=3000)
-        await asyncio.sleep(1)
-        await page.screenshot(path='/tmp/perplexity_deep_model_menu.png')
-
-        # Look for Deep Research in the dropdown
-        for label in ['Deep Research', 'Research']:
-            try:
-                opt = page.locator(f'text="{label}"').first
-                await opt.click(timeout=2000)
-                activated = True
-                print(f"  ✓ [Perplexity] {label} mode activated")
-                break
-            except:
-                continue
-
-        if not activated:
-            await page.keyboard.press('Escape')
-            print(f"  → [Perplexity] Deep Research not in Model menu - using default Pro search")
-    except:
-        print(f"  → [Perplexity] Model dropdown not found - using default Pro search")
-
-    await asyncio.sleep(1)
-
-    # Type and submit query (Perplexity needs type then fill pattern)
+    # Dismiss cookie modal if present (blocks subsequent clicks)
+    await page.evaluate("(()=>{const b=Array.from(document.querySelectorAll('button')).find(x=>(x.innerText||'').trim()==='Got it');if(b)b.click()})()")
+    await asyncio.sleep(0.5)
+    # Native click + keyboard.type — fill() / dispatchEvent both fail on Perplexity's input
     elem = page.locator('textarea, div[contenteditable="true"]').first
     await elem.click(timeout=3000)
-    words = query.split(' ', 1)
-    await elem.type(words[0] + ' ', delay=50)
-    if len(words) > 1:
-        await elem.fill(words[0] + ' ' + words[1])
+    await asyncio.sleep(0.3)
+    # Prefix prompt so Perplexity routes to Deep Research; honored on Pro tier
+    await page.keyboard.type(f'Use Deep Research mode. {query}', delay=10)
+    await asyncio.sleep(0.5)
     await page.keyboard.press('Enter')
-    print(f"  ✓ [Perplexity] Query submitted")
-
+    print(f"  ✓ [Perplexity] Query submitted (Deep Research prefix)")
     await asyncio.sleep(5)
-    await page.screenshot(path='/tmp/perplexity_deep_submitted.png')
     return page.url
 
 
