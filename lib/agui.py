@@ -2240,23 +2240,14 @@ async def _launch_deep_chatgpt(page, query):
     await page.keyboard.press('Enter')
     print(f"  ✓ [ChatGPT] Query submitted")
 
-    # Wait for research plan, then confirm start
-    await asyncio.sleep(10)
+    # Modern ChatGPT DR auto-runs after submit; if a "Start research" button appears,
+    # click it once. Never type "Start research" as a chat msg (creates phantom 2nd prompt).
+    await asyncio.sleep(8)
     try:
-        btn = page.locator('button:has-text("Start research")')
-        await btn.click(timeout=8000)
+        await page.locator('button:has-text("Start research")').first.click(timeout=4000)
         print(f"  ✓ [ChatGPT] Start research clicked")
-    except:
-        try:
-            elem2 = page.locator('#prompt-textarea, [contenteditable="true"]').last
-            await elem2.click(timeout=2000)
-            await elem2.press_sequentially("Start research", delay=5)
-            await page.keyboard.press('Enter')
-            print(f"  ✓ [ChatGPT] Start research typed")
-        except:
-            print(f"  ⚠ [ChatGPT] Could not confirm start - check manually")
-
-    await asyncio.sleep(5)
+    except: pass  # auto-run path
+    await asyncio.sleep(3)
     return page.url
 
 
