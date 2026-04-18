@@ -2146,7 +2146,7 @@ async def drfetch_async(url=None, watch=False):
     ctx = (await pw.chromium.connect_over_cdp('http://localhost:9222')).contexts[0]
     page = await ctx.new_page()
     await page.goto(url, wait_until='domcontentloaded', timeout=30000)
-    await asyncio.sleep(5 if is_chatgpt else 3)
+    await asyncio.sleep(20 if is_chatgpt else 3)  # ChatGPT DR iframes need ~10-20s to hydrate
     async def _extract():
         if is_chatgpt:
             import base64, subprocess, tempfile
@@ -2175,9 +2175,24 @@ async def drfetch_async(url=None, watch=False):
         await asyncio.sleep(15)
     if rep:
         out = os.path.join(_AGUI_DIR, 'drfetch'); os.makedirs(out, exist_ok=True)
-        f = os.path.join(out, time.strftime('%Y%m%d_%H%M%S')+'.txt')
-        open(f,'w').write(rep)
-        print(f"  saved: {f}")
+        ts = time.strftime('%Y%m%d_%H%M%S')
+        f = os.path.join(out, ts+'.txt'); open(f,'w').write(rep)
+        # Try to extract answer: <answer> tag, or first big number in executive summary
+        import re as _re
+        ans = None
+        m = _re.search(r'<answer>([^<]+)</answer>', rep)
+        if m: ans = m.group(1).strip()
+        else:
+            # First well-formed number with thousands separators (e.g. 14,192,184 or 1,234.56).
+            # In DR exec summaries this is almost always the headline figure.
+            m = _re.search(r'\b(\d{1,3}(?:,\d{3})+(?:\.\d+)?)\b', rep)
+            if m: ans = m.group(1)
+        if ans:
+            af = os.path.join(out, ts+'.answer.txt'); open(af,'w').write(ans)
+            print(f"  answer: {ans}")
+            print(f"  saved: {f}, {af}")
+        else:
+            print(f"  saved: {f} (no answer pattern matched — read the report)")
     global _profile_dir, _chrome_process
     _profile_dir = None; _chrome_process = None
     await pw.stop()
