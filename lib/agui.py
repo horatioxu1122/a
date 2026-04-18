@@ -2174,8 +2174,8 @@ async def drfetch_async(url=None, watch=False):
             try: txt = subprocess.check_output(['pdftotext', '-layout', pdfp, '-']).decode(errors='replace')
             finally: os.unlink(pdfp)
             return txt
-        # Gemini / Claude: longest .markdown or .font-claude-message
-        return await page.evaluate("(()=>{const sels=['.markdown','.font-claude-message','.prose'];let b='';for(const s of sels)for(const m of document.querySelectorAll(s)){const t=m.innerText||'';if(t.length>b.length)b=t}return b})()") or ''
+        # Gemini / Claude: longest text in any plausible response container
+        return await page.evaluate("(()=>{const sels=['.markdown','.standard-markdown','.font-claude-message','.prose','[data-test-render-count]'];let b='';for(const s of sels)for(const m of document.querySelectorAll(s)){const t=m.innerText||'';if(t.length>b.length)b=t}return b})()") or ''
     last_len = -1; rep = ''
     while True:
         rep = await _extract()
