@@ -4,7 +4,7 @@ P="com.aios.a"
 KT=r'''@file:Suppress("DEPRECATION","OVERRIDE_DEPRECATION")
 package com.aios.a
 import android.app.Activity;import android.content.*;import android.os.*;import android.webkit.*;import android.view.*;import android.graphics.*;import android.widget.*
-import java.io.File
+import java.io.File;import java.io.OutputStream;import java.net.Socket
 private const val U="http://127.0.0.1:1111/term"
 class M:Activity(){
 companion object{init{System.loadLibrary("anative")}}
@@ -12,8 +12,30 @@ private external fun nResize(w:Int,h:Int)
 private external fun nRender(px:IntArray)
 private external fun nFont(d:IntArray)
 private lateinit var w:WebView;private val h=Handler(Looper.getMainLooper());private var n=0
+private var wsOut:OutputStream?=null
+private val wsExec=java.util.concurrent.Executors.newSingleThreadExecutor()
 private fun pg(s:String)=w.loadDataWithBaseURL(null,"<body style='font:18px monospace;padding:20px;background:#000;color:#0f0'>$s","text/html","utf-8",null)
+private fun jsEval(s:String)=h.post{w.evaluateJavascript(s,null)}
 @JavascriptInterface fun retry(){h.post{boot()}}
+@JavascriptInterface fun wsOpen(url:String){wsExec.submit{try{val s=Socket("127.0.0.1",1111);wsOut=s.getOutputStream()
+val k=android.util.Base64.encodeToString(ByteArray(16).also{java.security.SecureRandom().nextBytes(it)},android.util.Base64.NO_WRAP)
+wsOut!!.write("GET /ws HTTP/1.1\r\nHost: 127.0.0.1:1111\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: $k\r\nSec-WebSocket-Version: 13\r\n\r\n".toByteArray())
+val ins=s.getInputStream();val hd=StringBuilder();while(!hd.endsWith("\r\n\r\n")){val b=ins.read();if(b<0)return@submit;hd.append(b.toChar())}
+jsEval("window._wsOpen&&window._wsOpen()")
+val buf=ByteArray(65536);while(true){val op=ins.read();if(op<0)break;val lb=ins.read();if(lb<0)break;var len=lb and 0x7f
+if(len==126){len=(ins.read() shl 8) or ins.read()}else if(len==127){len=0;for(i in 0..7)len=(len shl 8) or ins.read()}
+var got=0;while(got<len){val n=ins.read(buf,got,len-got);if(n<=0)return@submit;got+=n}
+if((op and 0xf)==8)break
+val sb=StringBuilder();for(i in 0 until len)sb.append(buf[i].toInt() and 0xff).append(',')
+jsEval("window._wsMsg&&window._wsMsg(String.fromCharCode(${sb.dropLast(1)}))")}
+jsEval("window._wsClose&&window._wsClose(1000)")
+}catch(e:Exception){jsEval("window._wsClose&&window._wsClose(1011)")}}}
+@JavascriptInterface fun wsSend(data:String){wsExec.submit{try{val bs=data.toByteArray(Charsets.UTF_8);val o=java.io.ByteArrayOutputStream();o.write(0x81)
+val m=ByteArray(4).also{java.security.SecureRandom().nextBytes(it)}
+when{bs.size<126->o.write(0x80 or bs.size);bs.size<65536->{o.write(0x80 or 126);o.write(bs.size shr 8);o.write(bs.size and 0xff)}}
+o.write(m);for(i in bs.indices)o.write(bs[i].toInt() xor m[i%4].toInt())
+wsOut?.write(o.toByteArray());wsOut?.flush()}catch(e:Exception){}}}
+private val SHIM="(function(){var _w=null;window.WebSocket=function(url){_w=this;this.readyState=0;this.send=function(d){A.wsSend(d+'')};this.close=function(){this.readyState=3};A.wsOpen(url)};window._wsOpen=function(){if(_w){_w.readyState=1;if(_w.onopen)_w.onopen()}};window._wsMsg=function(d){if(_w&&_w.onmessage)_w.onmessage({data:d})};window._wsClose=function(c){if(_w){_w.readyState=3;if(_w.onclose)_w.onclose({code:c,wasClean:false})}}})()"
 override fun onBackPressed(){if(w.canGoBack())w.goBack() else super.onBackPressed()}
 override fun onResume(){super.onResume();boot()}
 private val nl by lazy{applicationInfo.nativeLibraryDir}
@@ -28,7 +50,8 @@ override fun onCreate(b:Bundle?){super.onCreate(b)
 WebView.setWebContentsDebuggingEnabled(true)
 w=WebView(this).apply{settings.javaScriptEnabled=true;addJavascriptInterface(this@M,"A")
 webChromeClient=object:WebChromeClient(){override fun onConsoleMessage(m:ConsoleMessage):Boolean{android.util.Log.w("AWV","[${m.messageLevel()}] ${m.message()} @ ${m.sourceId()}:${m.lineNumber()}");return true}}
-webViewClient=object:WebViewClient(){override fun onReceivedError(v:WebView,r:WebResourceRequest,e:WebResourceError){if(r.isForMainFrame){if(n++<8){pg("<h2>Starting a serve...</h2>$n/8");h.postDelayed({v.loadUrl(U)},1500)}else pg("<h2>a serve not reachable</h2><button onclick='A.retry()'>Retry</button><br><br>log: $filesDir/serve.log")}}}}
+webViewClient=object:WebViewClient(){override fun onPageFinished(v:WebView,url:String){v.evaluateJavascript(SHIM,null)}
+override fun onReceivedError(v:WebView,r:WebResourceRequest,e:WebResourceError){if(r.isForMainFrame){if(n++<8){pg("<h2>Starting a serve...</h2>$n/8");h.postDelayed({v.loadUrl(U)},1500)}else pg("<h2>a serve not reachable</h2><button onclick='A.retry()'>Retry</button>")}}}}
 val nv=object:View(this){private lateinit var bm:Bitmap;private var px:IntArray?=null
 override fun onSizeChanged(w:Int,h:Int,ow:Int,oh:Int){if(::bm.isInitialized)bm.recycle();bm=Bitmap.createBitmap(w,h,Bitmap.Config.ARGB_8888);px=IntArray(w*h);nResize(w,h);nFont(atlas(48f))}
 override fun onDraw(c:Canvas){val a=px?:return;nRender(a);bm.setPixels(a,0,width,0,0,width,height);c.drawBitmap(bm,0f,0f,null)}}
