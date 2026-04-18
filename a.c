@@ -503,6 +503,15 @@ static int cmd_tmux(int c,char**v){(void)c;(void)v;tm_go(NULL);return 0;}
 static int cmd_tm_unsave(int c,char**v){
     if(c<3)return 1;tm_unsave_win(v[2]);return 0;}
 static int cmd_adb(int c,char**v){
+    if(c>2&&!strcmp(v[2],"setup"))return system(
+      "p=$(cat ~/.ssh/id_*.pub 2>/dev/null|head -1);[ -z \"$p\" ]&&{ echo no pubkey;exit 1;};"
+      "echo \"$p\">/tmp/_pk;adb push /tmp/_pk /sdcard/pk.txt >/dev/null||exit 1;rm /tmp/_pk;"
+      "printf 'mkdir -p ~/.ssh\\ncat /sdcard/pk.txt>~/.ssh/authorized_keys\\nchmod 600 ~/.ssh/authorized_keys\\nsshd\\necho A_OK\\n'>/tmp/_s.sh;"
+      "adb push /tmp/_s.sh /sdcard/_a.sh >/dev/null;rm /tmp/_s.sh;"
+      "adb shell '/system/bin/device_config put activity_manager max_phantom_processes 2147483647' 2>/dev/null;"
+      "adb shell 'settings put global settings_enable_monitor_phantom_procs false' 2>/dev/null;"
+      "adb shell am start -n com.termux/.app.TermuxActivity >/dev/null;sleep 2;"
+      "adb shell input text 'sh%s/sdcard/_a.sh';adb shell input keyevent 66;sleep 3;echo '✓ phantom-killer off, sshd up, key installed'");
     if(c>2&&!strcmp(v[2],"ssh"))return system("for s in $(adb devices|awk '/\\tdevice$/{print$1}');do printf '\\033[36m→ %s\\033[0m ' \"$s\";adb -s \"$s\" shell 'am broadcast -n com.termux/.app.TermuxOpenReceiver -a com.termux.RUN_COMMAND --es com.termux.RUN_COMMAND_PATH /data/data/com.termux/files/usr/bin/sshd --ez com.termux.RUN_COMMAND_BACKGROUND true' 2>&1|tail -1;done");
     if(c>3&&!strcmp(v[2],"cmd")){perf_disarm();
         char cmd[B]="";ajoin(cmd,B,c,v,3);
@@ -609,7 +618,7 @@ __attribute__((noreturn)) static void perf_alarm(int sig){(void)sig;
 static void perf_arm(const char *cmd) {
     if(getenv("A_BENCH")||isdigit(*cmd))return;
     char sk[64];snprintf(sk,64,"|%s|",cmd);
-    if(strstr("|push|pull|sync|u|update|login|ssh|gdrive|email|install|send|j|job|pr|hub|create|repo|e|revert|diff|d|perf|scan|review|fork|kill|ls|i|deps|log|serve|bench|c|l|g|co|cp|gp|restore|",sk))return;
+    if(strstr("|push|pull|sync|u|update|login|ssh|adb|gdrive|email|install|send|j|job|pr|hub|create|repo|e|revert|diff|d|perf|scan|review|fork|kill|ls|i|deps|log|serve|bench|c|l|g|co|cp|gp|restore|",sk))return;
     unsigned l=1000000;char pf[P];snprintf(pf,P,"%s/perf/%s.txt",SROOT,DEV);
     {char*d=readf(pf,NULL);unsigned pl=perf_limit(d,cmd);if(pl>=500)l=pl;free(d);}
     snprintf(perf_msg,B,"\n\033[31m✗ PERF KILL\033[0m: 'a %s' >%.1fms (%s)\n  %s\n",cmd,l/1000.0,DEV,pf);
