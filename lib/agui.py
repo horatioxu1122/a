@@ -2121,6 +2121,51 @@ async def gemini_deepthink_async(prompt):
 
 def gemini_deepthink(prompt): asyncio.run(gemini_deepthink_async(prompt))
 
+_AGUI_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'adata', 'local', 'agui')
+
+def _latest_gemini_url():
+    """Find the most recent gemini conversation URL saved by deep_research_async."""
+    if not os.path.isdir(_AGUI_DIR): return None
+    for ts in sorted(os.listdir(_AGUI_DIR), reverse=True):
+        f = os.path.join(_AGUI_DIR, ts, 'gemini', 'url.txt')
+        if os.path.exists(f):
+            u = open(f).read().strip()
+            if u: return u
+    return None
+
+async def drfetch_async(url=None, watch=False):
+    """Resume a Deep Research conversation: navigate to URL, extract longest .markdown
+    (the report). watch=True polls every 15s until report length stabilizes."""
+    url = url or _latest_gemini_url()
+    if not url: print("x no saved gemini url; provide one or run 'deep' first"); return
+    print(f"  url: {url}")
+    if not _cdp_already_running():
+        _launch_chrome_positioned()
+    pw = await async_playwright().start()
+    ctx = (await pw.chromium.connect_over_cdp('http://localhost:9222')).contexts[0]
+    page = await ctx.new_page()
+    await page.goto(url, wait_until='domcontentloaded', timeout=30000)
+    await asyncio.sleep(3)
+    last_len = -1; rep = ''
+    while True:
+        rep = await page.evaluate("(()=>{const ms=document.querySelectorAll('.markdown');let b='';for(const m of ms){const t=m.innerText||'';if(t.length>b.length)b=t}return b})()") or ''
+        cur = len(rep)
+        print(f"  report: {cur} chars{'' if not watch else ' (watching)'}")
+        if not watch: break
+        if cur and cur == last_len: print('  stable — done'); break
+        last_len = cur
+        await asyncio.sleep(15)
+    if rep:
+        out = os.path.join(_AGUI_DIR, 'drfetch'); os.makedirs(out, exist_ok=True)
+        f = os.path.join(out, time.strftime('%Y%m%d_%H%M%S')+'.txt')
+        open(f,'w').write(rep)
+        print(f"  saved: {f}")
+    global _profile_dir, _chrome_process
+    _profile_dir = None; _chrome_process = None
+    await pw.stop()
+
+def drfetch(url=None, watch=False): asyncio.run(drfetch_async(url, watch))
+
 # ═══════════════════════════════════════════════════════════════════
 # DEEP RESEARCH - Parallel launch, save URLs, exit
 # ═══════════════════════════════════════════════════════════════════
@@ -2902,7 +2947,7 @@ if __name__ == "__main__":
 """
         print(examples)
 
-    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary','status','signin','deepthink'}
+    _cmds = {'go','bing','runs','side','hide','solo','art','loop','deep','all','test','rank','ask','say','put','doc','demo','pick','log','add','pw','canary','status','signin','deepthink','drfetch','watch'}
     sys.argv = [a if a.startswith('-') or a not in _cmds else f'--{a}' for a in sys.argv]
     parser = argparse.ArgumentParser(
         description='agui - GUI Automation with XWayland Tools',
@@ -2934,6 +2979,8 @@ if __name__ == "__main__":
     parser.add_argument('--status', action='store_true', help='Login status across LLM platforms')
     parser.add_argument('--signin', action='store_true', help='Light auto sign-in for logged-out platforms')
     parser.add_argument('--deepthink', action='store_true', help='Gemini Deep Think (probes /u/0..2 + caches)')
+    parser.add_argument('--drfetch', nargs='?', const='', help='Resume DR conversation (URL or latest), extract report; combine with --watch for live')
+    parser.add_argument('--watch', action='store_true', help='Poll DR report until stable (used with --drfetch)')
     args, extra = parser.parse_known_args(); args.ask = args.ask or (' '.join(extra) if extra and not args.say else None)
 
     if args.demo: show_examples(); sys.exit(0)
@@ -2956,6 +3003,8 @@ if __name__ == "__main__":
             p = args.say or args.ask
             if not p: print("x need --ask or --say with prompt"); sys.exit(1)
             gemini_deepthink(p)
+        elif args.drfetch is not None:
+            drfetch(url=args.drfetch or None, watch=args.watch)
         elif args.log: launch_browser_with_positioning(); input("\n✓ Sign in anywhere. Press Enter or Ctrl+C to save & exit.\n")
         elif args.go: google_workflow()
         elif args.bing: bing_workflow(args.runs)
