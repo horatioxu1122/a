@@ -34,6 +34,9 @@ adata/
 *.plist
 infer-out/
 a
+/win/vw
+/win/vw.exe
+/win/*.pdb
 
 # macOS Finder metadata
 .DS_Store
