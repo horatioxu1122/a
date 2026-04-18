@@ -2150,14 +2150,16 @@ async def drfetch_async(url=None, watch=False):
     async def _extract():
         if is_chatgpt:
             import base64, subprocess, tempfile
-            # Expand the DR iframe so its full content renders within the PDF
-            await page.evaluate("(()=>{const f=document.querySelector('iframe[title*=\"deep-research\"]');if(f){f.style.height='10000px';if(f.parentElement)f.parentElement.style.height='10000px'}})()")
+            # Expand the DR iframe + strip overflow on ancestors so the iframe's content
+            # area is unconstrained, then printToPDF (CDP renders the cross-origin iframe
+            # contents that DOM access can't reach). Tall paper to fit a long report.
+            await page.evaluate("""(()=>{const fs=document.querySelectorAll('iframe[title*="deep-research"]');for(const f of fs){f.style.height='50000px';f.style.minHeight='50000px';f.style.maxHeight='none';let p=f.parentElement;for(let i=0;i<12&&p;i++){p.style.overflow='visible';p.style.maxHeight='none';p.style.height='auto';p=p.parentElement}}})()""")
             await asyncio.sleep(3)
             cdp = await page.context.new_cdp_session(page)
-            r = await cdp.send('Page.printToPDF', {'printBackground': True, 'preferCSSPageSize': True, 'paperHeight': 100, 'paperWidth': 8.5})
+            r = await cdp.send('Page.printToPDF', {'printBackground': True, 'paperHeight': 400, 'paperWidth': 8.5})
             data = base64.b64decode(r.get('data', ''))
             with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f: f.write(data); pdfp = f.name
-            try: txt = subprocess.check_output(['pdftotext', pdfp, '-']).decode(errors='replace')
+            try: txt = subprocess.check_output(['pdftotext', '-layout', pdfp, '-']).decode(errors='replace')
             finally: os.unlink(pdfp)
             return txt
         # Gemini / Claude: longest .markdown or .font-claude-message
